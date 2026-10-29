@@ -2834,7 +2834,7 @@
     "youtube_tutorial": "Need some help?"
   },
   "frontpot": {
-    "name": "SolSiege",
+    "name": "Sol of War",
     "powered_by": "Powered by openfront.io",
     "win_card": {
       "victory": "Victory",
@@ -2868,13 +2868,13 @@
     "game_text": {
       "common.backend_unreachable": "Can't reach the game servers. Check your connection and try again.",
       "graphics_setting.preset_default_desc": "The standard terrain style",
-      "ios_banner.modal_desc": "Your browser doesn't support fullscreen, but you can add SolSiege to your Home Screen for an immersive experience:",
-      "ios_banner.text": "For fullscreen, add SolSiege to your Home Screen",
+      "ios_banner.modal_desc": "Your browser doesn't support fullscreen, but you can add Sol of War to your Home Screen for an immersive experience:",
+      "ios_banner.text": "For fullscreen, add Sol of War to your Home Screen",
       "mode_selector.servers_unreachable": "Can't connect to the game servers",
-      "replay_viewer.unavailable_desync": "This game doesn't replay correctly on this version of SolSiege.",
-      "replay_viewer.unavailable_other_build": "This game was played on another version of SolSiege.",
-      "troubleshooting.chromium_tip": "SolSiege runs best on Chromium-based browsers.",
-      "update_available.message": "A new version of SolSiege is available. The page will now refresh to update."
+      "replay_viewer.unavailable_desync": "This game doesn't replay correctly on this version of Sol of War.",
+      "replay_viewer.unavailable_other_build": "This game was played on another version of Sol of War.",
+      "troubleshooting.chromium_tip": "Sol of War runs best on Chromium-based browsers.",
+      "update_available.message": "A new version of Sol of War is available. The page will now refresh to update."
     },
     "alpha": "ALPHA",
     "how_to_play": "How to play",
