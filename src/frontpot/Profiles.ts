@@ -95,10 +95,21 @@ export class Profiles {
     );
   }
   xpResult(pool: Pool, id: string) {
-    if (!this.ledger.db.prepare("SELECT 1 FROM player_profiles WHERE id=?").get(id) || !pool.participants.some(p => p.id === id)) return null;
-    if (!this.verified(pool) || pool.ranked !== false || pool.practice !== false) return null;
+    if (
+      !this.ledger.db
+        .prepare("SELECT 1 FROM player_profiles WHERE id=?")
+        .get(id) ||
+      !pool.participants.some((p) => p.id === id)
+    )
+      return null;
+    if (
+      !this.verified(pool) ||
+      pool.ranked !== false ||
+      pool.practice !== false
+    )
+      return null;
     const played = XP_PLAYED;
-    const win = pool.payouts.some(p => p.playerID === id) ? XP_WIN : 0;
+    const win = pool.payouts.some((p) => p.playerID === id) ? XP_WIN : 0;
     return { played, win, total: played + win };
   }
   view(id: string, viewerID?: string): PlayerProfile {
@@ -135,7 +146,7 @@ export class Profiles {
       String(values.reduce((a, b) => a + b, 0n));
     const payout = (p: Pool) =>
       p.payouts.find((w) => w.playerID === id)?.lamports ?? 0;
-    const games = (own ? pools : completed).slice(0, 50).map((p) => {
+    const games = (own ? pools : []).slice(0, 50).map((p) => {
       const verified = this.verified(p);
       const result: PlayerProfile["games"][number]["result"] = verified
         ? won(p)
@@ -182,13 +193,12 @@ export class Profiles {
       icon: settings.icon,
       color: settings.color,
       bio: settings.bio,
-      progress:
-        own || settings.showLevel
-          ? profileProgress(lifetimeXp, {
-              prestige: settings.unrankedPrestige ?? 0,
-              prestigeXp: settings.unrankedPrestigeXp ?? 0,
-            })
-          : null,
+      progress: own
+        ? profileProgress(lifetimeXp, {
+            prestige: settings.unrankedPrestige ?? 0,
+            prestigeXp: settings.unrankedPrestigeXp ?? 0,
+          })
+        : null,
       rankedRatings: publicStats
         ? this.ledger.rankings.view(this.network, id)
         : null,
@@ -217,7 +227,7 @@ export class Profiles {
             })),
           }
         : null,
-      games: publicStats ? games : [],
+      games,
       ...(own
         ? {
             settings,
@@ -311,7 +321,12 @@ export class Profiles {
     return this.view(session.id, session.id);
   }
   badge(id: string) {
-    if (!this.ledger.db.prepare("SELECT 1 FROM player_profiles WHERE id=?").get(id)) return undefined;
+    if (
+      !this.ledger.db
+        .prepare("SELECT 1 FROM player_profiles WHERE id=?")
+        .get(id)
+    )
+      return undefined;
     const settings = this.settings(id);
     if (!settings.showLevel) return undefined;
     const completed = this.matches(id).filter(

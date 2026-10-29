@@ -25,7 +25,7 @@ export function rankedCards(
     <header class="sp-ranked-heading">
       <div>
         <h2>Ranked</h2>
-        <p>Your competitive record, by mode.</p>
+        <p>Competitive record, by mode.</p>
       </div>
       <span>SKILL RATING</span>
     </header>
@@ -319,6 +319,7 @@ export class ProfileView {
           Back to play</button
         ><span class="fp-eyebrow">PLAYER PROFILE</span>
       </div>
+      ${p?.own ? html`<nav class="sc-nav" aria-label="Account pages"><a href="/profile" aria-current="page">Profile</a><a href="/wallet">Wallet</a></nav>` : ""}
       ${this.error ? html`<div class="fp-message fp-error" role="alert">${this.error} <button class="fp-text-button" ?disabled=${this.saving} @click=${() => this.load(this.target, this.tab)}>Reload profile</button></div>` : ""}
       ${this.message ? html`<div class="fp-message" role="status">${this.message}</div>` : ""}
       ${
@@ -353,8 +354,99 @@ export class ProfileView {
                     Share profile
                   </button>
                 </header>
-                <h2>Stats</h2>
-                ${this.stats()}
+                ${
+                  p.own
+                    ? html`<nav class="sp-tabs" aria-label="Profile sections">
+                        ${(
+                          [
+                            "overview",
+                            "games",
+                            "progression",
+                            ...(p.own ? ["edit"] : []),
+                          ] as Tab[]
+                        ).map(
+                          (tab) =>
+                            html`<button
+                              aria-current=${tab === this.tab ? "page" : "false"}
+                              class=${tab === this.tab ? "active" : ""}
+                              ?disabled=${this.saving}
+                              @click=${() => {
+                                this.tab = tab;
+                                this.error = "";
+                                this.message = "";
+                                this.hooks.paint();
+                              }}
+                            >
+                              ${{ overview: "Stats", games: "Games", progression: "Progression", edit: "Edit profile" }[tab]}
+                            </button>`,
+                        )}
+                      </nav>`
+                    : ""
+                }
+                ${
+                  !p.own
+                    ? html`<h2>Stats</h2>
+                        ${this.stats()}${this.rankedProgress(false)}`
+                    : this.tab === "edit"
+                      ? this.editor()
+                      : this.tab === "games"
+                        ? this.games()
+                        : html`
+                            <h2>Unranked</h2>
+                            ${
+                              p.progress
+                                ? html`<p class="sp-muted">
+                                      Level, XP and prestige
+                                    </p>
+                                    <profile-card
+                                      .username=${p.name}
+                                      .progress=${p.progress}
+                                      .prestigeable=${p.own}
+                                      .openKey=${`${p.id}-${this.request}`}
+                                      @prestige-request=${() => {
+                                        this.confirmingPrestige = true;
+                                        this.hooks.paint();
+                                      }}
+                                    ></profile-card>`
+                                : html`<section class="sp-empty">
+                                    This player keeps their level private.
+                                  </section>`
+                            }
+                            ${
+                              this.confirmingPrestige
+                                ? html`<section class="sp-panel">
+                                    <h2>
+                                      Prestige to rank
+                                      ${(p.progress?.prestige ?? 0) + 1}?
+                                    </h2>
+                                    <p>
+                                      Your level returns to 1. You keep your
+                                      lifetime XP, results and new prestige
+                                      badge.
+                                    </p>
+                                    <div class="sp-actions">
+                                      <button
+                                        class="fp-primary"
+                                        ?disabled=${this.saving}
+                                        @click=${() => this.prestige()}
+                                      >
+                                        Confirm prestige</button
+                                      ><button
+                                        class="sp-secondary"
+                                        @click=${() => {
+                                          this.confirmingPrestige = false;
+                                          this.hooks.paint();
+                                        }}
+                                      >
+                                        Cancel
+                                      </button>
+                                    </div>
+                                  </section>`
+                                : ""
+                            }
+                            ${this.tab === "progression" ? html`${this.progression()}${this.rankedProgress()}` : html`${this.rankedProgress(false)}${this.stats()}`}
+                          `
+                }
               `
       }
     </main>`;
@@ -396,7 +488,7 @@ export class ProfileView {
               ${!s.games ? html`<p class="sp-muted">Your first verified multiplayer result will appear here.</p>` : ""}
             </section>
             ${
-              p.finances
+              p.own && p.finances
                 ? html`<section class="sp-panel">
                     <div class="sp-section-heading">
                       <h2>Your match totals</h2>
@@ -460,16 +552,47 @@ export class ProfileView {
     const p = this.profile!;
     if (!p.progress) return "";
     return html` <section class="sp-panel">
-        <h2>Level track · ${p.progress.prestige ? `Prestige ${p.progress.prestige}` : "First run"}</h2>
-        <p>Level ${p.progress.level} of 100 · ${p.progress.lifetimeXp.toLocaleString()} lifetime XP</p>
-        <progress class="sp-level-track-progress" max="100" value=${p.progress.level} aria-label="Progress to level 100"></progress>
-        <div class="sp-level-track" tabindex="0" aria-label="Level progression track">
-          ${Array.from({length: 100}, (_, i) => i + 1).map(level => html`<div class=${level === p.progress!.level ? "current" : level < p.progress!.level ? "earned" : ""} aria-current=${level === p.progress!.level ? "step" : "false"}>
-            <level-badge .level=${level} .prestige=${p.progress!.prestige} .size=${44}></level-badge>
-            <strong>${level}</strong><small>${level === p.progress!.level ? "You" : level < p.progress!.level ? "Reached" : `${(100 * (level - 1) ** 2).toLocaleString()} XP`}</small>
-          </div>`)}
+        <h2>
+          Level track ·
+          ${p.progress.prestige ? `Prestige ${p.progress.prestige}` : "First run"}
+        </h2>
+        <p>
+          Level ${p.progress.level} of 100 ·
+          ${p.progress.lifetimeXp.toLocaleString()} lifetime XP
+        </p>
+        <progress
+          class="sp-level-track-progress"
+          max="100"
+          value=${p.progress.level}
+          aria-label="Progress to level 100"
+        ></progress>
+        <div
+          class="sp-level-track"
+          tabindex="0"
+          aria-label="Level progression track"
+        >
+          ${Array.from({ length: 100 }, (_, i) => i + 1).map(
+            (level) =>
+              html`<div
+                class=${level === p.progress!.level ? "current" : level < p.progress!.level ? "earned" : ""}
+                aria-current=${level === p.progress!.level ? "step" : "false"}
+              >
+                <level-badge
+                  .level=${level}
+                  .prestige=${p.progress!.prestige}
+                  .size=${44}
+                ></level-badge>
+                <strong>${level}</strong
+                ><small
+                  >${level === p.progress!.level ? "You" : level < p.progress!.level ? "Reached" : `${(100 * (level - 1) ** 2).toLocaleString()} XP`}</small
+                >
+              </div>`,
+          )}
         </div>
-        <p class="sp-muted">XP thresholds are for this prestige run. Reach level 100 to unlock prestige; lifetime XP stays with you.</p>
+        <p class="sp-muted">
+          XP thresholds are for this prestige run. Reach level 100 to unlock
+          prestige; lifetime XP stays with you.
+        </p>
         <h2>Unranked level milestones</h2>
         ${p.own && p.legacyProgress && p.legacyProgress.lifetimeXp > p.progress.lifetimeXp ? html`<p class="sp-muted">Combined lifetime record: ${p.legacyProgress.lifetimeXp.toLocaleString()} lifetime XP. Your unranked level and ranked ratings progress separately.</p>` : ""}
         <div class="sp-milestones">
@@ -661,7 +784,7 @@ export class ProfileView {
               @change=${(e: Event) => {
                 d.showStats = (e.target as HTMLInputElement).checked;
               }}
-            />Show statistics and match history</label
+            />Show statistics and ranked ratings</label
           ><label
             ><input
               type="checkbox"

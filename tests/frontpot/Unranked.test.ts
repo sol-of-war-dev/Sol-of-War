@@ -184,7 +184,7 @@ describe("Ranked and Unranked", () => {
           paidLamports: "0",
           pendingLamports: "0",
         });
-        expect(profiles.view(players[1].id).progress?.lifetimeXp).toBe(100);
+        expect(profiles.view(players[1].id, players[1].id).progress?.lifetimeXp).toBe(100);
         expect(ledger.settle(record, result)).toEqual(settled);
       } finally {
         ledger.close();

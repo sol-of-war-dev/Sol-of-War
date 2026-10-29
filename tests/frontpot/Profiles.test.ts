@@ -85,17 +85,52 @@ function fixture(network: "simulation" | "mainnet" = "simulation") {
   return { ledger, auth, store, players, profiles, match, input };
 }
 describe("SolSiege player profiles", () => {
+  it("limits visitors to stats and ranks while preserving the owner's full profile", () => {
+    const f = fixture();
+    f.match();
+    const player = f.players[0];
+    const own = f.profiles.view(player.id, player.id);
+    expect(own.settings).toBeDefined();
+    expect(own.finances).toBeDefined();
+    expect(own.progress).not.toBeNull();
+    expect(own.games).toHaveLength(1);
+    for (const viewer of [undefined, f.players[1].id]) {
+      const publicView = f.profiles.view(player.id, viewer);
+      expect(publicView.stats).toEqual(own.stats);
+      expect(publicView.rankedRatings).toEqual(own.rankedRatings);
+      expect(publicView.games).toEqual([]);
+      expect(publicView.progress).toBeNull();
+      expect(publicView.legacyProgress).toBeUndefined();
+      expect(publicView.settings).toBeUndefined();
+      expect(publicView.finances).toBeUndefined();
+    }
+  });
+
   it("returns verified XP breakdowns only for eligible participants", () => {
     const f = fixture();
     const room = f.match("1v1", 0, false, false);
     const pool = f.ledger.get(room.id)!;
-    expect(f.profiles.xpResult(pool, f.players[0].id)).toEqual({ played: 100, win: 150, total: 250 });
-    expect(f.profiles.xpResult(pool, f.players[1].id)).toEqual({ played: 100, win: 0, total: 100 });
+    expect(f.profiles.xpResult(pool, f.players[0].id)).toEqual({
+      played: 100,
+      win: 150,
+      total: 250,
+    });
+    expect(f.profiles.xpResult(pool, f.players[1].id)).toEqual({
+      played: 100,
+      win: 0,
+      total: 100,
+    });
     expect(f.profiles.xpResult(pool, f.players[2].id)).toBeNull();
     expect(f.profiles.xpResult(pool, "guest:test")).toBeNull();
-    expect(f.profiles.xpResult({ ...pool, state: "review" }, f.players[0].id)).toBeNull();
-    expect(f.profiles.xpResult({ ...pool, ranked: true }, f.players[0].id)).toBeNull();
-    expect(f.profiles.xpResult({ ...pool, practice: true }, f.players[0].id)).toBeNull();
+    expect(
+      f.profiles.xpResult({ ...pool, state: "review" }, f.players[0].id),
+    ).toBeNull();
+    expect(
+      f.profiles.xpResult({ ...pool, ranked: true }, f.players[0].id),
+    ).toBeNull();
+    expect(
+      f.profiles.xpResult({ ...pool, practice: true }, f.players[0].id),
+    ).toBeNull();
   });
   it("lobby badges match unranked profile progress and ignore ranked XP", () => {
     vi.useFakeTimers();
@@ -104,7 +139,10 @@ describe("SolSiege player profiles", () => {
     expect(f.profiles.badge(f.players[0].id)?.level).toBe(1);
     for (let i = 0; i < 3; i++) f.match("1v1", 0, false, false);
     vi.advanceTimersByTime(3001);
-    const progress = f.profiles.view(f.players[0].id).progress!;
+    const progress = f.profiles.view(
+      f.players[0].id,
+      f.players[0].id,
+    ).progress!;
     expect(f.profiles.badge(f.players[0].id)).toEqual({
       level: progress.level,
       prestige: progress.prestige,
@@ -208,19 +246,21 @@ describe("SolSiege player profiles", () => {
     const winners = [f.players[0], f.players[2]],
       losers = [f.players[1], f.players[3]];
     for (const player of winners)
-      expect(f.profiles.view(player.id)).toMatchObject({
+      expect(f.profiles.view(player.id, player.id)).toMatchObject({
         stats: { games: 1, wins: 1 },
         progress: { lifetimeXp: 250 },
       });
     for (const player of losers)
-      expect(f.profiles.view(player.id)).toMatchObject({
+      expect(f.profiles.view(player.id, player.id)).toMatchObject({
         stats: { games: 1, losses: 1 },
         progress: { lifetimeXp: 100 },
       });
     for (let i = 0; i < 5; i++)
       expect(
-        new Profiles(f.ledger, f.auth, "simulation").view(f.players[0].id)
-          .progress?.lifetimeXp,
+        new Profiles(f.ledger, f.auth, "simulation").view(
+          f.players[0].id,
+          f.players[0].id,
+        ).progress?.lifetimeXp,
       ).toBe(250);
   });
   it("excludes practice, unverified, cancelled and other-network games from XP and wins", () => {
@@ -245,7 +285,7 @@ describe("SolSiege player profiles", () => {
     f.ledger.db
       .prepare("UPDATE pools SET body=? WHERE id=?")
       .run(JSON.stringify(o), o.matchID);
-    expect(f.profiles.view(f.players[0].id)).toMatchObject({
+    expect(f.profiles.view(f.players[0].id, f.players[0].id)).toMatchObject({
       stats: { games: 0, wins: 0 },
       progress: { lifetimeXp: 0 },
     });
@@ -277,7 +317,9 @@ describe("SolSiege player profiles", () => {
     f.match();
     vi.advanceTimersByTime(1000);
     f.match();
-    expect(f.profiles.view(f.players[0].id).stats).toMatchObject({
+    expect(
+      f.profiles.view(f.players[0].id, f.players[0].id).stats,
+    ).toMatchObject({
       games: 4,
       wins: 3,
       losses: 1,
@@ -330,7 +372,7 @@ describe("SolSiege player profiles", () => {
       );
     }
     f.ledger.db.exec("COMMIT");
-    expect(f.profiles.view(player.id).progress).toMatchObject({
+    expect(f.profiles.view(player.id, player.id).progress).toMatchObject({
       level: 100,
       canPrestige: true,
       lifetimeXp: 980250,
@@ -344,7 +386,8 @@ describe("SolSiege player profiles", () => {
     expect(() => f.profiles.prestige(player.token, 0)).toThrow("changed");
     expect(() => f.profiles.prestige(player.token, 1)).toThrow("level 100");
     expect(
-      new Profiles(f.ledger, f.auth, "simulation").view(player.id).progress,
+      new Profiles(f.ledger, f.auth, "simulation").view(player.id, player.id)
+        .progress,
     ).toMatchObject({ level: 1, prestige: 1, lifetimeXp: 980250 });
   });
   it("enforces ownership and active-match edit protection through the HTTP routes", async () => {

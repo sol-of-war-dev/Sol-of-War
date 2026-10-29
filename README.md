@@ -1,35 +1,73 @@
-# Sol of War
+<p align="center">
+  <a href="https://solofwar.fun"><img src="resources/social/sol-of-war-share-loop-v2.gif" alt="Sol of War — The world is up for grabs" width="100%"></a>
+</p>
 
-Sol of War is a browser-based multiplayer territory-conquest game built on OpenFront,
-with Free Play, ranked 1v1/2v2 matchmaking and unranked FFA wagers using SOL.
+<h3 align="center">Conquer territory. Play free. Compete for SOL.</h3>
 
-This repository contains the application and its game engine source. Local development
-uses simulated payments by default. Production payment configuration is separate.
+<p align="center">
+  A browser strategy game built on OpenFront.<br>
+  Choose your battlefield, build your territory, and outlast the opposition.
+</p>
 
-## Funds, fees and payouts
+<p align="center">
+  <a href="https://solofwar.fun"><strong>Play Sol of War</strong></a> ·
+  <a href="PAYOUTS.md"><strong>Funds & payouts</strong></a> ·
+  <a href="PAYMENTS.md#code-and-test-map"><strong>Inspect the payment code</strong></a> ·
+  <a href="#run-it-yourself"><strong>Run locally</strong></a>
+</p>
 
-Read [How funds and payouts work](PAYOUTS.md) for the complete flow from deposit
-and entry confirmation to winnings, refunds and withdrawals. Paid games use a
-1% fee on the gross funded pool; eligible cancellations return the full entry.
-The platform controls account and pool signing keys. The guide explains custody,
-receipt verification, pending payments and recovery limits.
+<p align="center">
+  <img src=".github/assets/free-play.svg" alt="Free Play: no wallet needed" width="260">
+  <img src=".github/assets/ranked.svg" alt="Ranked: 1v1 and 2v2 with ten placements" width="260">
+  <img src=".github/assets/sol-wagers.svg" alt="FFA SOL wagers: one percent platform fee" width="260">
+</p>
 
-See [Payment architecture and tests](PAYMENTS.md) for implementation evidence.
-These documents describe the source; they are not an independent audit or an
-attestation of the live service's configuration.
+## Pick your battlefield
 
-## Project history
+| Free Play | Ranked | FFA Wagers |
+| --- | --- | --- |
+| FFA, 1v1, 2v2, Solo and tutorial | Competitive 1v1 and 2v2 | Unranked free-for-all with SOL entries |
+| Guest play without a wallet | Ten placement matches per mode | Funded entries form the prize pool |
+| Signed-in players keep their progress | Solo queue or bring a 2v2 teammate | 1% fee on completed prize pools |
 
-Development began on **October 3, 2026**, with daily work during the project's early
-development. This repository was first prepared on October 29, 2026, as an import
-of the existing application. Its initial commit is not the project's start date.
+- **Bring your duo.** Queue together with no rank-gap restriction; premade matching uses the stronger player's Elo.
+- **Accept, then play.** Timed acceptance, server-owned countdowns and funded-entry checks control match starts.
+- **Build your record.** Stats, XP, prestige and per-mode ranks. Your account tools stay yours; visitors see stats and ranks.
+- **Watch the battlefield.** Browse active games and spectate without taking a player slot.
 
-Maintained by [Sol of War](https://github.com/sol-of-war-dev).
+<p align="center">
+  <img src=".github/assets/spectator-view.png" alt="Sol of War Free Play spectator view of the Europe map, with game controls and Stop watching" width="100%">
+  <br><sub>Local Free Play spectator view.</sub>
+</p>
 
-## Run locally
+## Follow the SOL
 
-Use Node **24.15.0** (or a compatible Node 24 release) and npm **12.1.0** (npm 12).
-The versions are declared in `package.json` and `.nvmrc`.
+**Top up · Confirm entry · Play · Verify result · Receive payout · Withdraw**
+
+The prize pool shown in the app is gross. Settlement uses the funded roster locked
+at match start: 1% goes to the platform, and 99% to the winner or winning team.
+Eligible cancellations return the full entry without the platform fee.
+
+**Custody is explicit:** the platform controls account and pool signing keys.
+This is not trustless smart-contract escrow. The documentation explains the
+implemented safeguards and the scope of the available verification evidence.
+
+| Start here | What you can inspect |
+| --- | --- |
+| [Funds & payouts](PAYOUTS.md) | Deposits, fees, winnings, refunds, withdrawals and receipt checks |
+| [Payment architecture](PAYMENTS.md) | Source paths, signing boundaries, durable transfers and recovery |
+| [Payment code & test map](PAYMENTS.md#code-and-test-map) | The implementation and regression tests for each safeguard |
+| [Verification record](VERIFICATION.md) | Checks performed, test scope and remaining evidence limits |
+| [Account wallets](PLAYER_WALLETS.md) | Key storage, reservations and withdrawal authorization |
+
+These are source documentation and developer-run checks, not an independent
+security audit or a guarantee of the live service's configuration.
+
+## Run it yourself
+
+**Node 24.15.0 · npm 12.1.0 · TypeScript · Solana**
+
+Local development uses **simulated payments**. No real SOL is required.
 
 ```sh
 npm install --global --ignore-scripts npm@12.1.0
@@ -39,79 +77,53 @@ npm run build:demo
 npm run start:sow
 ```
 
-Open **http://localhost:3000**. Guest Free Play, Solo and the tutorial do not require
-wallet credentials. Optional wallet sign-in uses a separate Privy development app;
-configure its server-side credentials in the ignored `.env` file and allow the local
-origin in Privy. Never put secrets in frontend environment variables.
+Open **http://localhost:3000**. Guest Free Play, Solo and the tutorial work without
+wallet credentials. Optional wallet sign-in needs a separate Privy development app
+with the local origin allowed. Keep its server credentials in the ignored `.env`.
 
 `npm run inst` installs the exact lockfile with dependency lifecycle scripts disabled.
-The repository's npm policy enforces the configured dependency age/source restrictions.
-Do not remove those restrictions to work around an installation failure.
+Keep the configured dependency age/source restrictions. Local state lives in the
+ignored `.frontpot-state/` directory; never use production ledgers or keys locally.
 
-The local server reads `.env` and stores development state in the ignored
-`.frontpot-state/` directory. Stop it with Ctrl+C. Do not use a production ledger or
-payment keys for local testing.
-
-## Features
-
-- Free Play in FFA, 1v1 and 2v2, plus Solo practice and a tutorial.
-- Guest usernames and sessions without persistent guest stats.
-- Separate ranked 1v1 and 2v2 ratings, with ten placement matches per mode.
-- Solo matchmaking and two-person parties, using the stronger member's Elo for premade teams.
-- Timed match acceptance, server-owned lobby deadlines and funded-entry checks.
-- Unranked FFA wager lobbies, full prize-pool displays and verified settlement handling.
-- Player stats, progression data, XP/rank badges, live-game listing and spectating.
-
-Read [REPOSITORY.md](REPOSITORY.md) for the prepared changes and known operational limits.
-
-## Verify
+### Check the source
 
 ```sh
 npm run verify:sow
 ```
 
-This runs the application TypeScript check, the focused Frontpot regression suite and
-the production frontend/source-package build. Payment tests use local fixtures.
-Broader upstream checks remain available through `npm run typecheck` and `npm test`.
+Runs TypeScript, the focused application/payment regression suite, and the frontend
+and corresponding-source build. Tests use fixtures. Broader upstream checks remain
+available through `npm run typecheck` and `npm test`.
 
-## Source layout
-
-| Path | Purpose |
+| Source | Purpose |
 | --- | --- |
-| `src/frontpot/` | Sol of War UI, authentication, matchmaking, ledger and payment integration |
-| `src/client/` | Browser game client and renderer |
-| `src/server/` | Shared game server components |
-| `packages/` | Game engine and shared protocols |
-| `resources/` | Maps, translations and licensed game assets |
-| `tests/frontpot/` | Sol of War regression tests |
-| `demo.html`, `vite.demo.config.ts` | Sol of War frontend entry and build configuration |
-| `Dockerfile.frontpot` | Application container build |
+| [`src/frontpot/`](src/frontpot) | App, profiles, matchmaking, ledger and payments |
+| [`src/frontpot/payments/`](src/frontpot/payments) | Funding, custody, settlement and withdrawal implementation |
+| [`tests/frontpot/`](tests/frontpot) | Application and payment regression tests |
+| [`src/client/`](src/client), [`src/server/`](src/server), [`packages/`](packages) | Game client, server and engine |
+| [`resources/`](resources) | Maps, translations and licensed assets |
+| [`Dockerfile.frontpot`](Dockerfile.frontpot) | Sol of War container build |
 
-Internal `frontpot` and `solsiege` names remain for compatibility. `index.html`,
-`vite.config.ts` and the original deployment scripts target upstream OpenFront; use
-the Sol of War entry points above for this application.
+The Sol of War entry points are `demo.html`, `vite.demo.config.ts` and
+`src/frontpot/Server.ts`. Internal `frontpot` and `solsiege` names remain for
+compatibility. Other upstream launch scripts are not the application's launch path.
 
-## Operations documentation
+[Repository guide](REPOSITORY.md) · [Matchmaking](SHARED_MATCHMAKING.md) ·
+[Operations](OPERATIONS.md) · [Devnet](DEVNET.md) · [Mainnet](MAINNET.md) ·
+[Railway](RAILWAY.md)
 
-- [Shared matchmaking](SHARED_MATCHMAKING.md)
-- [Payments](PAYMENTS.md) and [player wallets](PLAYER_WALLETS.md)
-- [Operations and recovery](OPERATIONS.md)
-- [Devnet setup](DEVNET.md) and [mainnet configuration](MAINNET.md)
-- [Railway deployment](RAILWAY.md)
+## Built on an open foundation
 
-These documents include historical implementation notes. They are not evidence of the
-current production configuration or a completed production validation. Local development
-must remain in simulation mode unless a separate funded test is deliberately configured.
-No deployment is triggered by this repository's setup or verification commands.
+Development began **October 3, 2026**, with daily work before the first Git import
+on October 29. Maintained by [Sol of War](https://github.com/sol-of-war-dev).
+The import date is not the project's start date; no earlier Git history exists.
 
-## Attribution and licenses
-
-Sol of War is an independent fork of [OpenFront](https://github.com/openfrontio/OpenFrontIO)
-and is not endorsed by OpenFront. OpenFront is a fork/rewrite of WarFront.io; credit to
-[WarFrontIO](https://github.com/WarFrontIO).
+Sol of War is an independent fork of [OpenFront](https://github.com/openfrontio/OpenFrontIO),
+not endorsed by OpenFront. OpenFront is a fork/rewrite of
+[WarFront.io](https://github.com/WarFrontIO).
 
 **© OpenFront and Contributors.** Preserve the existing visible copyright notices.
-Source licensing and additional terms are in [LICENSE](LICENSE). Asset licensing is
-in [LICENSE-ASSETS](LICENSE-ASSETS), with context in [LICENSING.md](LICENSING.md) and
-[CREDITS.md](CREDITS.md). Upstream proprietary artwork is not included in this handoff.
-The application build retains the corresponding-source download at `/source`.
+[Source license & additional terms](LICENSE) · [Asset license](LICENSE-ASSETS) ·
+[Licensing details](LICENSING.md) · [Credits](CREDITS.md).
+Upstream proprietary artwork is excluded. The application retains its
+[corresponding-source download](https://solofwar.fun/source).

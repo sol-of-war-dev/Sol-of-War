@@ -3,7 +3,8 @@
 Checked October 29, 2026 against the prepared source snapshot using Node 24.15.0.
 
 - Application TypeScript check: passed.
-- Application and payment regression suite: 336 tests across 43 files passed.
+- Profile access: owner account tabs, match history, progression and editing remain available; public profiles expose stats/ranks without personal progression, history, settings or financial totals. Server projection and rendered UI regression checks passed.
+- Application and payment regression suite: 339 tests across 44 files passed.
 - Account-funded result review: 20 new regression cases cover replay, original-entry refunds, mixed account/external funding, 1v1/2v2, restart recovery and invalid-payment rejection under devnet and mainnet configurations. RPC responses are mocked; no real funds are used. The valid account-funded review cases reproduced the failure before the guard correction.
 - Incoming receipt handling: 7 new regression cases cover exclusive entry/return claims, concurrent requests in both orders, pre-broadcast return-signing failure, restart recovery, conflicting restored state, wallet-adjusted entry reconciliation and extra same-amount transfers. Three failures were reproduced before correction. Fixtures use real transaction signatures and mocked RPC; no real funds are used.
 - Changed payment source and tests: targeted lint check passed.

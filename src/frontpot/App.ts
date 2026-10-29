@@ -1523,7 +1523,7 @@ function playerBar() {
       @click=${() => (identity?.name ? void openProfile("me") : openAccount())}
       ?disabled=${!!room || busy}
     >
-      ${identity?.name ? "View stats" : identity ? "Set username" : "Sign in to play"}
+      ${identity?.name ? "My profile" : identity ? "Set username" : "Sign in to play"}
     </button>
   </div>`;
 }

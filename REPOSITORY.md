@@ -13,7 +13,7 @@ is no earlier Git history to import; the first commit captures the existing sour
 - Server-authoritative countdowns, lobby presentation, XP/rank badges and prize-pool displays.
 - Spectator startup/error handling, cancellation and exit fixes.
 - Homepage scrolling and footer layout fixes.
-- Stats-only profiles and the View stats shortcut.
+- Full profiles for account owners; other visitors see stats and ranks only.
 - Verified funding, fixed payout destinations, exclusive entry/return receipts and constrained payment review, with regression tests.
 
 This source is independently inspectable. Its presence here does not by itself establish which version a particular deployment is running.
