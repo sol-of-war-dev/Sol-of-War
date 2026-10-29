@@ -6,6 +6,7 @@ import {
 } from "@solana/kit";
 import type { DatabaseSync } from "node:sqlite";
 import { InputError } from "../Store";
+import { validateDepositSignature } from "./DepositSignature";
 import {
   acceptSignature,
   type DevnetTransactions,
@@ -50,6 +51,9 @@ export class UnmatchedReturns {
       .prepare("SELECT body FROM unmatched_returns WHERE signature=?")
       .get(signature);
     return row ? JSON.parse(String(row.body)) : null;
+  }
+  has(signature: string) {
+    return this.plan(signature) !== null;
   }
   async request(matchID: string, signature: string) {
     if (this.running)
@@ -158,12 +162,28 @@ export class UnmatchedReturns {
         .prepare("SELECT body FROM devnet_entries WHERE match_id=?")
         .all(matchID)) {
         const entry = JSON.parse(String(row.body));
+        // A separate transfer must stay returnable if this entry already has
+        // its own receipt. Otherwise protect wallet-adjusted issued deposits.
+        if (this.transactions.get(`deposit:${entry.id}`)) continue;
         const issued = getTransactionDecoder().decode(
           Buffer.from(entry.wire.transaction, "base64"),
         );
-        if (
-          Buffer.from(issued.messageBytes).equals(Buffer.from(tx.messageBytes))
-        )
+        let matches = Buffer.from(issued.messageBytes).equals(
+          Buffer.from(tx.messageBytes),
+        );
+        if (!matches && !entry.paymentWallet) {
+          try {
+            await validateDepositSignature(
+              entry.wire,
+              result.transaction[0],
+              entry.wallet,
+            );
+            matches = true;
+          } catch {
+            // A different signed transfer remains eligible for its own return.
+          }
+        }
+        if (matches)
           throw new InputError(
             "This is an issued match entry; recover it through entry reconciliation.",
           );
@@ -192,13 +212,20 @@ export class UnmatchedReturns {
       };
       // The request can overlap an externally submitted entry while RPC calls
       // are in flight. Recheck before committing the immutable return plan.
-      if (this.known(signature))
-        throw new InputError(
-          "This deposit is already recorded as a match entry.",
-        );
-      this.db
-        .prepare("INSERT INTO unmatched_returns VALUES(?,?,?)")
-        .run(signature, matchID, JSON.stringify(plan));
+      this.db.exec("BEGIN IMMEDIATE");
+      try {
+        if (this.known(signature))
+          throw new InputError(
+            "This deposit is already recorded as a match entry.",
+          );
+        this.db
+          .prepare("INSERT INTO unmatched_returns VALUES(?,?,?)")
+          .run(signature, matchID, JSON.stringify(plan));
+        this.db.exec("COMMIT");
+      } catch (error) {
+        this.db.exec("ROLLBACK");
+        throw error;
+      }
       return await this.send(plan);
     } finally {
       this.running = false;

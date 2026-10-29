@@ -41,9 +41,12 @@ export class MatchReview {
             !entries.some(
               (e) =>
                 e.playerID === p.id &&
-                e.wallet === p.wallet &&
+                // Match the frozen funding destination, which can differ from
+                // the login wallet for entries paid from an account balance.
+                (e.paymentWallet ?? e.wallet) === p.wallet &&
                 e.lamports === pool.stakeLamports &&
                 e.state === "locked" &&
+                !e.cancelled &&
                 this.payments!.transactions.get(`deposit:${e.id}`)?.state ===
                   "finalized" &&
                 !this.payments!.transactions.get(`refund:${e.id}`),

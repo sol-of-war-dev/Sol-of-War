@@ -6,6 +6,26 @@ with Free Play, ranked 1v1/2v2 matchmaking and unranked FFA wagers using SOL.
 This repository contains the application and its game engine source. Local development
 uses simulated payments by default. Production payment configuration is separate.
 
+## Funds, fees and payouts
+
+Read [How funds and payouts work](PAYOUTS.md) for the complete flow from deposit
+and entry confirmation to winnings, refunds and withdrawals. Paid games use a
+1% fee on the gross funded pool; eligible cancellations return the full entry.
+The platform controls account and pool signing keys. The guide explains custody,
+receipt verification, pending payments and recovery limits.
+
+See [Payment architecture and tests](PAYMENTS.md) for implementation evidence.
+These documents describe the source; they are not an independent audit or an
+attestation of the live service's configuration.
+
+## Project history
+
+Development began on **October 3, 2026**, with daily work during the project's early
+development. This repository was first prepared on October 29, 2026, as an import
+of the existing application. Its initial commit is not the project's start date.
+
+Maintained by [Sol of War](https://github.com/sol-of-war-dev).
+
 ## Run locally
 
 Use Node **24.15.0** (or a compatible Node 24 release) and npm **12.1.0** (npm 12).

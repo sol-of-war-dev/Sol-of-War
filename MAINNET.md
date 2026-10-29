@@ -1,6 +1,6 @@
-# SolSiege mainnet configuration
+# Sol of War mainnet configuration
 
-This is a setup guide, not a record of activation. The public service still uses `PAYMENTS_MODE=simulation`. Funded validation, recovery work, independent review and production terms remain on [LAUNCH.md](LAUNCH.md).
+This is a setup guide, not a record of current activation or custody assurance. The default local mode is `simulation`; the live mode must be checked separately. For payment behavior and evidence limits, see [PAYOUTS.md](PAYOUTS.md) and [PAYMENTS.md](PAYMENTS.md). The October 27 setup notes below are historical, not current balances or a completed funded rehearsal.
 
 ## Configuration completed October 27, 2026
 
@@ -57,4 +57,4 @@ Switching network/state starts a separate ledger and may require users to claim 
 References: [Privy authorization keys](https://docs.privy.io/controls/authorization-keys/keys/create/key), [key quorum API](https://docs.privy.io/api-reference/key-quorums/create), [Solana policy examples](https://docs.privy.io/controls/policies/example-policies/solana), [Solana genesis RPC](https://solana.com/docs/rpc/http/getgenesishash).
 
 
-The recovery release is deployed. S3 configuration and an offsite restore drill are documented in `OPERATIONS.md`; direct unmatched-deposit returns and controlled review of unverified game results are available. Deployment authentication is reusable. Privy production-plan setup is deferred at the operator’s request; real-SOL mode remains disabled pending the remaining activation checks. A successful RPC simulation is not proof of a real deposit or payout.
+The source includes encrypted offsite backup support, direct unmatched-deposit returns and constrained review of unverified results. See `OPERATIONS.md` for review/recovery controls and `PAYMENTS.md` for implementation and verification evidence. This guide does not establish whether a particular release, provider plan or real-SOL mode is active. A successful RPC simulation is not proof of a real deposit or payout.

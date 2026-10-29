@@ -1,3 +1,4 @@
+import { getSignatureFromTransaction } from "@solana/kit";
 import { randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 import { FUNDED_MIN_ENTRY_LAMPORTS } from "../Amounts";
@@ -85,6 +86,16 @@ export class DevnetPayments {
       CREATE TABLE IF NOT EXISTS devnet_entries(id TEXT PRIMARY KEY,match_id TEXT NOT NULL,player_id TEXT NOT NULL,wallet TEXT NOT NULL,body TEXT NOT NULL,UNIQUE(match_id,player_id),UNIQUE(match_id,wallet));`);
     this.outbox = new SettlementOutbox(db, this.network);
     this.returns = new UnmatchedReturns(db, transactions, signer, payer);
+    if (
+      db
+        .prepare(
+          "SELECT 1 FROM chain_jobs j JOIN unmatched_returns r ON r.signature=json_extract(j.body,'$.signature') WHERE j.id LIKE 'deposit:%' LIMIT 1",
+        )
+        .get()
+    )
+      throw new Error(
+        "A deposit receipt has both an entry and a return claim. Payment reconciliation is required before startup.",
+      );
   }
   get network() {
     return this.transactions.rpc.network;
@@ -608,18 +619,36 @@ export class DevnetPayments {
   async importExternalDeposit(matchID: string, wire: string) {
     for (const e of this.entries(matchID)) {
       if (!["awaiting_signature", "confirming"].includes(e.state)) continue;
+      let signature: string;
       try {
-        await validateDepositSignature(e.wire, wire, e.wallet);
+        const { actual } = await validateDepositSignature(
+          e.wire,
+          wire,
+          e.wallet,
+        );
+        signature = getSignatureFromTransaction(actual.tx);
       } catch {
         continue;
       }
-      await this.submit(
-        matchID,
-        { id: e.playerID, wallet: e.wallet, name: "", token: "", expires: 0 },
-        e.id,
-        wire,
-      );
-      return true;
+      const recorded = this.transactions.get(`deposit:${e.id}`);
+      if (
+        this.returns.has(signature) ||
+        (recorded && recorded.signature !== signature)
+      )
+        continue;
+      try {
+        await this.submit(
+          matchID,
+          { id: e.playerID, wallet: e.wallet, name: "", token: "", expires: 0 },
+          e.id,
+          wire,
+        );
+      } catch (error) {
+        if (this.returns.has(signature)) return false;
+        throw error;
+      }
+      // A concurrent submit may have claimed a different receipt for this seat.
+      return this.transactions.get(`deposit:${e.id}`)?.signature === signature;
     }
     return false;
   }

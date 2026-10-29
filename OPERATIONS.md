@@ -1,8 +1,10 @@
-# SolSiege operations
+# Sol of War payment operations
+
+For players, see [How funds and payouts work](PAYOUTS.md). This is the operator runbook for the source implementation. Live configuration, alerts and recovery checks need separate dated verification; setup notes are not a deployment attestation.
 
 ## Access and modes
 
-Open `/admin` using a verified Privy session with a username and a wallet in the server's `SOLSIEGE_ADMIN_WALLETS` allowlist. Every operations endpoint checks the same authorization. The actor is taken from the session, never from the request body. Public deployment remains simulation; no actual transfers appear in its payment queue.
+Open `/admin` using a verified Privy session with a username and a wallet in the server's `SOLSIEGE_ADMIN_WALLETS` allowlist. Every operations endpoint checks the same authorization. The actor is taken from the session, never from the request body. Check the configured network first: simulation sends no SOL, while devnet and mainnet have separate funded records.
 
 The payment operations section refreshes with the existing admin dashboard. It shows pending, held and finalized transfers, signing failures, worker health, receipts and the last 20 operator actions. The table contains up to 50 jobs, prioritizing holds. It returns signatures/status, never signed transaction bytes or credentials. A separate finalized-chain scanner reports pool balances and unmatched transfers; this is not an independent financial audit.
 
@@ -47,7 +49,7 @@ An absent, expired or merely confirmed signature is not eligible for replacement
 
 ## Pool reconciliation
 
-The worker scans finalized pool history in bounded pages with durable cursors. An exact issued deposit submitted outside the normal submit endpoint can be verified and recovered through the usual entry flow. Other transactions remain unmatched and appear with receipts and balance deltas; they never create a seat or enlarge the prize. Check differences against all known deposits, refunds and settlement attempts. Returning unrelated/manual funds still requires a dedicated reviewed workflow; do not improvise a transfer from the admin panel.
+The worker scans finalized pool history in bounded pages with durable cursors. An exact issued deposit submitted outside the normal submit endpoint can be verified and recovered through the usual entry flow. Other transactions remain unmatched and appear with receipts and balance deltas; they never create a seat or enlarge the prize. Check differences against all known deposits, refunds and settlement attempts. Use the constrained [accidental-deposit return workflow](#returning-an-accidental-deposit) for eligible transfers; ambiguous transfers require further review.
 
 ## Worker and signing failures
 
@@ -103,3 +105,5 @@ The destination and full amount come from the original transaction; the administ
 ## Reviewing an unverified match
 
 **Match result review** can queue the immutable saved recording for verification again. If verification cannot recover a result, **Refund original entries** returns confirmed original entries in full with no platform fee. Both actions require an administrator and a recorded reason. A match must be held for result review, have no verified result, signature or existing payout plan, and retain its original locked funded roster. A verified payout cannot be replaced by a refund or a new winner. Payment-status problems continue through the payment recovery controls. No arbitrary winner or destination override is exposed.
+
+Eligibility uses the original funding address frozen into each participant record. For account-funded entries this is the account wallet; for legacy external entries it is the original external wallet. Deposits must be finalized, entries must remain locked and uncancelled, and no refund job may already exist. A mismatch stays held for reconciliation; operators cannot override its destination. See the [account-wallet review regression tests](tests/frontpot/PlayerWallets.test.ts).

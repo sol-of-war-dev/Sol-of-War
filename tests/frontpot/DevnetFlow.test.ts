@@ -1120,6 +1120,213 @@ describe("pool history reconciliation", () => {
   });
 });
 
+describe("exclusive use of deposit receipts", () => {
+  function gate() {
+    let resolve!: () => void;
+    const promise = new Promise<void>((ready) => {
+      resolve = ready;
+    });
+    return { promise, resolve };
+  }
+  async function unclaimedDeposit(additionalSurplus = false) {
+    const f = await fixture("1v1", "mainnet");
+    await f.fund(0);
+    f.finalize();
+    await f.payments.tick();
+    if (additionalSurplus) {
+      const extra = await f.rpc.build(f.addresses[2], f.addresses[2], [
+        { to: f.addresses[4], lamports: 300_000_000 },
+      ]);
+      const signed = await f.sign(2, extra.transaction);
+      const { getSignatureFromTransaction } = await import("@solana/kit");
+      f.sent.set(
+        getSignatureFromTransaction(
+          getTransactionDecoder().decode(Buffer.from(signed, "base64")),
+        ),
+        signed,
+      );
+    }
+    const wire = await f.rpc.build(f.addresses[1], f.addresses[1], [
+      { to: f.addresses[4], lamports: 250_000_000 },
+    ]);
+    const signed = await f.sign(1, wire.transaction);
+    const { getSignatureFromTransaction } = await import("@solana/kit");
+    const signature = getSignatureFromTransaction(
+      getTransactionDecoder().decode(Buffer.from(signed, "base64")),
+    );
+    f.sent.set(signature, signed);
+    const audit = new PoolReconciliation(f.ledger.db, f.rpc, (id, tx) =>
+      f.payments.importExternalDeposit(id, tx),
+    );
+    await audit.scan(f.room.id);
+    return { ...f, signed, signature, audit };
+  }
+
+  it("cannot reuse a returned transfer as a newly issued entry after restart", async () => {
+    const f = await unclaimedDeposit();
+    await f.payments.returns.request(f.room.id, f.signature);
+    await f.payments.tick();
+    expect(f.tx.get(`return:${f.signature}`)?.state).toBe("finalized");
+    f.advanceBlock();
+    const restarted = f.service();
+    const entry = await restarted.prepare(f.room, f.players[1]);
+    await expect(
+      restarted.submit(f.room.id, f.players[1], entry.entryID, f.signed),
+    ).rejects.toThrow("return");
+    expect(f.tx.get(`deposit:${entry.entryID}`)).toBeNull();
+    expect(restarted.fundedIDs(f.room.id)).toEqual([f.players[0].id]);
+    expect(f.audit.expected(f.room.id)).toBe(250_000_000n);
+  });
+
+  it.each(["entry", "return"] as const)(
+    "only the %s claim wins overlapping submission and return requests",
+    async (winner) => {
+      const f = await unclaimedDeposit(true);
+      const balanceReached = gate();
+      const releaseBalance = gate();
+      const request = f.request.getMockImplementation()!;
+      f.request.mockImplementation(async (url, init) => {
+        const result = await request(url, init);
+        if (JSON.parse(String(init?.body)).method === "getBalance") {
+          balanceReached.resolve();
+          await releaseBalance.promise;
+        }
+        return result;
+      });
+      const returning = f.payments.returns.request(f.room.id, f.signature).then(
+        (job) => ({ job, error: null }),
+        (error: Error) => ({ job: null, error }),
+      );
+      await balanceReached.promise;
+      f.advanceBlock();
+      const entry = await f.payments.prepare(f.room, f.players[1]);
+      const persistReached = gate();
+      const releasePersist = gate();
+      if (winner === "return") {
+        const persist = f.tx.persist.bind(f.tx);
+        vi.spyOn(f.tx, "persist").mockImplementationOnce(async (id, wire) => {
+          persistReached.resolve();
+          await releasePersist.promise;
+          return persist(id, wire);
+        });
+      }
+      const submitting = f.payments
+        .submit(f.room.id, f.players[1], entry.entryID, f.signed)
+        .then(
+          (status) => ({ status, error: null }),
+          (error: Error) => ({ status: null, error }),
+        );
+      if (winner === "return") {
+        await persistReached.promise;
+        releaseBalance.resolve();
+        expect((await returning).error).toBeNull();
+        releasePersist.resolve();
+        expect((await submitting).error?.message).toContain("return");
+        expect(f.tx.get(`deposit:${entry.entryID}`)).toBeNull();
+        expect(f.tx.get(`return:${f.signature}`)).not.toBeNull();
+      } else {
+        expect((await submitting).status?.state).toBe("funded");
+        releaseBalance.resolve();
+        expect((await returning).error?.message).toContain("already recorded");
+        expect(f.tx.get(`return:${f.signature}`)).toBeNull();
+        expect(f.payments.returns.has(f.signature)).toBe(false);
+      }
+    },
+  );
+
+  it("reserves a receipt even when signing its return fails before broadcast", async () => {
+    const f = await unclaimedDeposit();
+    f.signer.sign.mockRejectedValueOnce(new Error("signer unavailable"));
+    await expect(
+      f.payments.returns.request(f.room.id, f.signature),
+    ).rejects.toThrow("signer unavailable");
+    expect(f.tx.get(`return:${f.signature}`)).toBeNull();
+    f.advanceBlock();
+    const restarted = f.service();
+    const entry = await restarted.prepare(f.room, f.players[1]);
+    await expect(
+      restarted.submit(f.room.id, f.players[1], entry.entryID, f.signed),
+    ).rejects.toThrow("return");
+    expect(await restarted.importExternalDeposit(f.room.id, f.signed)).toBe(
+      false,
+    );
+    await restarted.tick();
+    await restarted.tick();
+    expect(f.tx.get(`return:${f.signature}`)?.state).toBe("finalized");
+    expect(restarted.fundedIDs(f.room.id)).toEqual([f.players[0].id]);
+  });
+
+  it("fails closed if a restored database contains conflicting entry and return claims", async () => {
+    const f = await unclaimedDeposit();
+    await f.payments.returns.request(f.room.id, f.signature);
+    const id = "deposit:legacy-conflicting-receipt";
+    // Simulate a pre-correction snapshot; do not silently discard either obligation.
+    f.ledger.db.prepare("INSERT INTO chain_jobs(id,body) VALUES(?,?)").run(
+      id,
+      JSON.stringify({
+        id,
+        transaction: f.signed,
+        signature: f.signature,
+        lastValidBlockHeight: 200,
+        state: "finalized",
+      }),
+    );
+    const sent = f.sent.size;
+    expect(() => f.service()).toThrow(
+      "reconciliation is required before startup",
+    );
+    expect(f.tx.get(id)).not.toBeNull();
+    expect(f.payments.returns.has(f.signature)).toBe(true);
+    expect(f.sent.size).toBe(sent);
+  });
+
+  it("routes a blockhash-adjusted issued entry through entry reconciliation", async () => {
+    const f = await unclaimedDeposit();
+    f.advanceBlock();
+    const entry = await f.payments.prepare(f.room, f.players[1]);
+    const signedCount = f.signer.sign.mock.calls.length;
+    await expect(
+      f.payments.returns.request(f.room.id, f.signature),
+    ).rejects.toThrow("issued match entry");
+    expect(f.signer.sign).toHaveBeenCalledTimes(signedCount);
+    await f.payments.submit(f.room.id, f.players[1], entry.entryID, f.signed);
+    expect(f.payments.fundedIDs(f.room.id)).toHaveLength(2);
+    expect(f.tx.get(`return:${f.signature}`)).toBeNull();
+  });
+
+  it("does not discard a second equal transfer while the first entry is confirming", async () => {
+    const f = await fixture("1v1", "mainnet");
+    const issued = await f.fund(0);
+    f.advanceBlock();
+    const extra = await f.rpc.build(f.addresses[0], f.addresses[0], [
+      { to: f.addresses[4], lamports: 250_000_000 },
+    ]);
+    const signed = await f.sign(0, extra.transaction);
+    const { getSignatureFromTransaction } = await import("@solana/kit");
+    const signature = getSignatureFromTransaction(
+      getTransactionDecoder().decode(Buffer.from(signed, "base64")),
+    );
+    f.sent.set(signature, signed);
+    f.finalize();
+    const originalSignature = f.tx.get(`deposit:${issued.entryID}`)!.signature;
+    const audit = new PoolReconciliation(f.ledger.db, f.rpc, (id, tx) =>
+      f.payments.importExternalDeposit(id, tx),
+    );
+    await audit.scan(f.room.id);
+    expect(audit.snapshot().unmatched).toEqual([
+      expect.objectContaining({ signature, delta: "250000000" }),
+    ]);
+    expect(f.tx.get(`deposit:${issued.entryID}`)!.signature).toBe(
+      originalSignature,
+    );
+    await f.payments.tick();
+    await f.payments.returns.request(f.room.id, signature);
+    await f.payments.tick();
+    expect(f.tx.get(`return:${signature}`)?.state).toBe("finalized");
+    expect(f.payments.fundedIDs(f.room.id)).toEqual([f.players[0].id]);
+  });
+});
+
 describe("returns of unmatched deposits", () => {
   async function manualDeposit(extraInstruction = false) {
     const f = await fixture("1v1", "mainnet");

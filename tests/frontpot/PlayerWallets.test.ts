@@ -1,3 +1,5 @@
+import type { PartialGameRecord } from "@openfront/shared/WireSchemas";
+import { getTransferSolInstructionDataDecoder } from "@solana-program/system";
 import {
   getSignatureFromTransaction,
   getTransactionDecoder,
@@ -8,18 +10,23 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createPaymentBackup,
   restorePaymentBackup,
 } from "../../src/frontpot/Backups";
 import { MatchLedger } from "../../src/frontpot/MatchLedger";
+import { MatchReview } from "../../src/frontpot/MatchReview";
+import { Operations } from "../../src/frontpot/Operations";
 import { DevnetPayments } from "../../src/frontpot/payments/DevnetPayments";
 import {
   DevnetRPC,
   DevnetTransactions,
 } from "../../src/frontpot/payments/DevnetTransactions";
-import { GENESIS_HASHES } from "../../src/frontpot/payments/Network";
+import {
+  GENESIS_HASHES,
+  type PaymentNetwork,
+} from "../../src/frontpot/payments/Network";
 import { PlayerWallets } from "../../src/frontpot/payments/PlayerWallets";
 import { PlayerWalletVault } from "../../src/frontpot/payments/PlayerWalletVault";
 import { LobbyStore } from "../../src/frontpot/Store";
@@ -27,14 +34,16 @@ const dbs: DatabaseSync[] = [];
 afterEach(() => {
   for (const db of dbs.splice(0)) db.close();
 });
-function fixture() {
-  const db = new DatabaseSync(":memory:");
+function fixture(
+  db = new DatabaseSync(":memory:"),
+  network: PaymentNetwork = "devnet",
+) {
   dbs.push(db);
   const keyring = {
     active: "v1",
     keys: { v1: randomBytes(32).toString("base64") },
   };
-  const vault = new PlayerWalletVault(db, "devnet", keyring);
+  const vault = new PlayerWalletVault(db, network, keyring);
   const alice = vault.ensure("alice"),
     bob = vault.ensure("bob"),
     payer = vault.ensure("payer"),
@@ -54,7 +63,7 @@ function fixture() {
   const request = async (_url: unknown, init?: RequestInit) => {
     const { method, params } = JSON.parse(String(init?.body));
     let result: unknown;
-    if (method === "getGenesisHash") result = GENESIS_HASHES.devnet;
+    if (method === "getGenesisHash") result = GENESIS_HASHES[network];
     else if (method === "getBalance")
       result = { context: { slot }, value: balances.get(params[0]) ?? 0 };
     else if (method === "getMinimumBalanceForRentExemption") result = 890_880;
@@ -88,7 +97,7 @@ function fixture() {
     } else throw new Error(`Unhandled RPC ${method}`);
     return new Response(JSON.stringify({ result }), { status: 200 });
   };
-  const rpc = new DevnetRPC("https://rpc.invalid", request);
+  const rpc = new DevnetRPC("https://rpc.invalid", request, network);
   const transactions = new DevnetTransactions(db, rpc);
   const signer = {
     sign: async (id: string, tx: string) => {
@@ -553,3 +562,272 @@ describe("SolSiege player wallets", () => {
     expect(settled.plan.treasury).toBe(treasury);
   });
 });
+
+async function heldAccountMatch(
+  network: PaymentNetwork,
+  mode: "1v1" | "2v2" = "1v1",
+  mixedFunding = false,
+) {
+  const ledger = new MatchLedger(":memory:", network);
+  const f = fixture(ledger.db, network);
+  const store = new LobbyStore();
+  const players = Array.from({ length: mode === "2v2" ? 4 : 2 }, (_, i) => {
+    const login = f.vault.ensure(`review-login-${i}`);
+    const player = store.identity(`Reviewer${i}`, login.address);
+    f.balances.set(f.vault.ensure(player.id).address, 10_000_000);
+    return player;
+  });
+  const room = store.create(players[0], { mode, stake: "0.001" });
+  for (const player of players.slice(1)) store.join(player, room.id);
+  ledger.open(room);
+  const provision = {
+    create: async (externalID: string) => ({
+      id: "pool",
+      address: f.pool.address,
+      externalID,
+    }),
+    find: async () => null,
+  };
+  const treasury = f.vault.ensure("treasury").address;
+  const service = () =>
+    new DevnetPayments(
+      f.db,
+      f.transactions,
+      provision,
+      f.signer,
+      f.payerConfig,
+      treasury,
+    );
+  const payments = service();
+  for (const [i, player] of players.entries()) {
+    if (mixedFunding && i === players.length - 1) {
+      const entry = await payments.prepare(room, player);
+      await payments.submit(
+        room.id,
+        player,
+        entry.entryID,
+        f.vault.sign(`review-login-${i}`, entry.transaction!),
+      );
+    } else {
+      await payments.fundFromBalance(room, player, f.wallets);
+    }
+  }
+  f.set({ finalized: true });
+  await f.wallets.tick();
+  await payments.tick();
+  payments.lock(room, room.members);
+  const lockedPool = ledger.lock(
+    room,
+    payments.payoutSeats(room.id, room.members),
+  );
+  ledger.verifying(room.id);
+  ledger.saveRecord({
+    info: {
+      gameID: room.id,
+      players: players.map((p, i) => ({
+        clientID: `client-${i}`,
+        persistentID: p.id,
+      })),
+    },
+    turns: [],
+  } as unknown as PartialGameRecord);
+  ledger.review(room.id, "Result verification interrupted.");
+  const enqueue = vi.fn();
+  const review = new MatchReview(ledger, payments, enqueue);
+  const ops = new Operations(
+    f.db,
+    payments,
+    Date.now,
+    undefined,
+    undefined,
+    review,
+  );
+  return {
+    ...f,
+    ledger,
+    room,
+    players,
+    lockedPool,
+    payments,
+    service,
+    enqueue,
+    review,
+    ops,
+  };
+}
+
+describe.each(["devnet", "mainnet"] as const)(
+  "account-funded result review (%s)",
+  (network) => {
+    it("queues replay once without changing destinations or permitting a competing refund", async () => {
+      const f = await heldAccountMatch(network);
+      expect(f.review.snapshot()[0]).toMatchObject({
+        canReplay: true,
+        canRefund: true,
+      });
+      const before = f.sends.length;
+      f.ops.reviewMatch(
+        f.room.id,
+        "replay",
+        f.alice.address,
+        "Retry saved result verification",
+      );
+      expect(f.enqueue).toHaveBeenCalledExactlyOnceWith(f.room.id);
+      expect(f.ledger.get(f.room.id)).toMatchObject({
+        state: "verifying",
+        participants: f.lockedPool.participants,
+      });
+      expect(() => f.review.act(f.room.id, "replay")).toThrow(
+        "recorded result",
+      );
+      expect(() => f.review.act(f.room.id, "refund")).toThrow(
+        "recorded result",
+      );
+      expect(f.sends).toHaveLength(before);
+      expect(
+        f.db
+          .prepare(
+            "SELECT action,result FROM operation_audit ORDER BY rowid LIMIT 1",
+          )
+          .get(),
+      ).toMatchObject({ action: "review_replay", result: "queued" });
+    });
+
+    it.each([
+      ["1v1", false],
+      ["1v1", true],
+      ["2v2", false],
+    ] as const)(
+      "refunds original %s funding wallets after recovery (mixed: %s)",
+      async (mode, mixed) => {
+        const f = await heldAccountMatch(network, mode, mixed);
+        expect(f.review.snapshot()[0].canRefund).toBe(true);
+        f.ops.reviewMatch(
+          f.room.id,
+          "refund",
+          f.alice.address,
+          "Recording could not produce a verified result",
+        );
+        const expected = f.lockedPool.participants.map((p) => ({
+          playerID: p.id,
+          wallet: p.wallet,
+          lamports: 1_000_000,
+        }));
+        expect(f.ledger.get(f.room.id)).toMatchObject({
+          state: "refund_pending",
+          feeLamports: 0,
+          payouts: expected,
+        });
+        const restarted = f.service();
+        restarted.recover((id) => f.ledger.get(id));
+        await restarted.tick();
+        await restarted.tick();
+        expect(restarted.refundsComplete(f.room.id)).toBe(true);
+        const rows = f.db
+          .prepare("SELECT body FROM devnet_entries WHERE match_id=?")
+          .all(f.room.id);
+        expect(rows).toHaveLength(f.players.length);
+        for (const row of rows) {
+          const entry = JSON.parse(String(row.body));
+          const job = f.transactions.get(`refund:${entry.id}`)!;
+          expect(job.state).toBe("finalized");
+          expect(restarted.status(f.room.id, entry.playerID).state).toBe(
+            "refunded",
+          );
+          const message = getCompiledTransactionMessageDecoder().decode(
+            getTransactionDecoder().decode(
+              Buffer.from(job.transaction, "base64"),
+            ).messageBytes,
+          );
+          if (message.version !== 0)
+            throw new Error("Expected a version-0 refund transaction");
+          expect(message.staticAccounts[0]).toBe(f.payerConfig.address);
+          expect(message.instructions).toHaveLength(1);
+          const instruction = message.instructions[0];
+          expect(message.staticAccounts[instruction.programAddressIndex]).toBe(
+            "11111111111111111111111111111111",
+          );
+          expect(message.staticAccounts[instruction.accountIndices![0]]).toBe(
+            f.pool.address,
+          );
+          expect(message.staticAccounts[instruction.accountIndices![1]]).toBe(
+            expected.find((p) => p.playerID === entry.playerID)!.wallet,
+          );
+          expect(
+            getTransferSolInstructionDataDecoder().decode(instruction.data!)
+              .amount,
+          ).toBe(1_000_000n);
+        }
+        f.ledger.confirmPayment(f.room.id, "refunded");
+        const uniqueSends = new Set(f.sends).size;
+        await restarted.tick();
+        expect(new Set(f.sends).size).toBe(uniqueSends);
+        expect(() => f.review.act(f.room.id, "refund")).toThrow(
+          "recorded result",
+        );
+        expect(
+          f.db
+            .prepare(
+              "SELECT action,result FROM operation_audit ORDER BY rowid LIMIT 1",
+            )
+            .get(),
+        ).toMatchObject({ action: "review_refund", result: "queued" });
+      },
+    );
+
+    it.each([
+      "changed funding wallet",
+      "login wallet substituted",
+      "wrong amount",
+      "unfinalized deposit",
+      "existing refund",
+      "cancelled entry",
+    ])(
+      "blocks review for %s without signing or changing the result",
+      async (invalid) => {
+        const f = await heldAccountMatch(network);
+        expect(f.review.snapshot()[0].canRefund).toBe(true);
+        const row = f.db
+          .prepare("SELECT id,body FROM devnet_entries WHERE player_id=?")
+          .get(f.players[0].id)!;
+        const entry = JSON.parse(String(row.body));
+        if (invalid === "changed funding wallet")
+          entry.paymentWallet = f.alice.address;
+        if (invalid === "wrong amount") entry.lamports++;
+        if (invalid === "cancelled entry") entry.cancelled = true;
+        f.db
+          .prepare("UPDATE devnet_entries SET body=? WHERE id=?")
+          .run(JSON.stringify(entry), row.id);
+        if (invalid === "login wallet substituted") {
+          const pool = f.ledger.get(f.room.id)!;
+          pool.participants[0].wallet = f.players[0].wallet;
+          f.db
+            .prepare("UPDATE pools SET body=? WHERE id=?")
+            .run(JSON.stringify(pool), f.room.id);
+        }
+        if (invalid === "unfinalized deposit") {
+          const job = f.transactions.get(`deposit:${entry.id}`)!;
+          job.state = "pending";
+          f.db
+            .prepare("UPDATE chain_jobs SET body=? WHERE id=?")
+            .run(JSON.stringify(job), job.id);
+        }
+        if (invalid === "existing refund") {
+          f.db
+            .prepare("INSERT INTO chain_jobs(id,body) VALUES(?,?)")
+            .run(`refund:${entry.id}`, JSON.stringify({ state: "pending" }));
+        }
+        const before = f.sends.length;
+        expect(f.review.snapshot()[0]).toMatchObject({
+          canReplay: false,
+          canRefund: false,
+        });
+        for (const action of ["refund", "replay"] as const)
+          expect(() => f.review.act(f.room.id, action)).toThrow("reconciled");
+        expect(f.ledger.get(f.room.id)!.state).toBe("review");
+        expect(f.enqueue).not.toHaveBeenCalled();
+        expect(f.sends).toHaveLength(before);
+      },
+    );
+  },
+);

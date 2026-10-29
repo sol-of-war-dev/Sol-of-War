@@ -1,6 +1,6 @@
-# SolSiege devnet rehearsal
+# Sol of War devnet rehearsal
 
-Public deployment remains simulation. Do not change its mode just to test the new code. Use an isolated local state directory or a separate Railway test service/volume first.
+Use an isolated local state directory or a separate Railway test service/volume. Do not change the public service's payment mode to run a test. The dated provider notes below are historical, not evidence of current production settings or a completed funded game. See [PAYOUTS.md](PAYOUTS.md) for the player flow.
 
 ## Provider status — October 26, 2026
 
@@ -52,13 +52,13 @@ Allow the test site's origin in Privy. Privy app development-mode restrictions a
 
 ## Rehearsal
 
-Start with a private 1v1 and two tester wallets. Join, pay the displayed entry with each wallet, and wait for funded status and matching explorer receipts. At zero the frozen pool should be 0.495 SOL for two 0.25 entries. Complete the game. Verify the server replay result, one finalized atomic payout containing 0.495 to the winner and 0.005 to the treasury, and separate payment of the network fee.
+Start with a private 1v1 and two tester wallets. Join, pay the displayed entry with each wallet, and wait for funded status and matching explorer receipts. The frozen gross pool should be 0.5 devnet SOL for two 0.25 entries; the winner's net prize is 0.495. Complete the game. Verify the server replay result, one finalized atomic payout containing 0.495 to the winner and 0.005 to the treasury, and separate payment of the network fee.
 
 Repeat with a pre-start departure, a deposit still confirming at the deadline, a service restart during play, and a lost RPC response. Full entries should be refunded where applicable, and no job may produce duplicate transfers. Then rehearse 2v2 (0.495 to each winning teammate plus 0.01 treasury) and FFA. Inspect both participant history and protected admin totals.
 
 Expired or failed jobs require reconciliation; do not manually submit a replacement while the old signature may still finalize. Admin can check the saved signature and recover late finalization. A separate audited retry permits a new blockhash only after a finalized outgoing failure, preserving the original recipients/amounts. Rehearse both paths and confirm audit records. Also test pause, deployment draining, externally submitted exact deposits, unmatched transfers and encrypted backup restoration. See [OPERATIONS.md](OPERATIONS.md).
 
-Do not delete the SQLite database or signed transaction records while any entries are funded. The current release has no operator resubmission button or automatic importer for transfers sent outside the app. A failed transaction remains held after checking; that is not a successful refund or payout.
+Do not delete the SQLite database or signed transaction records while any entries are funded. The implementation supports exact issued-entry recovery and constrained retries of finalized outgoing failures, as described in [OPERATIONS.md](OPERATIONS.md). It does not permit blind replacements for uncertain payments. A held transaction is not a successful refund or payout.
 
 ## Local verification
 

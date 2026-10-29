@@ -18,6 +18,7 @@ import {
   verifySignature,
 } from "@solana/kit";
 import type { DatabaseSync } from "node:sqlite";
+import { InputError } from "../Store";
 import { GENESIS_HASHES, type PaymentNetwork } from "./Network";
 import { bindPaymentDatabase } from "./PaymentDatabase";
 import type { Transfer } from "./SettlementOutbox";
@@ -214,13 +215,35 @@ export class DevnetTransactions {
   }
   async persist(id: string, wire: Wire) {
     const job = await this.signedJob(id, wire);
-    // Competing callers must use the winning persisted transaction, never their own.
-    this.db
-      .prepare(
-        "INSERT INTO chain_jobs(id,body) VALUES(?,?) ON CONFLICT(id) DO NOTHING",
+    // A receipt can fund an entry or be returned, never both. Check and claim
+    // under the same SQLite write lock used to persist accidental-return plans.
+    this.db.exec("BEGIN IMMEDIATE");
+    try {
+      if (
+        id.startsWith("deposit:") &&
+        this.db
+          .prepare("SELECT 1 FROM sqlite_master WHERE name='unmatched_returns'")
+          .get() &&
+        this.db
+          .prepare("SELECT 1 FROM unmatched_returns WHERE signature=?")
+          .get(job.signature)
       )
-      .run(id, JSON.stringify(job));
-    return this.get(id)!;
+        throw new InputError(
+          "This deposit is reserved for return and cannot fund a match.",
+        );
+      // Competing callers use the winning persisted transaction, never their own.
+      this.db
+        .prepare(
+          "INSERT INTO chain_jobs(id,body) VALUES(?,?) ON CONFLICT(id) DO NOTHING",
+        )
+        .run(id, JSON.stringify(job));
+      const saved = this.get(id)!;
+      this.db.exec("COMMIT");
+      return saved;
+    } catch (error) {
+      this.db.exec("ROLLBACK");
+      throw error;
+    }
   }
   private save(job: ChainJob) {
     const current = this.get(job.id);
