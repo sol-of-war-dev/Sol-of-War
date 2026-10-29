@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: frontpot-demo
+    runtime: node
+    plan: free
+    buildCommand: npm ci --ignore-scripts && npm run build:demo
+    startCommand: npm run start:demo
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_VERSION
+        value: 24.15.0
+      - key: GAME_ENV
+        value: dev
+      - key: NUM_WORKERS
+        value: 1
+      - key: GIT_COMMIT
+        value: DEV
+      - key: DOMAIN
+        value: localhost

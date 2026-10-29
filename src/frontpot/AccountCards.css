@@ -1,0 +1,528 @@
+/* Shared account surfaces adapted from the supplied wallet-card reference. */
+.sc-account {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 28px 0 56px;
+}
+.sc-nav {
+  display: flex;
+  gap: 6px;
+  padding: 5px;
+  border: 1px solid #42334e;
+  border-radius: 15px;
+  background: #1a1125;
+  width: fit-content;
+  margin: 24px 0;
+}
+.sc-nav a {
+  color: #bdb1ca;
+  text-decoration: none;
+  padding: 10px 25px;
+  border-radius: 11px;
+  font-weight: 600;
+}
+.sc-nav a[aria-current] {
+  color: #fff4e5;
+  background: #63350f;
+}
+.sw-wallet h1 {
+  font-size: clamp(28px, 4vw, 38px);
+  letter-spacing: -0.035em;
+  margin: 0 0 8px;
+}
+.sc-subtitle {
+  color: #bdb1ca;
+  margin: 0 0 28px;
+}
+.sw-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
+  gap: 26px;
+  align-items: start;
+}
+.sc-wallet-card {
+  background: #1b1028;
+  border: 1px solid #493352;
+  color: #f7f2fa;
+  border-radius: 28px;
+  padding: 24px;
+  box-shadow: 0 16px 48px #0003;
+}
+.sc-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 22px;
+  font-weight: 650;
+  font-size: 14px;
+}
+.sc-network {
+  color: #baa9c8;
+  border: 1px solid #4a3559;
+  border-radius: 20px;
+  padding: 5px 9px;
+  font-size: 11px;
+}
+.sc-pastel {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  border-radius: 16px;
+  padding: 18px;
+  margin-bottom: 12px;
+  border: 1px solid #624124;
+  font-size: 14px;
+}
+.sc-pastel strong {
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+.sc-rose {
+  background: linear-gradient(110deg, #3e271e, #30201e);
+}
+.sc-lilac {
+  background: linear-gradient(110deg, #30203e, #24182f);
+  border-color: #4c355f;
+}
+.sc-available {
+  border: 1px solid #44304e;
+  border-radius: 19px;
+  padding: 23px 18px;
+  margin: 24px 0 20px;
+  background: #120b1c;
+}
+.sc-balance-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #baa9c8;
+  font-size: 14px;
+}
+.sc-quiet {
+  background: none;
+  border: 0;
+  color: #c4b1cf;
+  padding: 8px;
+  font: inherit;
+}
+.sc-total {
+  display: block;
+  font-size: clamp(30px, 4vw, 44px);
+  letter-spacing: -0.045em;
+  line-height: 1.25;
+  margin: 14px 0 8px;
+  overflow-wrap: anywhere;
+}
+.sc-total small {
+  font-size: 17px;
+  color: #c4b1cf;
+  letter-spacing: 0;
+  font-weight: 500;
+}
+.sc-currency {
+  font-size: 14px;
+  color: #ffa134;
+}
+.sc-actions {
+  display: flex;
+  gap: 10px;
+}
+.sc-actions button {
+  flex: 1;
+  border: 1px solid #51365e;
+  border-radius: 14px;
+  padding: 14px;
+  color: #e9dfef;
+  background: #302039;
+  font: inherit;
+  font-weight: 650;
+}
+.sc-actions button.selected {
+  background: #ef8517;
+  color: #201005;
+  border-color: #ff9b28;
+}
+.sc-refresh {
+  display: block;
+  margin: 16px auto;
+  padding: 8px 14px;
+  border: 0;
+  background: none;
+  color: #b8a6c5;
+  font: inherit;
+  font-size: 13px;
+}
+.sc-profile-link {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  border: 1px solid #44304e;
+  border-radius: 16px;
+  padding: 17px;
+  text-decoration: none;
+  color: #eee5f5;
+}
+.sc-profile-link span {
+  color: #baa9c8;
+  font-size: 12px;
+}
+.sc-profile-link strong {
+  overflow-wrap: anywhere;
+}
+.sw-wallet .sc-detail {
+  margin: 0;
+  padding: 26px;
+  border: 1px solid #45344f;
+  border-radius: 24px;
+  background: #1b1226;
+}
+.sw-wallet .sc-detail[hidden] {
+  display: none;
+}
+.sc-detail p {
+  color: #bfb2cb;
+  font-size: 14px;
+  line-height: 1.7;
+}
+.sc-detail h2,
+.sc-activity h2 {
+  font-size: 21px;
+  margin: 0 0 14px;
+}
+.sc-detail .sw-address {
+  padding: 16px;
+  background: #110b1b;
+  border: 1px solid #3a2c46;
+  border-radius: 13px;
+  line-height: 1.6;
+  font-size: 14px;
+}
+.sc-detail .fp-primary {
+  font-size: 15px;
+  padding: 14px 20px;
+  border-radius: 13px;
+}
+.sc-detail label {
+  font-size: 14px;
+}
+.sc-detail .sw-confirm {
+  align-items: flex-start;
+  line-height: 1.5;
+}
+.sc-detail .sw-confirm input {
+  flex-shrink: 0;
+  margin-top: 4px;
+  accent-color: #ff981f;
+}
+.sc-activity {
+  margin-top: 28px;
+  padding: 26px;
+  background: #1b1226;
+  border: 1px solid #45344f;
+  border-radius: 24px;
+}
+.sc-activity > p {
+  color: #bfb2cb;
+  font-size: 14px;
+}
+.sc-custody {
+  color: #a89bb5;
+  line-height: 1.7;
+  max-width: 760px;
+  margin: 20px auto 0;
+  text-align: center;
+}
+.sc-status {
+  padding: 16px;
+  border: 1px solid #62516d;
+  border-radius: 14px;
+  background: #2b1c37;
+}
+.sc-account button {
+  cursor: pointer;
+}
+.sc-account button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+.sc-account :is(button, a, input):focus-visible {
+  outline: 2px solid #ff981f;
+  outline-offset: 4px;
+}
+.sp-page.sc-account .sp-header {
+  border-radius: 26px 26px 0 0;
+  background: linear-gradient(115deg, #2b1837, #170d23);
+  color: #fff5e9;
+  border-color: #493352;
+  padding: 32px;
+}
+.sp-page.sc-account .sp-person p {
+  color: #b8a8c4;
+}
+.sp-page.sc-account .sp-person .sp-bio {
+  color: #d3c4de;
+}
+.sp-page.sc-account .sp-header .sp-secondary {
+  background: #33203f;
+  color: #f0e6f6;
+  border-color: #594365;
+  border-radius: 12px;
+}
+.sp-page.sc-account .sp-tabs {
+  background: #1b1028;
+  border-color: #493352;
+  border-radius: 0 0 24px 24px;
+  gap: 22px;
+  padding: 0 26px;
+}
+.sp-page.sc-account .sp-tabs button {
+  color: #bbaac8;
+}
+.sp-page.sc-account .sp-tabs button.active {
+  color: #ffa134;
+  border-color: #ef8517;
+}
+.sp-page.sc-account .sp-stats > div {
+  background: #30201e;
+  border-color: #624124;
+  color: #fff4e7;
+  border-radius: 19px;
+  text-align: left;
+}
+.sp-page.sc-account .sp-stats > div:nth-child(even) {
+  background: #291b37;
+  border-color: #4c355f;
+}
+.sp-page.sc-account .sp-stats span {
+  color: #c2afcc;
+}
+.sp-page.sc-account .sp-panel {
+  border-radius: 24px;
+  background: #1b1226;
+  border-color: #45344f;
+}
+.sp-page.sc-account .sp-mode-stats > div {
+  border-radius: 16px;
+  background: #291e36;
+}
+@media (max-width: 760px) {
+  .sw-layout {
+    grid-template-columns: 1fr;
+  }
+  .sc-account {
+    padding-top: 20px;
+  }
+  .sc-wallet-card {
+    padding: 20px;
+  }
+  .sw-wallet .sc-detail,
+  .sc-activity {
+    padding: 20px;
+  }
+  .sp-page.sc-account .sp-header {
+    padding: 22px;
+  }
+  .sp-page.sc-account .sp-tabs {
+    padding: 0 12px;
+    gap: 5px;
+  }
+  .sp-page.sc-account .sp-stats > div {
+    padding: 20px;
+  }
+}
+
+.sp-balance-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 10px 14px;
+  border: 1px solid #624124;
+  border-radius: 14px;
+  background: #2b1c20;
+  color: #fff0dd;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.sp-balance-badge svg {
+  width: 19px;
+  height: 19px;
+  flex-shrink: 0;
+  color: #ff9b28;
+}
+.sp-balance-badge:focus-visible {
+  outline: 2px solid #ff9b28;
+  outline-offset: 3px;
+}
+.sp-balance-badge:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+@media (max-width: 700px) {
+  .fp-nav-right {
+    gap: 7px;
+  }
+  .sp-balance-badge {
+    padding: 8px 10px;
+    font-size: 12px;
+    gap: 5px;
+  }
+  .sp-account .fp-wallet {
+    padding: 7px 9px;
+    gap: 6px;
+  }
+  .sp-account .fp-wallet > span:last-child {
+    max-width: 76px;
+  }
+  .fp-nav-right > .fp-icon-button {
+    display: none;
+  }
+  .fp-brand {
+    font-size: 20px;
+    gap: 6px;
+  }
+  .fp-brand .fp-mark {
+    width: 24px;
+  }
+}
+
+@media (max-width: 600px) {
+  .fp-nav-inner {
+    column-gap: 8px;
+    row-gap: 10px;
+    padding: 14px 12px 0;
+  }
+  .fp-brand {
+    font-size: 18px;
+  }
+  .fp-nav-right {
+    gap: 6px;
+    min-width: 0;
+  }
+  .sp-account .fp-wallet > span:last-child {
+    max-width: 60px;
+  }
+  .sp-account .fp-wallet .sp-avatar {
+    width: 26px;
+    height: 26px;
+  }
+  .sp-balance-badge {
+    min-height: 38px;
+  }
+  .sp-balance-badge span {
+    max-width: 86px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+@media (max-width: 360px) {
+  .fp-brand > span:last-child {
+    display: none;
+  }
+}
+
+.sw-deposit-qr {
+  display: block;
+  width: 184px;
+  height: 184px;
+  max-width: 100%;
+  margin: 22px auto;
+  background: white;
+  border-radius: 12px;
+  padding: 8px;
+}
+
+.sw-sol-icon {
+  width: 0.8em;
+  height: 0.8em;
+  margin-right: 0.22em;
+  color: #ffac32;
+  vertical-align: -0.03em;
+}
+.sc-detail details {
+  margin-top: 24px;
+}
+.sc-detail summary {
+  cursor: pointer;
+  color: #ffac32;
+}
+
+/* Keep account and balance controls aligned, regardless of profile avatar. */
+.fp-nav-right .sp-balance-badge,
+.fp-nav-right .sp-account .fp-wallet {
+  box-sizing: border-box;
+  height: 42px;
+  min-height: 42px;
+  padding: 10px 14px;
+  gap: 8px;
+  border-radius: 14px;
+  font-size: 14px;
+}
+.fp-nav-right .sp-account .fp-wallet .fp-icon {
+  width: 19px;
+  height: 19px;
+  flex-shrink: 0;
+}
+@media (max-width: 700px) {
+  .fp-nav-right .sp-balance-badge,
+  .fp-nav-right .sp-account .fp-wallet {
+    height: 38px;
+    min-height: 38px;
+    padding: 8px 10px;
+    gap: 5px;
+    font-size: 12px;
+  }
+}
+
+.sw-details {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.sw-details > .sc-profile-link {
+  background: #1b1028;
+}
+
+.sw-details input:not([type="checkbox"]) {
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+.sw-change-wallet {
+  display: block;
+  margin: 12px 0 20px;
+}
+
+.sw-destination-field {
+  position: relative;
+  display: block;
+}
+.sw-destination-field input {
+  width: 100%;
+  padding-right: 66px;
+}
+.sw-destination-field .sw-confirm-address {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 42px;
+  height: 42px;
+  min-height: 0;
+  padding: 10px;
+  display: grid;
+  place-items: center;
+}
+.sw-confirm-address svg {
+  width: 22px;
+  height: 22px;
+}
+.sw-destination-field input[readonly] {
+  color: #bdb0c8;
+}

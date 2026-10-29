@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#13091e" />
+    <meta
+      name="description"
+      content="Play Sol of War: multiplayer territory strategy with Solana wallet profiles, custom lobbies, free-for-all, 1v1 and 2v2."
+    />
+    <title>Sol of War</title>
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Sol of War" />
+    <meta property="og:title" content="Sol of War" />
+    <meta
+      property="og:description"
+      content="The world is up for grabs. Play Sol of War."
+    />
+    <meta
+      property="og:image"
+      content="https://solofwar.fun/social/sol-of-war-preview-v3.png"
+    />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:type" content="image/png" />
+    <meta
+      property="og:image:alt"
+      content="Sol of War — The world is up for grabs."
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@solofwar" />
+    <meta name="twitter:title" content="Sol of War" />
+    <meta
+      name="twitter:description"
+      content="The world is up for grabs. Play Sol of War."
+    />
+    <meta
+      name="twitter:image"
+      content="https://solofwar.fun/social/sol-of-war-share-loop-v2.gif"
+    />
+    <meta
+      name="twitter:image:alt"
+      content="Sol of War — The world is up for grabs."
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      href="/src/frontpot/assets/sol-of-war-symbol.png"
+    />
+    <script>
+      window.BOOTSTRAP_CONFIG = {
+        gameEnv: "dev",
+        gitCommit: "DEV",
+        numWorkers: 1,
+        turnstileSiteKey: "",
+        jwtAudience: "localhost",
+        instanceId: "frontpot",
+        assetManifest: {},
+        cdnBase: "",
+      };
+    </script>
+    <style>
+      html {
+        background: #100819;
+      }
+      #sow-boot {
+        position: fixed;
+        inset: 0;
+        z-index: 2147483647;
+        display: grid;
+        place-items: center;
+        background: radial-gradient(ellipse at center, #291331 0%, #100819 65%);
+        color: #e9e1ef;
+        transition: opacity 180ms ease;
+      }
+      #sow-boot::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        opacity: 0.14;
+        background: repeating-linear-gradient(
+          0deg,
+          transparent 0 3px,
+          #000 3px 4px
+        );
+      }
+      .sow-boot-content {
+        width: min(340px, 76vw);
+        text-align: center;
+        position: relative;
+      }
+      .sow-boot-symbol {
+        width: 66px;
+        height: 66px;
+        object-fit: contain;
+        margin: 0 auto 22px;
+        display: block;
+        animation: sow-boot-glow 1.2s ease-in-out infinite alternate;
+      }
+      .sow-boot-wordmark {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+      .sow-boot-track {
+        height: 12px;
+        margin-top: 35px;
+        padding: 3px;
+        border: 1px solid #995b24;
+        background: #1c1027;
+        box-sizing: content-box;
+      }
+      .sow-boot-fill {
+        height: 100%;
+        width: 12%;
+        background: repeating-linear-gradient(
+          90deg,
+          #ff9b14 0 12px,
+          transparent 12px 16px
+        );
+        animation: sow-boot-load 1.2s steps(10, end) forwards;
+      }
+      #sow-boot p {
+        font:
+          600 12px/1.5 system-ui,
+          sans-serif;
+        letter-spacing: 2px;
+        margin-top: 16px;
+        text-transform: uppercase;
+      }
+      #sow-boot.done {
+        opacity: 0;
+        pointer-events: none;
+      }
+      #sow-boot.done .sow-boot-fill {
+        animation: none;
+        width: 100%;
+      }
+      #sow-boot a {
+        color: #ffad4d;
+        font:
+          14px system-ui,
+          sans-serif;
+      }
+      @keyframes sow-boot-glow {
+        to {
+          filter: brightness(1.15) drop-shadow(0 0 12px #ff900055);
+        }
+      }
+      @keyframes sow-boot-load {
+        to {
+          width: 88%;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #sow-boot,
+        .sow-boot-symbol,
+        .sow-boot-fill {
+          animation: none;
+          transition: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="sow-boot"
+      role="status"
+      aria-live="polite"
+      aria-label="Loading Sol of War"
+    >
+      <div class="sow-boot-content">
+        <img
+          class="sow-boot-symbol"
+          src="/src/frontpot/assets/sol-of-war-symbol.png"
+          alt=""
+        />
+        <img
+          class="sow-boot-wordmark"
+          src="/src/frontpot/assets/sol-of-war-wordmark.png"
+          alt="Sol of War"
+        />
+        <div class="sow-boot-track" aria-hidden="true">
+          <div class="sow-boot-fill"></div>
+        </div>
+        <p id="sow-boot-label">Loading battlefield</p>
+        <a id="sow-boot-retry" href="" hidden>Reload page</a>
+        <noscript><p>Enable JavaScript to play.</p></noscript>
+      </div>
+    </div>
+    <script>
+      (() => {
+        const boot = document.getElementById("sow-boot");
+        const started = performance.now();
+        const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const fallback = setTimeout(() => {
+          document.getElementById("sow-boot-label").textContent =
+            "Taking longer than expected";
+          document.getElementById("sow-boot-retry").hidden = false;
+        }, 10000);
+        window.addEventListener(
+          "sow:ready",
+          () => {
+            clearTimeout(fallback);
+            setTimeout(
+              () => {
+                boot.classList.add("done");
+                setTimeout(() => boot.remove(), reduced ? 0 : 180);
+              },
+              Math.max(0, (reduced ? 0 : 600) - (performance.now() - started)),
+            );
+          },
+          { once: true },
+        );
+      })();
+    </script>
+    <lang-selector hidden></lang-selector>
+    <div id="frontpot"></div>
+    <user-setting id="menu-settings"></user-setting>
+    <div id="game-components">
+      <!-- Game components -->
+      <div id="app"></div>
+
+      <!-- Bottom HUD: <sm=column, sm..lg=2col (HUD left | events right), lg+=3col grid centered -->
+      <div
+        class="fixed bottom-0 left-0 w-full z-[200] flex flex-col pointer-events-none sm:flex-row sm:items-end lg:grid lg:grid-cols-[1fr_500px_1fr] lg:items-end min-[1200px]:px-4"
+        style="
+          padding-bottom: env(safe-area-inset-bottom);
+          padding-left: env(safe-area-inset-left);
+          padding-right: env(safe-area-inset-right);
+        "
+      >
+        <!-- HUD: <sm contents (children join outer flex), sm+ flex-col 460px, lg+ col-2 -->
+        <div
+          class="contents sm:flex sm:flex-col sm:pointer-events-none w-full sm:w-[500px] lg:col-start-2 sm:z-10"
+        >
+          <attacks-display
+            class="w-full pointer-events-auto order-1 sm:order-none"
+          ></attacks-display>
+          <tutorial-panel
+            class="hidden w-full order-3 sm:order-none"
+          ></tutorial-panel>
+          <div
+            class="pointer-events-auto bg-gray-800/92 backdrop-blur-sm sm:rounded-tr-lg lg:rounded-t-lg min-[1200px]:rounded-lg shadow-lg order-3 sm:order-none"
+          >
+            <control-panel class="w-full"></control-panel>
+            <unit-display class="hidden lg:block w-full"></unit-display>
+          </div>
+        </div>
+
+        <!-- events+chat: <sm between attacks and control (order-2), sm+ right side, lg+ col-3 -->
+        <div
+          class="flex flex-col pointer-events-none items-end order-2 sm:order-none sm:flex-1 lg:col-start-3 lg:self-end lg:justify-end"
+        >
+          <chat-display
+            class="w-full sm:w-auto pointer-events-auto"
+          ></chat-display>
+          <events-display
+            class="w-full sm:w-auto pointer-events-auto"
+          ></events-display>
+          <actionable-events
+            class="w-full sm:w-auto pointer-events-auto"
+          ></actionable-events>
+        </div>
+      </div>
+
+      <!-- Game modals and overlays -->
+      <emoji-table></emoji-table>
+      <build-menu></build-menu>
+      <win-modal></win-modal>
+      <new-lobby-prompt></new-lobby-prompt>
+      <game-starting-modal></game-starting-modal>
+      <div class="flex flex-col items-end fixed top-0 right-0 z-1000 gap-2">
+        <game-right-sidebar></game-right-sidebar>
+        <replay-panel></replay-panel>
+      </div>
+      <settings-modal></settings-modal>
+      <!-- The in-game settings modal: the same component as #page-settings, but
+         non-inline, and mounted out here because the page's copy sits in a
+         subtree that is hidden during a match. It must stay AFTER
+         #page-settings in document order: ModalRouter.routeFromHash and
+         Main.ts both resolve this component with
+         document.querySelector("user-setting"), which takes the first match. -->
+      <user-setting id="game-settings"></user-setting>
+      <player-panel></player-panel>
+      <spawn-timer></spawn-timer>
+      <immunity-timer></immunity-timer>
+      <in-game-promo></in-game-promo>
+      <alert-frame></alert-frame>
+      <chat-modal></chat-modal>
+      <multi-tab-modal></multi-tab-modal>
+      <game-left-sidebar></game-left-sidebar>
+      <performance-overlay></performance-overlay>
+      <player-info-overlay></player-info-overlay>
+      <heads-up-message></heads-up-message>
+    </div>
+    <script type="module" src="/src/frontpot/App.ts"></script>
+  </body>
+</html>
