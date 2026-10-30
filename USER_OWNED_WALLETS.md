@@ -39,6 +39,30 @@ A user-owned wallet also depends on Privy, account authentication, the browser/d
 
 Local automated tests use generated keys and mocked RPC/provider responses. They establish regression coverage, not successful live provider access or mainnet custody safety.
 
+## Isolated devnet rehearsal tools
+
+Use a clean source checkout with no `.env` file and a separate Privy development app. Keep credentials and all fixture state in a dedicated directory outside the checkout, with directory permissions `0700` and JSON file permissions `0600`. The helpers reject this project's production app ID, check Solana's devnet genesis, and never inherit production secrets into the rehearsal server. Do not reuse production wallet keys, backups, databases, fee payers or pool authorization keys.
+
+Create `privy-app.json` privately with `appId` and `appSecret`, then run:
+
+```sh
+node scripts/prepareUserWalletDevnet.mjs /private/rehearsal/privy-app.json /private/rehearsal TESTER_PUBLIC_WALLET
+```
+
+This provisions a separate operator-owned test fee payer and a restrictive pool transfer policy. It does not create a personal wallet or add any personal-wallet signers. The helper saves an uncertain-write marker before provider provisioning; reconcile a pending operation instead of deleting the marker and provisioning again. Configure the new app's allowed origin as `http://127.0.0.1:5312`, enable identity tokens, retain provider confirmation modals and verify TEE support.
+
+Fund the printed fixture address with free devnet SOL from the official faucet. Then:
+
+```sh
+node --import tsx scripts/fundUserWalletDevnet.ts /private/rehearsal
+node --import tsx scripts/checkUserWalletDevnetProvider.ts /private/rehearsal
+node scripts/runUserWalletDevnet.mjs /private/rehearsal
+```
+
+The first helper funds the fee payer and treasury. The second verifies that the pool policy rejects an unlisted recipient, then signs and finalizes a small allowed return transfer using the real provider. These transactions use stable identifiers and the application's persisted transaction engine. Reruns reconcile the saved transfer. The optional local traffic observer records only token-presence booleans and HTTP status, never tokens, cookies or raw request bodies.
+
+The test user must sign in through the local app and explicitly create their fresh wallet. Verify its provider ownership before funding it with `fundUserWalletDevnet.ts /private/rehearsal VERIFIED_TEST_WALLET_ADDRESS`. Add only verified rehearsal recipients to the separate test **pool** policy when testing refunds and payouts; do not attach that policy or its authorization key to a personal wallet. Complete all activation evidence above. Successful operator-wallet signing by itself does not establish user-wallet ownership, export, withdrawal or migration safety.
+
 ## Primary provider references
 
 - [Wallet export](https://docs.privy.io/wallets/wallets/export)
