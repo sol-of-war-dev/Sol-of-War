@@ -366,7 +366,8 @@ export function initializePrivy(
         ...(clientId ? { clientId } : {}),
         config: {
           // Privy's confirmation UI uses these for transaction simulation and
-          // fees. Keep provider credentials out of browser RPC configuration.
+          // fees. Mainnet's public RPC rejects browser origins; use Privy's
+          // app-scoped RPC (the SDK default), with only the public app ID.
           solana: {
             rpcs: {
               "solana:devnet": {
@@ -377,9 +378,11 @@ export function initializePrivy(
                 blockExplorerUrl: "https://explorer.solana.com",
               },
               "solana:mainnet": {
-                rpc: createSolanaRpc("https://api.mainnet-beta.solana.com"),
+                rpc: createSolanaRpc(
+                  `https://solana-mainnet.rpc.privy.systems?privyAppId=${encodeURIComponent(appId)}`,
+                ),
                 rpcSubscriptions: createSolanaRpcSubscriptions(
-                  "wss://api.mainnet-beta.solana.com",
+                  `wss://solana-mainnet.rpc.privy.systems?privyAppId=${encodeURIComponent(appId)}`,
                 ),
                 blockExplorerUrl: "https://explorer.solana.com",
               },
