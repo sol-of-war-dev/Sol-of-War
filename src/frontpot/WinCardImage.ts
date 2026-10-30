@@ -1,5 +1,6 @@
 import symbolUrl from "./assets/sol-of-war-symbol.png";
 import wordmarkUrl from "./assets/sol-of-war-wordmark.png";
+import { currencyLabel } from "./payments/Network";
 import { formatSol, type DemoWinResult } from "./WinResult";
 
 export type WinCardLabels = {
@@ -7,7 +8,6 @@ export type WinCardLabels = {
   mode: string;
   victory: string;
   prize: string;
-  demoSol: string;
   winner: string;
   stake: string;
   profit: string;
@@ -92,6 +92,7 @@ export async function createWinCardImage(
     292,
   );
   const free = result.stakeLamports === 0 || result.practice;
+  const currency = currencyLabel(result.network ?? "simulation").toUpperCase();
   text(
     (free ? "Victory" : labels.prize).toUpperCase(),
     56,
@@ -156,6 +157,18 @@ export async function createWinCardImage(
   }
   if (free)
     text(result.practice ? "PRACTICE" : "UNRANKED", 56, 357, 28, lime, 650);
+  else if (result.network !== "mainnet")
+    text(
+      result.network === "devnet"
+        ? "DEVNET · TEST SOL"
+        : "SIMULATED · DEMO SOL",
+      56,
+      357,
+      24,
+      lime,
+      650,
+      690,
+    );
   text(labels.winner, 56, 402, 24, muted, 500, 160);
   ctx.font = '600 26px "DM Sans", Arial, sans-serif';
   const pillWidth = Math.min(
@@ -180,12 +193,9 @@ export async function createWinCardImage(
         ["Entry", "Free"],
       ]
     : [
-        [labels.stake, `${formatSol(result.stakeLamports)} SOL`],
-        [labels.profit, `+${formatSol(result.profitLamports)} SOL`],
-        [
-          labels.pool,
-          `${formatSol(result.poolLamports - result.feeLamports)} SOL`,
-        ],
+        [labels.stake, `${formatSol(result.stakeLamports)} ${currency}`],
+        [labels.profit, `+${formatSol(result.profitLamports)} ${currency}`],
+        [labels.pool, `${formatSol(result.poolLamports)} ${currency}`],
       ];
   stats.forEach(([label, value], i) => {
     text(label.toUpperCase(), 56 + i * 365, 478, 18, muted, 600, 330);
@@ -194,13 +204,13 @@ export async function createWinCardImage(
 
   if (!free)
     text(
-      `Platform fee (1%): ${formatSol(result.feeLamports)} SOL deducted from the pool`,
+      `Platform fee (1%): ${formatSol(result.feeLamports)} ${currency}. Network fees are separate.`,
       56,
       581,
       20,
       muted,
       500,
-      920,
+      1088,
     );
   if (!free && result.network !== "mainnet")
     text("TEST MATCH", 1010, 596, 17, muted, 700, 140);

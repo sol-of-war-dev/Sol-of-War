@@ -69,19 +69,33 @@ The first helper funds the fee payer and treasury. The second verifies that the 
 
 The test user must sign in through the local app and explicitly create their fresh wallet. Verify its provider ownership before funding it with `fundUserWalletDevnet.ts /private/rehearsal VERIFIED_TEST_WALLET_ADDRESS`. Add only verified rehearsal recipients to the separate test **pool** policy when testing refunds and payouts; do not attach that policy or its authorization key to a personal wallet. Complete all activation evidence above. Successful operator-wallet signing by itself does not establish user-wallet ownership, export, withdrawal or migration safety.
 
+After verifying an approved test user's wallet, run the negative authorization check:
+
+```sh
+node --import tsx scripts/checkUserWalletServerAuthority.ts /private/rehearsal TEST_USER_SUBJECT TEST_WALLET_ID
+```
+
+This checks current user ownership and asks Privy to sign a valid devnet transfer using the application secret alone, then the application secret plus the isolated pool authorization key. Both must produce an authorization rejection. It never broadcasts either transaction and prints only sanitized evidence. This verifies the tested credentials against that wallet; it is not a proof against every possible compromise of the client, provider, or deployment.
+
 ### Recorded devnet evidence — October 30, 2026
 
-[Rehearsal receipts](evidence/user-wallet-devnet-2026-10-30.json) record a finalized 0.001 SOL withdrawal from the fresh personal wallet, its 0.000005 SOL network fee, an unsigned cancellation, and repeated recovery of the same finalized receipt without RPC calls. The agent operated the authenticated browser with the user's explicit permission for valueless devnet SOL; the server had no personal-wallet spending delegation. Three earlier signed requests expired and remain in review. These results do not establish mainnet safety or complete the outstanding winner-payout, late legacy payout, and external recovery checks.
+[Rehearsal receipts](evidence/user-wallet-devnet-2026-10-30.json) record a finalized 0.001 SOL withdrawal from the fresh personal wallet, its 0.000005 SOL network fee, an unsigned cancellation, and repeated recovery of the same finalized receipt without RPC calls. The agent operated the authenticated browser with the user's explicit permission for valueless devnet SOL; the server had no personal-wallet spending delegation. Three earlier signed requests expired and remain in review. These results do not establish mainnet safety or complete the outstanding late legacy payout check.
 
 The isolated test pool policy now includes the verified personal wallet as an allowed refund recipient, without changing that personal wallet's owner or signers. A separate private devnet backup bucket passed encrypted upload, readback, and restore checks; restored state remains held for chain reconciliation. Production configuration is unchanged.
 
-Match entry preparation now checks browser signing readiness before issuing a short-lived transaction. Reopening an expired unsigned entry returns a clear error and preserves the original request; it never silently substitutes a new blockhash. This addresses an issue observed during the real rehearsal. Winner payouts, late legacy payout recovery, and external recovery still need their recorded acceptance evidence.
+Match entry preparation now checks browser signing readiness before issuing a short-lived transaction. Reopening an expired unsigned entry returns a clear error and preserves the original request; it never silently substitutes a new blockhash. This addresses an issue observed during the real rehearsal. Late legacy payout recovery still needs recorded acceptance evidence.
 
 The migration rehearsal also found that the isolated pool/fee-payer policy rejects the Memo instruction used to bind legacy transfers to their request IDs. A fee-payer-only comparison accepted the native transfer without the memo and rejected it with the memo; neither diagnostic was broadcast. The attempted migration is saved as failed before broadcast. The user subsequently approved the isolated Memo rule. Readback confirmed the original transfer rule and owner were unchanged. New fee-payer-only checks accepted a bounded transfer with a memo while still rejecting an unlisted recipient and an amount above the limit. The wallet UI now validates the returned migration receipt, reports failed/review/pending/finalized states accurately, and updates the notice when a saved receipt finalizes.
 
 The approved migration then finalized: 0.02 devnet SOL moved from the legacy wallet to the registered user-owned wallet, with the operator fee payer covering its 0.00001 SOL network fee. The legacy balance reached zero. The earlier failed receipt remains saved and was not silently retried.
 
 A browser-approved 0.001 devnet SOL match entry also finalized. Leaving the waiting match returned the full 0.001 SOL to the same personal funding address, with no platform fee. The user paid the 0.000005 SOL deposit network fee; the operator fee payer covered the refund's 0.00001 SOL network fee. Independent finalized RPC checks confirmed both transfers and a zero pool balance. Public signatures, exact recipients, amounts, and slots are in the rehearsal receipts above. This verifies a waiting-match cancellation, not a winner settlement.
+
+One explicitly approved second test account was created in the isolated development app. Its fresh embedded wallet passed the ownership verifier and has no server spending signers. Privy returned HTTP 401 authorization rejections for both the app-secret-only signing attempt and the app-secret-plus-pool-key attempt against this wallet; neither transaction was broadcast. A cancelled two-player rehearsal returned the test opponent's full entry, while the other player's expired signed entry remains in review. Detaching Chrome's debugger and hard reloading allowed the main wallet frame to load and a fresh entry to finalize. The exact debugger interaction has not been isolated.
+
+A subsequent two-player match completed its server replay verification and winner settlement. Both 0.001 test SOL entries finalized; a single finalized transaction paid 0.00198 test SOL to the verified winning personal wallet and 0.00002 test SOL to the treasury. The operator paid the 0.00001 test SOL network fee, and the pool balance reached zero. The remaining client rejoined through the ordinary invite-code flow before reporting the result. See the [deployment and payment evidence](SECURITY_EVIDENCE.md) for verification links and the remaining activation limits.
+
+The user subsequently imported the privately exported key into Phantom and sent 0.001 test SOL while the local application server was stopped. Finalized RPC verification confirmed the exact personal-wallet source, recipient, amount, network fee, and resulting balance while the application remained unavailable. This verifies independent recovery without giving the application a personal-wallet signer.
 
 ## Primary provider references
 

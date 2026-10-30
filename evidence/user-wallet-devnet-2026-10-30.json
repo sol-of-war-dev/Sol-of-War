@@ -1,7 +1,7 @@
 {
   "scope": "Isolated devnet rehearsal, not an independent audit or mainnet result",
   "testedCommit": "5c245fba21da4b48c00cf457057431dc51f2f4ef",
-  "walletOwnership": "Provider metadata verified sole user ownership, threshold one, no server authorization keys, additional signers or policies. Protected export was reported successful by user; external recovery has not been tested.",
+  "walletOwnership": "Provider metadata verified sole user ownership, threshold one, no server authorization keys, additional signers or policies. The user completed protected export and independently sent devnet SOL from the imported Phantom wallet while the local application was offline; the transfer was independently verified finalized.",
   "withdrawal": {
     "network": "devnet",
     "genesis": "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG",
@@ -59,7 +59,9 @@
   "limitations": [
     "Three earlier signed withdrawals expired and remain in review. No automatic replacement payments.",
     "Finalized-receipt reconciliation was exercised twice against the real stored receipt with RPC calls disabled; this does not test every ambiguous network failure.",
-    "Winner payout, late legacy payout recovery, external key recovery and production activation remain outstanding. Browser signing initialization has been intermittent after reload; the successful entry followed a reload and foreground interaction, which does not establish the cause."
+    "One earlier signed match entry expired and remains in review; its opponent was refunded.",
+    "Late legacy payout recovery and production activation remain outstanding.",
+    "Browser signing initialization loaded after Chrome debugger detachment and a hard reload. The exact interaction has not been isolated."
   ],
   "latestRehearsalCommit": "d262e1388d49e6062ed7c9bae2ed9b7ec1bf462b",
   "migration": {
@@ -166,5 +168,202 @@
         "status": 400
       }
     ]
-  }
+  },
+  "secondTestUser": {
+    "checkedAt": "2026-10-30T18:35:34.070Z",
+    "network": "devnet",
+    "appId": "cmvufc1a800000gktrq44unsi",
+    "name": "DevnetTest2",
+    "subject": "did:privy:cmvvb9vgy00xr0hjzg9kloljf",
+    "loginAddress": "8AEKYKbJwtK2cBhjcHna4iTQW7ktiJayLQHZ8YJz9zUK",
+    "playerID": "60670f18-2594-4949-9f8f-38a3a3ca9cc5",
+    "walletID": "b5h9fubx07laiepnyytlarty",
+    "walletAddress": "4ufWpc8JJjK11cPs2EZhGxfrBdQ1RMefz3QHnUJmyzLk",
+    "soleUserOwnershipVerified": true,
+    "serverSpendingSigners": 0,
+    "serverReceivedIdentityTokenOnly": true,
+    "fixtureControlledTestUser": true
+  },
+  "secondTestPoolPolicy": {
+    "checkedAt": "2026-10-30T18:35:58.683Z",
+    "appId": "cmvufc1a800000gktrq44unsi",
+    "policyId": "sgjuc9dg96fm9kftgbw5i4io",
+    "changed": true,
+    "allowedRefundRecipient": "4ufWpc8JJjK11cPs2EZhGxfrBdQ1RMefz3QHnUJmyzLk",
+    "ownerUnchanged": true,
+    "originalControlsRetained": true,
+    "personalWalletSigningAuthorityChanged": false,
+    "localTesters": [
+      "CVT7yhhxz1bY1o6ZeL3U7eWNpTppbzdAjv89iDCm8oZM",
+      "HQqdAGjDJbkxGFdbf7XqZgNvC3JPbdKUGKpU3pbQgnPZ",
+      "8AEKYKbJwtK2cBhjcHna4iTQW7ktiJayLQHZ8YJz9zUK"
+    ],
+    "productionApplicationChanged": false
+  },
+  "serverUserWalletSigningDenied": {
+    "checkedAt": "2026-10-30T19:12:28.180Z",
+    "network": "devnet",
+    "appId": "cmvufc1a800000gktrq44unsi",
+    "walletID": "b5h9fubx07laiepnyytlarty",
+    "address": "4ufWpc8JJjK11cPs2EZhGxfrBdQ1RMefz3QHnUJmyzLk",
+    "results": [
+      {
+        "credential": "app secret alone",
+        "httpStatus": 401,
+        "providerCode": null,
+        "authorizationRejection": true
+      },
+      {
+        "credential": "app secret plus isolated pool authorization key",
+        "httpStatus": 401,
+        "providerCode": null,
+        "authorizationRejection": true
+      }
+    ],
+    "broadcastAttempted": false,
+    "serverSpendingDelegationAdded": false,
+    "productionChanged": false,
+    "reproducedBy": "scripts/checkUserWalletServerAuthority.ts",
+    "reproducedAt": "2026-10-30T19:13:51.621Z"
+  },
+  "cancelledWinnerAttempt": {
+    "checkedAt": "2026-10-30T19:16:27.425Z",
+    "network": "devnet",
+    "matchID": "ca771946",
+    "fixtureEntryID": "8a3a05f2-a695-45e2-bc18-e2ed526b10f8",
+    "fixtureEntryState": "refunded",
+    "refund": {
+      "signature": "sYQvjZc5vZTNZawGP7Xnq7H6xp62VAFBCJiRMRwH3hw7w5mNp5Ap9NHYxFwnGzhSZrEdBP1vmCkhZ9PKCck79H5",
+      "slot": 516873639,
+      "state": "finalized",
+      "feeLamports": 10000,
+      "transfers": [
+        {
+          "destination": "4ufWpc8JJjK11cPs2EZhGxfrBdQ1RMefz3QHnUJmyzLk",
+          "lamports": 1000000,
+          "source": "D6J66isWNk1wmRAaHtfueK7JpzQWsmtF8WVzjei834j9"
+        }
+      ]
+    },
+    "otherEntry": {
+      "entryID": "88aec0bf-7fb4-44c8-ac16-6de65f52eee1",
+      "state": "review",
+      "reviewReason": "expired_unconfirmed",
+      "signature": "5cGQ5y6Bz2CczQ9aYHFgWkCcVFGtDtooXesTafqnBJunLG1cDDnnynGa2xJ7u9ti2nQHRCDi5ZC7vFY7WyTyNhDe"
+    },
+    "gameStarted": false,
+    "expiredSignedRequestPreserved": true
+  },
+  "browserReadinessObservation": "The main user wallet frame loaded after detaching the Chrome debugger and hard reloading. A native-browser approval then finalized. This points to a debugger interaction, but its exact cause has not been isolated.",
+  "currentRehearsalRelease": "e9d5824ea55cabb80c63d7bf1c66389b2d6b4f2e",
+  "winnerSettlement": {
+    "checkedAt": "2026-10-30T19:25:22.254Z",
+    "network": "devnet",
+    "matchID": "02f7efcb",
+    "state": "settled",
+    "poolAddress": "HkezzUFg88yYi4gFYiNPuSigjs7TbggoCEbJXtuYg5ru",
+    "verificationHash": "9681451bfe74d2f5d6b47d2291182201ea9c0cdd5c8f8ebb4d052b0cf4b820d2",
+    "recordingExists": true,
+    "poolLamports": 2000000,
+    "feeLamports": 20000,
+    "prizes": [
+      {
+        "to": "2rv7CM4VRHjin6YRRkWXhqGakjJVTzspneeibnpN2u1c",
+        "lamports": 1980000
+      }
+    ],
+    "receipts": [
+      {
+        "kind": "entry",
+        "signature": "56PndhkNbw3E17BU3pp4sntiAQUqbnXxKRA4C4YrmfCVhBvBNvkYkvZUdCVKyHTfbh48oSTpJUKmvy2dj3jKQpgd",
+        "slot": 516873788,
+        "status": "finalized",
+        "feeLamports": 5000,
+        "feePayer": "4ufWpc8JJjK11cPs2EZhGxfrBdQ1RMefz3QHnUJmyzLk",
+        "transfers": [
+          {
+            "destination": "HkezzUFg88yYi4gFYiNPuSigjs7TbggoCEbJXtuYg5ru",
+            "lamports": 1000000,
+            "source": "4ufWpc8JJjK11cPs2EZhGxfrBdQ1RMefz3QHnUJmyzLk"
+          }
+        ]
+      },
+      {
+        "kind": "entry",
+        "signature": "Mgxf9sqQ1eHDjvC2XeSW8gFZdtRzriJwKF2hnjGCr3KpEemY61VM876ACWK6PZow6XwVcyg2S2Nc9jm9kMjfFdP",
+        "slot": 516873989,
+        "status": "finalized",
+        "feeLamports": 5000,
+        "feePayer": "2rv7CM4VRHjin6YRRkWXhqGakjJVTzspneeibnpN2u1c",
+        "transfers": [
+          {
+            "destination": "HkezzUFg88yYi4gFYiNPuSigjs7TbggoCEbJXtuYg5ru",
+            "lamports": 1000000,
+            "source": "2rv7CM4VRHjin6YRRkWXhqGakjJVTzspneeibnpN2u1c"
+          }
+        ]
+      },
+      {
+        "kind": "winner payout and platform fee",
+        "signature": "5hpEkR1GmB34h23sfiXEBr3cHs8FVbSSHCXpTbGnUdMSfoS7sr5kzfK6cBWxFzjqkVqvQzYb14JNgne3Aku6kHqe",
+        "slot": 516878748,
+        "status": "finalized",
+        "feeLamports": 10000,
+        "feePayer": "5GwHZg4ZsM9DBHwvw89Z2JKdViRUrupGEqJMVFYZSJDr",
+        "transfers": [
+          {
+            "destination": "2rv7CM4VRHjin6YRRkWXhqGakjJVTzspneeibnpN2u1c",
+            "lamports": 1980000,
+            "source": "HkezzUFg88yYi4gFYiNPuSigjs7TbggoCEbJXtuYg5ru"
+          },
+          {
+            "destination": "Ab2LZLurTpCZJFse9kbzjHvYo9CatVGv2DMojeRQLDPY",
+            "lamports": 20000,
+            "source": "HkezzUFg88yYi4gFYiNPuSigjs7TbggoCEbJXtuYg5ru"
+          }
+        ]
+      }
+    ],
+    "finalizedPoolBalanceLamports": 0,
+    "resultMethod": "Actual private two-player match with ordinary expansion input. After leaving, the remaining player rejoined through the normal invite-code flow. The server independently verified the recorded replay before settlement; no result or ledger record was fabricated.",
+    "serverPersonalWalletSpendingDelegationAdded": false,
+    "productionChanged": false
+  },
+  "externalRecovery": {
+    "checkedAt": "2026-10-30T19:40:27.079Z",
+    "network": "devnet",
+    "outageObservedAt": "2026-10-30T19:37:09.493Z",
+    "applicationUnavailableBeforeAndAfterVerification": true,
+    "source": "2rv7CM4VRHjin6YRRkWXhqGakjJVTzspneeibnpN2u1c",
+    "balanceBeforeLamports": 39965000,
+    "balanceAfterLamports": 38885066,
+    "receipt": {
+      "signature": "f6EinPBT9PQBqyNYC3QUA3v5mjaytqs3fo2anYhnHgP3xhGECB2s4KEnP1GKzmBmGTVUL3NTND5FrkKVV8aMgXr",
+      "slot": 516882505,
+      "blockTime": 1793389180,
+      "status": "finalized",
+      "feeLamports": 79934,
+      "feePayer": "2rv7CM4VRHjin6YRRkWXhqGakjJVTzspneeibnpN2u1c",
+      "transfers": [
+        {
+          "destination": "CTesggEX1CmgosFLzDib6PTq8SgFB1GnYa75uidb5JvD",
+          "lamports": 1000000,
+          "source": "2rv7CM4VRHjin6YRRkWXhqGakjJVTzspneeibnpN2u1c"
+        }
+      ]
+    },
+    "signingMethod": "User reported sending directly from the independently imported Phantom Test account while the local application server was stopped.",
+    "privateKeyReadByAgent": false,
+    "serverPersonalWalletSpendingDelegationAdded": false,
+    "productionChanged": false
+  },
+  "productionObserved": {
+    "checkedAt": "2026-10-30T19:31:21.448Z",
+    "sourceCommit": "b6defd9d526f9d866e02a89baa2f258ec6448b68",
+    "paymentsMode": "mainnet",
+    "userOwnedWalletsEnabled": false,
+    "entriesPaused": true,
+    "draining": true
+  },
+  "protectedExport": "User privately completed Privy export, imported the wallet into Phantom, and completed a finalized devnet transfer during the local application outage. Agent did not access the private key."
 }

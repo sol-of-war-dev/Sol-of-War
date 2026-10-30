@@ -24,11 +24,11 @@
 
 ## Pick your battlefield
 
-| Free Play | Ranked | FFA Wagers |
-| --- | --- | --- |
-| FFA, 1v1, 2v2, Solo and tutorial | Competitive 1v1 and 2v2 | Unranked free-for-all with SOL entries |
-| Guest play without a wallet | Ten placement matches per mode | Funded entries form the prize pool |
-| Signed-in players keep their progress | Solo queue or bring a 2v2 teammate | 1% fee on completed prize pools |
+| Free Play                             | Ranked                             | FFA Wagers                             |
+| ------------------------------------- | ---------------------------------- | -------------------------------------- |
+| FFA, 1v1, 2v2, Solo and tutorial      | Competitive 1v1 and 2v2            | Unranked free-for-all with SOL entries |
+| Guest play without a wallet           | Ten placement matches per mode     | Funded entries form the prize pool     |
+| Signed-in players keep their progress | Solo queue or bring a 2v2 teammate | 1% fee on completed prize pools        |
 
 - **Bring your duo.** Queue together with no rank-gap restriction; premade matching uses the stronger player's Elo.
 - **Accept, then play.** Timed acceptance, server-owned countdowns and funded-entry checks control match starts.
@@ -54,13 +54,14 @@ is available in this source and requires provider verification before activation
 Match pools remain custodial in either mode. This is not trustless smart-contract escrow. The documentation explains the
 implemented safeguards and the scope of the available verification evidence.
 
-| Start here | What you can inspect |
-| --- | --- |
-| [Funds & payouts](PAYOUTS.md) | Deposits, fees, winnings, refunds, withdrawals and receipt checks |
-| [Payment architecture](PAYMENTS.md) | Source paths, signing boundaries, durable transfers and recovery |
-| [Payment code & test map](PAYMENTS.md#code-and-test-map) | The implementation and regression tests for each safeguard |
-| [Verification record](VERIFICATION.md) | Checks performed, test scope and remaining evidence limits |
-| [Account wallets](PLAYER_WALLETS.md) | Key storage, reservations and withdrawal authorization |
+| Start here                                               | What you can inspect                                                             |
+| -------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| [Funds & payouts](PAYOUTS.md)                            | Deposits, fees, winnings, refunds, withdrawals and receipt checks                |
+| [Payment architecture](PAYMENTS.md)                      | Source paths, signing boundaries, durable transfers and recovery                 |
+| [Payment code & test map](PAYMENTS.md#code-and-test-map) | The implementation and regression tests for each safeguard                       |
+| [Verification record](VERIFICATION.md)                   | Checks performed, test scope and remaining evidence limits                       |
+| [Deployment and payment evidence](SECURITY_EVIDENCE.md)  | Running-release checks, real devnet receipts and outstanding activation evidence |
+| [Account wallets](PLAYER_WALLETS.md)                     | Key storage, reservations and withdrawal authorization                           |
 
 These are source documentation and developer-run checks, not an independent
 security audit or a guarantee of the live service's configuration.
@@ -97,14 +98,14 @@ Runs TypeScript, the focused application/payment regression suite, and the front
 and corresponding-source build. Tests use fixtures. Broader upstream checks remain
 available through `npm run typecheck` and `npm test`.
 
-| Source | Purpose |
-| --- | --- |
-| [`src/frontpot/`](src/frontpot) | App, profiles, matchmaking, ledger and payments |
-| [`src/frontpot/payments/`](src/frontpot/payments) | Funding, custody, settlement and withdrawal implementation |
-| [`tests/frontpot/`](tests/frontpot) | Application and payment regression tests |
-| [`src/client/`](src/client), [`src/server/`](src/server), [`packages/`](packages) | Game client, server and engine |
-| [`resources/`](resources) | Maps, translations and licensed assets |
-| [`Dockerfile`](Dockerfile), [`Dockerfile.frontpot`](Dockerfile.frontpot) | Sol of War container build |
+| Source                                                                            | Purpose                                                    |
+| --------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| [`src/frontpot/`](src/frontpot)                                                   | App, profiles, matchmaking, ledger and payments            |
+| [`src/frontpot/payments/`](src/frontpot/payments)                                 | Funding, custody, settlement and withdrawal implementation |
+| [`tests/frontpot/`](tests/frontpot)                                               | Application and payment regression tests                   |
+| [`src/client/`](src/client), [`src/server/`](src/server), [`packages/`](packages) | Game client, server and engine                             |
+| [`resources/`](resources)                                                         | Maps, translations and licensed assets                     |
+| [`Dockerfile`](Dockerfile), [`Dockerfile.frontpot`](Dockerfile.frontpot)          | Sol of War container build                                 |
 
 The Sol of War entry points are `demo.html`, `vite.demo.config.ts` and
 `src/frontpot/Server.ts`. Internal `frontpot` and `solsiege` names remain for

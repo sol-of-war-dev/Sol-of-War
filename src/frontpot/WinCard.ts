@@ -1,6 +1,7 @@
 import { html, LitElement, nothing, type PropertyValues } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
+import { currencyLabel } from "./payments/Network";
 import { createWinCardImage } from "./WinCardImage";
 import { formatSol, type DemoWinResult } from "./WinResult";
 
@@ -51,11 +52,10 @@ export class FrontpotWinCard extends LitElement {
         brand: "Sol of War",
         mode: this.modeLabel(),
         victory: t("victory"),
-        prize: "Your prize",
-        demoSol: result.network === "devnet" ? "TEST SOL" : "SOL",
+        prize: "Calculated prize",
         winner: t("winner"),
         stake: t("stake"),
-        profit: t("profit"),
+        profit: "Prize less entry",
         pool: t("pool"),
       });
       if (generation !== this.generation || !this.isConnected) return;
@@ -80,7 +80,7 @@ export class FrontpotWinCard extends LitElement {
       return `Won an Unranked Sol of War match. Play for free.\n${location.origin}/`;
     if (r.practice)
       return "I just won a practice match on @SOLOFWAR!\n\nPlay now!\nhttps://solofwar.fun/";
-    return `I just won ${formatSol(r.prizeLamports)} ${r.network === "mainnet" ? "SOL" : "test SOL"} on @SOLOFWAR!\n\nPlay now!\nhttps://solofwar.fun/`;
+    return `I won a match on @SOLOFWAR! Calculated prize: ${formatSol(r.prizeLamports)} ${currencyLabel(r.network ?? "simulation")}. Check payment history for finalized settlement.\n\nhttps://solofwar.fun/`;
   }
 
   private canShareImage() {
@@ -138,7 +138,7 @@ export class FrontpotWinCard extends LitElement {
     const summary =
       r.practice || r.stakeLamports === 0
         ? `${r.playerName} won a ${r.practice ? "practice" : "Unranked"} Sol of War match`
-        : `${r.playerName} won. Prize: ${formatSol(r.prizeLamports)} ${r.network === "mainnet" ? "SOL" : "test SOL"}. Net profit: ${formatSol(r.profitLamports)}.`;
+        : `${r.playerName} won. Calculated prize: ${formatSol(r.prizeLamports)} ${currencyLabel(r.network ?? "simulation")}. Prize less entry, before network fees: ${formatSol(r.profitLamports)}. Check payment history for finalized settlement.`;
     return html`<section class="fp-win-share" aria-label=${t("share_title")}>
       ${
         this.imageUrl
@@ -152,7 +152,7 @@ export class FrontpotWinCard extends LitElement {
           : html`<div class="fp-win-image-fallback">
               <strong
                 >${r.stakeLamports === 0 ? "Victory" : formatSol(r.prizeLamports)}
-                ${r.stakeLamports === 0 ? "" : r.network === "mainnet" ? "SOL" : r.network === "devnet" ? "devnet SOL" : "Test SOL"}</strong
+                ${r.stakeLamports === 0 ? "" : currencyLabel(r.network ?? "simulation")}</strong
               ><span>${this.failed ? t("image_failed") : t("preparing")}</span
               >${this.failed ? html`<button @click=${() => this.prepareImage()}>${t("retry")}</button>` : nothing}
             </div>`
