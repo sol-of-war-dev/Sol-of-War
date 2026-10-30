@@ -69,6 +69,10 @@ The first helper funds the fee payer and treasury. The second verifies that the 
 
 The test user must sign in through the local app and explicitly create their fresh wallet. Verify its provider ownership before funding it with `fundUserWalletDevnet.ts /private/rehearsal VERIFIED_TEST_WALLET_ADDRESS`. Add only verified rehearsal recipients to the separate test **pool** policy when testing refunds and payouts; do not attach that policy or its authorization key to a personal wallet. Complete all activation evidence above. Successful operator-wallet signing by itself does not establish user-wallet ownership, export, withdrawal or migration safety.
 
+### Recorded devnet evidence — October 30, 2026
+
+[Rehearsal receipts](evidence/user-wallet-devnet-2026-10-30.json) record a finalized 0.001 SOL withdrawal from the fresh personal wallet, its 0.000005 SOL network fee, an unsigned cancellation, and repeated recovery of the same finalized receipt without RPC calls. The agent operated the authenticated browser with the user's explicit permission for valueless devnet SOL; the server had no personal-wallet spending delegation. Three earlier signed requests expired and remain in review. These results do not establish mainnet safety or complete the outstanding match, migration, and external recovery checks.
+
 ## Primary provider references
 
 - [Wallet export](https://docs.privy.io/wallets/wallets/export)

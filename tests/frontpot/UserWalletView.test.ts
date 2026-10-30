@@ -131,66 +131,85 @@ it("recovers a recorded withdrawal after reload without asking for a second sign
   expect(f.api.mock.calls.every(([p]) => !p.includes("/submit"))).toBe(true);
 });
 
-it("keeps an expired signed receipt in review instead of implying submission or asking for another signature", async () => {
-  const f = fixture();
-  const receipt = {
-    id: `user-withdrawal:${requestID}`,
-    transaction: "fixture-signed-wire",
-    lastValidBlockHeight: 100,
-    signature: entry.signature,
-    state: "review",
-    reviewReason: "expired_unconfirmed",
-  };
-  f.api.mockImplementation(async (path) => {
-    if (path.endsWith("/withdrawals")) return [{ ...entry, state: "review" }];
-    if (path.endsWith("/prepare"))
-      return {
-        ...receipt,
-        receipt,
-        source: wallet.address,
+it.each(["review", "pending"] as const)(
+  "shows a recorded %s receipt without signing again and updates it after finalization",
+  async (state) => {
+    const f = fixture();
+    let historyState: UserWithdrawal["state"] = state;
+    const receipt = {
+      id: `user-withdrawal:${requestID}`,
+      transaction: "fixture-signed-wire",
+      lastValidBlockHeight: 100,
+      signature: entry.signature,
+      state,
+      reviewReason: state === "review" ? "expired_unconfirmed" : undefined,
+    };
+    f.api.mockImplementation(async (path) => {
+      if (path.endsWith("/withdrawals"))
+        return [{ ...entry, state: historyState }];
+      if (path.endsWith("/prepare"))
+        return {
+          ...receipt,
+          receipt,
+          source: wallet.address,
+          destination: entry.destination,
+          lamports: entry.lamports,
+          network: "devnet",
+        };
+      return f.snapshot;
+    });
+    await f.view.refresh();
+    f.paint();
+    sessionStorage.setItem(
+      "sow-user-wallet:withdrawal:alice",
+      JSON.stringify({
+        id: requestID,
+        amount: "0.002",
         destination: entry.destination,
-        lamports: entry.lamports,
-        network: "devnet",
-      };
-    return f.snapshot;
-  });
-  await f.view.refresh();
-  f.paint();
-  sessionStorage.setItem(
-    "sow-user-wallet:withdrawal:alice",
-    JSON.stringify({
-      id: requestID,
-      amount: "0.002",
-      destination: entry.destination,
-    }),
-  );
-  for (const [label, value] of [
-    ["Destination address", entry.destination],
-    ["Amount in SOL", "0.002"],
-  ]) {
-    const input = [...f.host.querySelectorAll("label")]
-      .find((l) => l.textContent?.includes(label))!
-      .querySelector("input")!;
-    input.value = value;
-    input.dispatchEvent(new Event("input"));
-  }
-  const check = f.host.querySelector<HTMLInputElement>(
-    'input[type="checkbox"]',
-  )!;
-  check.checked = true;
-  check.dispatchEvent(new Event("change"));
-  await f.view.withdraw();
-  f.paint();
-  expect(f.host.textContent).toContain("expired without a confirmed result");
-  expect(f.host.textContent).toContain(
-    "No automatic replacement payment was created",
-  );
-  expect(f.host.textContent).not.toContain("Withdrawal submitted");
-  expect(f.signDeposit).not.toHaveBeenCalled();
-  expect(f.api.mock.calls.some(([path]) => path.endsWith("/submit"))).toBe(
-    false,
-  );
-});
+      }),
+    );
+    for (const [label, value] of [
+      ["Destination address", entry.destination],
+      ["Amount in SOL", "0.002"],
+    ]) {
+      const input = [...f.host.querySelectorAll("label")]
+        .find((l) => l.textContent?.includes(label))!
+        .querySelector("input")!;
+      input.value = value;
+      input.dispatchEvent(new Event("input"));
+    }
+    const check = f.host.querySelector<HTMLInputElement>(
+      'input[type="checkbox"]',
+    )!;
+    check.checked = true;
+    check.dispatchEvent(new Event("change"));
+    await f.view.withdraw();
+    f.paint();
+    if (state === "review") {
+      expect(f.host.textContent).toContain(
+        "expired without a confirmed result",
+      );
+      expect(f.host.textContent).toContain(
+        "No automatic replacement payment was created",
+      );
+    } else
+      expect(f.host.textContent).toContain("Waiting for Solana confirmation");
+    expect(f.host.textContent).not.toContain("Withdrawal submitted");
+    expect(f.signDeposit).not.toHaveBeenCalled();
+    expect(f.api.mock.calls.some(([path]) => path.endsWith("/submit"))).toBe(
+      false,
+    );
+    historyState = "finalized";
+    await f.view.refresh();
+    f.paint();
+    expect(f.host.textContent).toContain("Withdrawal finalized.");
+    expect(f.host.textContent).not.toContain("Waiting for Solana confirmation");
+    expect(f.host.textContent).not.toContain(
+      "expired without a confirmed result",
+    );
+    expect(f.signDeposit).not.toHaveBeenCalled();
+  },
+);
 it("keeps receipts and provider export available when fresh ownership verification fails", async () => {
   const f = fixture();
   f.api.mockImplementation(async (path) => {

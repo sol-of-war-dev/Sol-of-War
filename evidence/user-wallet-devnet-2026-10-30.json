@@ -1,0 +1,64 @@
+{
+  "scope": "Isolated devnet rehearsal, not an independent audit or mainnet result",
+  "testedCommit": "5c245fba21da4b48c00cf457057431dc51f2f4ef",
+  "walletOwnership": "Provider metadata verified sole user ownership, threshold one, no server authorization keys, additional signers or policies. Protected export was reported successful by user; external recovery has not been tested.",
+  "withdrawal": {
+    "network": "devnet",
+    "genesis": "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG",
+    "checkedAt": "2026-10-30T10:48:33.985Z",
+    "requestID": "user-withdrawal:c455fde9-1e5d-40d2-ab7a-4eac5cd71308",
+    "signature": "3Wzj6SttVPZyfRKhxkSsbtaFMJ6nEGDH9enHk4zNrVx7KoHR5zQooqT2GaaJ5XPfiXCVCSRqZ4ZzdrCtjyEQpnX3",
+    "status": {
+      "confirmationStatus": "finalized",
+      "confirmations": null,
+      "err": null,
+      "slot": 516749865,
+      "status": {
+        "Ok": null
+      }
+    },
+    "slot": 516749865,
+    "feeLamports": 5000,
+    "transfers": [
+      {
+        "destination": "CTesggEX1CmgosFLzDib6PTq8SgFB1GnYa75uidb5JvD",
+        "lamports": 1000000,
+        "source": "2rv7CM4VRHjin6YRRkWXhqGakjJVTzspneeibnpN2u1c"
+      }
+    ],
+    "balanceLamports": 18995000,
+    "balanceSlot": 516750073,
+    "approval": "Agent operated the authenticated user browser with explicit permission for valueless devnet SOL. No server spending delegation or private-key export used.",
+    "timing": {
+      "started": "2026-10-30T10:47:35.934Z",
+      "approved": "2026-10-30T10:47:39.850Z",
+      "signed": "2026-10-30T10:47:40.941Z",
+      "closed": "2026-10-30T10:47:41.476Z"
+    }
+  },
+  "cancellationAndRecovery": {
+    "checkedAt": "2026-10-30T10:51:57.857Z",
+    "network": "devnet",
+    "reconciliation": {
+      "requestID": "user-withdrawal:c455fde9-1e5d-40d2-ab7a-4eac5cd71308",
+      "state": "finalized",
+      "signature": "3Wzj6SttVPZyfRKhxkSsbtaFMJ6nEGDH9enHk4zNrVx7KoHR5zQooqT2GaaJ5XPfiXCVCSRqZ4ZzdrCtjyEQpnX3",
+      "repeatReturnedSameReceipt": true,
+      "rpcCalls": 0
+    },
+    "cancellations": [
+      {
+        "id": "user-withdrawal:0f81ae4b-d314-49af-9848-b0c0225e3098",
+        "cancelled": true,
+        "destination": "CTesggEX1CmgosFLzDib6PTq8SgFB1GnYa75uidb5JvD",
+        "lamports": 1000000,
+        "signedJobExists": false
+      }
+    ]
+  },
+  "limitations": [
+    "Three earlier signed withdrawals expired and remain in review. No automatic replacement payments.",
+    "Finalized-receipt reconciliation was exercised twice against the real stored receipt with RPC calls disabled; this does not test every ambiguous network failure.",
+    "Match funding/refund/payout, legacy migration, late payout recovery, external key recovery and production activation remain outstanding."
+  ]
+}

@@ -68,6 +68,25 @@ export class UserWalletView {
     this.historyUnavailable = history === null;
     if (history) {
       this.withdrawals = history;
+      const currentReceipt = this.receipt;
+      const latest =
+        currentReceipt &&
+        history.find(
+          (w) =>
+            `user-withdrawal:${w.requestID}` === currentReceipt.id &&
+            w.signature === currentReceipt.signature,
+        );
+      if (
+        currentReceipt &&
+        latest &&
+        (latest.state === "finalized" || latest.state === "review") &&
+        latest.state !== currentReceipt.state
+      ) {
+        const showingReceiptNotice =
+          this.notice === withdrawalNotice(currentReceipt);
+        this.receipt = { ...currentReceipt, state: latest.state };
+        if (showingReceiptNotice) this.notice = withdrawalNotice(this.receipt);
+      }
       const key = `sow-user-wallet:withdrawal:${owner}`;
       const pending = this.savedPending(key);
       if (
