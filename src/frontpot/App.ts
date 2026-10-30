@@ -2655,7 +2655,7 @@ function lobbySettings(r: PublicRoom) {
         roomWager(r)
           ? html`<h2>Entry amount</h2>
               <div class="sow-setting-options">
-                ${["0.001", "0.01", "0.1", "0.25"].map((value) => html`<button class=${r.stake === value ? "selected" : ""} @click=${() => act(() => updateLobby(r, { stake: value }))}>${value} SOL</button>`)}<label
+                ${["0.01", "0.1", "0.25"].map((value) => html`<button class=${r.stake === value ? "selected" : ""} @click=${() => act(() => updateLobby(r, { stake: value }))}>${value} SOL</button>`)}<label
                   >Custom amount (SOL)<input
                     inputmode="decimal"
                     .value=${r.stake}
