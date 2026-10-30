@@ -148,6 +148,7 @@ it("configures both confirmation networks and signs only with the requested wall
       expect(fake.config!.solana.rpcs[chain].rpc).toBeDefined();
       expect(fake.config!.solana.rpcs[chain].rpcSubscriptions).toBeDefined();
       expect(fake.config!.embeddedWallets.showWalletUIs).toBe(true);
+      expect(() => wallet.assertSigningReady(selected.address)).not.toThrow();
       expect(await wallet.signDeposit(selected.address, "AQID", network)).toBe(
         "BAUG",
       );
@@ -189,6 +190,9 @@ it("reports wallet initialization separately and never signs while no wallet is 
   const warning = vi.spyOn(console, "warn").mockImplementation(() => {});
   try {
     const wallet = await initializePrivy("fixture-app", null, vi.fn(), true);
+    expect(() =>
+      wallet.assertSigningReady(fake.user.linkedAccounts[0].address),
+    ).toThrow("Your Solana wallets are still loading");
     await expect(
       wallet.signDeposit(fake.user.linkedAccounts[0].address, "AQID", "devnet"),
     ).rejects.toThrow("Your Solana wallets are still loading");

@@ -344,6 +344,31 @@ function transfers(wire: string) {
   };
 }
 describe("integrated devnet payments (local RPC fixture, no network funds)", () => {
+  it("refuses to reissue an expired user-wallet entry while preserving its issued transaction", async () => {
+    const f = await fixture();
+    const issued = await f.payments.prepare(
+      f.room,
+      f.players[0],
+      f.addresses[0],
+      true,
+    );
+    const before = f.ledger.db
+      .prepare("SELECT body FROM devnet_entries WHERE id=?")
+      .get(issued.entryID);
+    expect(issued.transaction).toBeTruthy();
+    f.expire();
+    await expect(
+      f.payments.prepare(f.room, f.players[0], f.addresses[0], true),
+    ).rejects.toThrow("expired before submission");
+    expect(
+      f.ledger.db
+        .prepare("SELECT body FROM devnet_entries WHERE id=?")
+        .get(issued.entryID),
+    ).toEqual(before);
+    expect(f.tx.get(`deposit:${issued.entryID}`)).toBeNull();
+    expect(f.sent.size).toBe(0);
+    expect(f.wallets.create).toHaveBeenCalledTimes(1);
+  });
   it("uses a fresh blockhash with matching broadcast preflight", async () => {
     const f = await fixture();
     await f.fund(0);

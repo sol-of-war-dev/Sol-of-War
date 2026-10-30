@@ -272,6 +272,22 @@ export class DevnetPayments {
       }
       // Never replace an issued blockhash automatically: the old transaction
       // could still land. Expired entries are reconciled before another attempt.
+      if (
+        e.state === "awaiting_signature" &&
+        (!e.paymentWallet || e.userSigned)
+      ) {
+        await this.transactions.rpc.check();
+        const height = await this.transactions.rpc.call<number>(
+          "getBlockHeight",
+          [{ commitment: "confirmed" }],
+        );
+        if (!Number.isSafeInteger(height) || height < 0)
+          throw new Error("Invalid chain height; entry remains saved.");
+        if (height > e.wire.lastValidBlockHeight)
+          throw new InputError(
+            "This entry expired before submission. Leave this match and join a new one. Its saved request is preserved; no replacement payment was created.",
+          );
+      }
       return {
         ...this.status(room.id, identity.id),
         entryID: e.id,

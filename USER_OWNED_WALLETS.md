@@ -73,6 +73,10 @@ The test user must sign in through the local app and explicitly create their fre
 
 [Rehearsal receipts](evidence/user-wallet-devnet-2026-10-30.json) record a finalized 0.001 SOL withdrawal from the fresh personal wallet, its 0.000005 SOL network fee, an unsigned cancellation, and repeated recovery of the same finalized receipt without RPC calls. The agent operated the authenticated browser with the user's explicit permission for valueless devnet SOL; the server had no personal-wallet spending delegation. Three earlier signed requests expired and remain in review. These results do not establish mainnet safety or complete the outstanding match, migration, and external recovery checks.
 
+The isolated test pool policy now includes the verified personal wallet as an allowed refund recipient, without changing that personal wallet's owner or signers. A separate private devnet backup bucket passed encrypted upload, readback, and restore checks; restored state remains held for chain reconciliation. Production configuration is unchanged.
+
+Match entry preparation now checks browser signing readiness before issuing a short-lived transaction. Reopening an expired unsigned entry returns a clear error and preserves the original request; it never silently substitutes a new blockhash. This addresses an issue observed during the real rehearsal. Match refunds, winner payouts, legacy migration, and external recovery still need their recorded acceptance evidence.
+
 ## Primary provider references
 
 - [Wallet export](https://docs.privy.io/wallets/wallets/export)

@@ -30,6 +30,7 @@ export type WalletCredentials = {
   wallet: string;
 };
 export type WalletLogin = {
+  assertSigningReady(wallet: string): void;
   createUserWallet(): Promise<{ id: string; address: string }>;
   exportUserWallet(address: string): Promise<void>;
   approvePayment(wallet: string, approval: SpendApproval): Promise<SpendProof>;
@@ -118,7 +119,37 @@ export function initializePrivy(
         throw new Error("Your wallet sign-in expired. Please sign in again.");
       return { accessToken, wallet: wallet.address };
     }
+    function signingWallet(walletAddress: string) {
+      const wallet = solanaWallets.find((w) => w.address === walletAddress);
+      if (!wallet || !signTransaction || !current?.authenticated) {
+        // Safe diagnostics only: never include provider payloads or tokens.
+        console.warn(
+          "Wallet signing readiness",
+          JSON.stringify({
+            authenticated: !!current?.authenticated,
+            ready: solanaReady,
+            connectedCount: solanaWallets.length,
+            matchingWallet: !!wallet,
+            signingHook: !!signTransaction,
+            linkedWallet: !!current?.user?.linkedAccounts.some(
+              (a) => a.type === "wallet" && a.address === walletAddress,
+            ),
+          }),
+        );
+        throw new Error(
+          !current?.authenticated
+            ? "Sign in again to approve this transfer. Your saved request remains available."
+            : !solanaReady
+              ? "Your Solana wallets are still loading. If this persists, reload the page and review the saved request."
+              : "Your signing wallet is not connected. Reopen wallet sign-in, then review the saved request.",
+        );
+      }
+      return { wallet, sign: signTransaction };
+    }
     const controller: WalletLogin = {
+      assertSigningReady(walletAddress) {
+        signingWallet(walletAddress);
+      },
       async createUserWallet() {
         if (!current?.authenticated || !createWallet)
           throw new Error("Sign in before creating a wallet.");
@@ -205,31 +236,8 @@ export function initializePrivy(
         });
       },
       async signDeposit(walletAddress, transaction, network) {
-        const wallet = solanaWallets.find((w) => w.address === walletAddress);
-        if (!wallet || !signTransaction || !current?.authenticated) {
-          // Safe diagnostics only: never include provider payloads or tokens.
-          console.warn(
-            "Wallet signing readiness",
-            JSON.stringify({
-              authenticated: !!current?.authenticated,
-              ready: solanaReady,
-              connectedCount: solanaWallets.length,
-              matchingWallet: !!wallet,
-              signingHook: !!signTransaction,
-              linkedWallet: !!current?.user?.linkedAccounts.some(
-                (a) => a.type === "wallet" && a.address === walletAddress,
-              ),
-            }),
-          );
-          throw new Error(
-            !current?.authenticated
-              ? "Sign in again to approve this transfer. Your saved request remains available."
-              : !solanaReady
-                ? "Your Solana wallets are still loading. If this persists, reload the page and review the saved request."
-                : "Your signing wallet is not connected. Reopen wallet sign-in, then review the saved request.",
-          );
-        }
-        const { signedTransaction } = await signTransaction({
+        const { wallet, sign } = signingWallet(walletAddress);
+        const { signedTransaction } = await sign({
           wallet,
           chain: network === "mainnet" ? "solana:mainnet" : "solana:devnet",
           options: {

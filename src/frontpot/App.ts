@@ -183,6 +183,16 @@ async function fundEntry() {
   const target = room,
     player = identity;
   if (!target || !roomWager(target) || !player?.wallet) return;
+  // Finish provider initialization and ownership reads before creating the
+  // short-lived entry transaction. A loading wallet must not consume its TTL.
+  if (authConfig?.userOwnedWalletsEnabled) {
+    await userWalletView.refresh();
+    const owned = userWalletView.data?.wallet;
+    if (!owned) throw new Error("Create your personal wallet before entering.");
+    (await getWalletLogin()).assertSigningReady(owned.address);
+    if (identity?.id !== player.id || room?.id !== target.id)
+      throw new Error("Your account or match changed. No entry was prepared.");
+  }
   const prepared = await api<
     PaymentStatus & {
       entryID: string;
@@ -221,7 +231,6 @@ async function fundEntry() {
   if (!prepared.transaction) return;
   let signingAddress = player.wallet;
   if (prepared.fundingSource === "user-wallet") {
-    await userWalletView.refresh();
     const owned = userWalletView.data?.wallet;
     if (
       !owned ||
