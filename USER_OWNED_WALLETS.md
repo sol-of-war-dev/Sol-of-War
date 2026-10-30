@@ -12,6 +12,8 @@ The source includes an opt-in migration flow. It is not proof of a deployed feat
 
 ## Provider prerequisites
 
+Privy's browser confirmation dialogs need Solana RPC and subscription configuration independently of the backend RPC. The client configures the public Solana devnet and mainnet endpoints; confirm simulation, fee display, rejection and approval on the intended network before activation. Public RPC availability and rate limits are not a production capacity guarantee. Never copy a private server RPC credential into the browser configuration.
+
 Use a separate development Privy app for rehearsal. Verify TEE user-owned wallets are supported and that client-created wallets expose an owner quorum containing only the authenticated user. The strict verifier intentionally rejects legacy or unknown metadata layouts; do not loosen it merely to make a dashboard look green. Configure no automatic additional/session signers, no platform authorization key in the user owner quorum, and no wallet policies restricting user export. Force provider wallet confirmation UIs on.
 
 In **Authentication / Login methods / External wallets**, enable **Log in or sign up** and **Solana wallets**. The external-wallet master switch and EVM wallets alone do not enable Solana authentication; that configuration rejects Phantom sign-in with `disallowed_login_method`. Reload the client after changing provider settings. Confirm a real wallet sign-in reaches the application before attempting personal-wallet creation.

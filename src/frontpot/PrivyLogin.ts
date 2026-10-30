@@ -14,6 +14,7 @@ import {
   useExportWallet,
   toSolanaWalletConnectors,
 } from "@privy-io/react-auth/solana";
+import { createSolanaRpc, createSolanaRpcSubscriptions } from "@solana/kit";
 import { createElement, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import type { PaymentNetwork } from "./payments/Network";
@@ -61,6 +62,7 @@ export function initializePrivy(
     const root = createRoot(host);
     let current: ReturnType<typeof usePrivy> | null = null;
     let solanaWallets: ReturnType<typeof useWallets>["wallets"] = [];
+    let solanaReady = false;
     let signTransaction:
       | ReturnType<typeof useSignTransaction>["signTransaction"]
       | null = null;
@@ -204,10 +206,29 @@ export function initializePrivy(
       },
       async signDeposit(walletAddress, transaction, network) {
         const wallet = solanaWallets.find((w) => w.address === walletAddress);
-        if (!wallet || !signTransaction || !current?.authenticated)
-          throw new Error(
-            "Connect the same wallet you used to join this match.",
+        if (!wallet || !signTransaction || !current?.authenticated) {
+          // Safe diagnostics only: never include provider payloads or tokens.
+          console.warn(
+            "Wallet signing readiness",
+            JSON.stringify({
+              authenticated: !!current?.authenticated,
+              ready: solanaReady,
+              connectedCount: solanaWallets.length,
+              matchingWallet: !!wallet,
+              signingHook: !!signTransaction,
+              linkedWallet: !!current?.user?.linkedAccounts.some(
+                (a) => a.type === "wallet" && a.address === walletAddress,
+              ),
+            }),
           );
+          throw new Error(
+            !current?.authenticated
+              ? "Sign in again to approve this transfer. Your saved request remains available."
+              : !solanaReady
+                ? "Your Solana wallets are still loading. If this persists, reload the page and review the saved request."
+                : "Your signing wallet is not connected. Reopen wallet sign-in, then review the saved request.",
+          );
+        }
         const { signedTransaction } = await signTransaction({
           wallet,
           chain: network === "mainnet" ? "solana:mainnet" : "solana:devnet",
@@ -223,7 +244,7 @@ export function initializePrivy(
     };
     function Bridge() {
       const privy = usePrivy();
-      const { wallets } = useWallets();
+      const { wallets, ready: walletsReady } = useWallets();
       const signing = useSignTransaction();
       const sending = useSignAndSendTransaction();
       const messages = useSignMessage();
@@ -233,6 +254,10 @@ export function initializePrivy(
         onComplete: ({ user, loginAccount }) => {
           const waiting = pending;
           pending = null;
+          // Privy also emits this during automatic session restoration.
+          // Only exchange credentials for an interactive login waiting here;
+          // restore() owns its own refresh and must not race another one.
+          if (!waiting) return;
           const wallet =
             loginAccount?.type === "wallet" &&
             loginAccount.chainType === "solana"
@@ -292,6 +317,7 @@ export function initializePrivy(
       useEffect(() => {
         current = privy;
         solanaWallets = wallets;
+        solanaReady = walletsReady;
         signTransaction = signing.signTransaction;
         sendTransaction = sending.signAndSendTransaction;
         signMessage = messages.signMessage;
@@ -307,6 +333,7 @@ export function initializePrivy(
         privy,
         login,
         wallets,
+        walletsReady,
         signing.signTransaction,
         sending.signAndSendTransaction,
         messages.signMessage,
@@ -320,6 +347,26 @@ export function initializePrivy(
         appId,
         ...(clientId ? { clientId } : {}),
         config: {
+          // Privy's confirmation UI uses these for transaction simulation and
+          // fees. Keep provider credentials out of browser RPC configuration.
+          solana: {
+            rpcs: {
+              "solana:devnet": {
+                rpc: createSolanaRpc("https://api.devnet.solana.com"),
+                rpcSubscriptions: createSolanaRpcSubscriptions(
+                  "wss://api.devnet.solana.com",
+                ),
+                blockExplorerUrl: "https://explorer.solana.com",
+              },
+              "solana:mainnet": {
+                rpc: createSolanaRpc("https://api.mainnet-beta.solana.com"),
+                rpcSubscriptions: createSolanaRpcSubscriptions(
+                  "wss://api.mainnet-beta.solana.com",
+                ),
+                blockExplorerUrl: "https://explorer.solana.com",
+              },
+            },
+          },
           // Do not mirror spending-capable provider sessions into site cookies.
           ...(identityOnly
             ? { sessions: { cookieWriteBehavior: "never" as const } }
