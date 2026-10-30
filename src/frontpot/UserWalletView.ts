@@ -39,6 +39,8 @@ type Pending = { id: string; amount: string; destination: string };
 export class UserWalletView {
   data: UserWalletSnapshot | null = null;
   private recovery: UserWallet | null = null;
+  private panel: "deposit" | "withdraw" = "deposit";
+  private hidden = false;
   private amount = "";
   private destination = "";
   private acknowledged = false;
@@ -389,248 +391,349 @@ export class UserWalletView {
     const run = (fn: () => Promise<void>) => () => void c.act(fn);
     return html`<main class="sw-wallet sc-account">
       <button class="fp-text-button" @click=${c.back}>Back to games</button>
-      <h1>Your wallet</h1>
+      <nav class="sc-nav" aria-label="Account pages">
+        <a href="/profile">Profile</a
+        ><a href="/wallet" aria-current="page">Wallet</a>
+      </nav>
+      <h1>Sol of War wallet</h1>
+      <p class="sc-subtitle">Your balance and transfers, in one place.</p>
       ${
         !c.identity()?.name
           ? html`<button class="fp-primary" @click=${c.signIn}>Sign in</button>`
-          : html` <section class="fp-help sc-detail">
-                <h2>Personal wallet</h2>
-                <p>
-                  You approve wallet transfers through Privy. Sol of War does
-                  not add a server spending signer to this wallet. Protect your
-                  account and device, and keep a private backup using Privy’s
-                  export screen.
-                </p>
-                ${
-                  !d
-                    ? html`<p>
-                        Wallet verification is unavailable. Refresh to check
-                        ownership and balance before depositing.
-                      </p>`
-                    : !wallet
-                      ? html`<p>
-                            Create a new wallet in your account. Your existing
-                            custody balance will not move automatically.
-                          </p>
-                          <button
-                            class="fp-primary"
-                            ?disabled=${c.busy()}
-                            @click=${run(() => this.create())}
-                          >
-                            Create user-owned wallet
-                          </button>`
-                      : html`
-                          <strong>${sol(d.balanceLamports)} SOL</strong>
-                          <p>
-                            Finalized wallet balance ·
-                            ${d.network === "mainnet" ? "Solana mainnet" : "Solana devnet test SOL"}.
-                            Pending transfers may not yet be reflected.
-                          </p>
-                          <h3>Deposit native SOL</h3>
-                          <p>
-                            Send only native SOL on this network to this
-                            address.
-                          </p>
-                          <code style="overflow-wrap:anywhere"
-                            >${wallet.address}</code
-                          >
-                          ${depositQR(wallet.address)}<button
-                            class="fp-text-button"
-                            @click=${run(() => navigator.clipboard.writeText(wallet.address))}
-                          >
-                            Copy deposit address
-                          </button>
-                          <h3>Withdraw from your wallet</h3>
-                          <label
-                            >Destination address<input
-                              autocomplete="off"
-                              .value=${this.destination}
-                              @input=${(e: Event) => {
-                                this.destination = (
-                                  e.target as HTMLInputElement
-                                ).value;
-                                this.acknowledged = false;
-                                c.paint();
-                              }}
-                          /></label>
-                          <label
-                            >Amount in SOL<input
-                              inputmode="decimal"
-                              autocomplete="off"
-                              .value=${this.amount}
-                              @input=${(e: Event) => {
-                                this.amount = (
-                                  e.target as HTMLInputElement
-                                ).value;
-                                this.acknowledged = false;
-                                c.paint();
-                              }}
-                          /></label>
-                          <p>
-                            Your wallet pays the network fee. Leave enough SOL
-                            for the fee shown by your wallet.
-                          </p>
-                          <label class="sw-confirm"
-                            ><input
-                              type="checkbox"
-                              .checked=${this.acknowledged}
-                              @change=${(e: Event) => {
-                                this.acknowledged = (
-                                  e.target as HTMLInputElement
-                                ).checked;
-                                c.paint();
-                              }}
-                            />I have reviewed the amount and destination.</label
-                          >
-                          <button
-                            class="fp-primary"
-                            ?disabled=${c.busy() || !this.acknowledged || !this.amount || !this.destination}
-                            @click=${run(() => this.withdraw())}
-                          >
-                            Review withdrawal in wallet
-                          </button>
-                          ${this.savedPending(`sow-user-wallet:withdrawal:${c.identity()?.id}`) ? html`<button class="fp-text-button" ?disabled=${c.busy()} @click=${run(() => this.cancelWithdrawal())}>Cancel unsubmitted request</button>` : ""}
-                        `
-                }
-                <button
-                  class="fp-text-button"
-                  ?disabled=${c.busy()}
-                  @click=${run(() => this.refresh())}
-                >
-                  Refresh wallet
-                </button>
-                ${
-                  this.recovery
-                    ? html`<button
-                          class="fp-text-button"
-                          ?disabled=${c.busy()}
-                          @click=${run(async () => {
-                            const address = this.recovery!.address;
-                            await (
-                              await c.walletLogin()
-                            ).exportUserWallet(address);
-                          })}
-                        >
-                          Export private key with Privy
-                        </button>
-                        <p>
-                          <small
-                            >Privy displays the key in its protected interface.
-                            Anyone with that key can spend the wallet’s funds.
-                            Never share it with Sol of War support.</small
-                          >
-                        </p>`
-                    : ""
-                }
-              </section>
-              <section class="fp-help sc-detail">
-                <h2>Recent withdrawal history</h2>
-                <p>
-                  Receipts are saved with your account and remain available
-                  after a refresh. Your latest 25 requests appear here.
-                </p>
-                ${
-                  this.historyUnavailable
-                    ? html`<p>
-                        History is temporarily unavailable. Refresh before
-                        retrying a payment.
-                      </p>`
-                    : !this.withdrawals.length
-                      ? html`<p>No withdrawals recorded yet.</p>`
-                      : this.withdrawals.map(
-                          (w) =>
-                            html`<div class="sc-detail">
-                              <p>
-                                ${sol(w.lamports)} SOL ·
-                                ${w.network === "mainnet" ? "Mainnet" : "Devnet"}
-                                ·
-                                ${w.state === "awaiting_approval" ? "Awaiting your approval" : w.state === "finalized" ? "Finalized successfully" : w.state === "review" ? "Needs reconciliation or review" : w.state === "cancelled" ? "Cancelled in Sol of War" : "Signed; confirmation pending"}
-                              </p>
-                              <code style="overflow-wrap:anywhere"
-                                >${w.destination}</code
-                              >
-                              ${w.signature ? html`<p><a href=${transactionLink(w.signature, w.network)} target="_blank" rel="noreferrer">View transaction</a></p>` : ""}
-                              ${w.state === "awaiting_approval" ? html`<button class="fp-text-button" ?disabled=${c.busy() || !wallet} @click=${run(async () => this.resumeWithdrawal(w))}>Review saved withdrawal</button><button class="fp-text-button" ?disabled=${c.busy()} @click=${run(() => this.cancelWithdrawal(w.requestID))}>Cancel unsubmitted request</button>` : ""}
-                            </div>`,
-                        )
-                }
-              </section>
-              ${d?.legacyUnavailable ? html`<p role="status">Legacy custody wallet details are temporarily unavailable. Your personal wallet remains separate. Refresh before attempting a migration.</p>` : ""}
+          : html` <div class="sw-layout">
               ${
-                d?.legacy
-                  ? html`<section class="fp-help sc-detail">
-                      <h2>Legacy custody balance</h2>
-                      <p>
-                        Sol of War still controls the keys for this older
-                        wallet, including retained backups. Exporting its key
-                        would not remove that control. Migrate to your new
-                        address to move available funds out of custody.
-                      </p>
-                      <p>
-                        Available: ${sol(d.legacy.availableLamports)} SOL. In
-                        legacy matches: ${sol(d.legacy.inMatchesLamports)} SOL.
-                        Pending transfers: ${sol(d.legacy.reservedLamports)}
-                        SOL.
-                      </p>
-                      ${
-                        wallet
-                          ? html`<p>
-                                Migration destination:
-                                <code style="overflow-wrap:anywhere"
-                                  >${wallet.address}</code
-                                >. Sol of War pays the migration network fee.
+                d && wallet
+                  ? html`<section
+                      class="sc-wallet-card"
+                      aria-label="Wallet balance"
+                    >
+                      <div class="sc-card-top">
+                        <span>Your personal wallet</span
+                        ><span class="sc-network"
+                          >${d.network === "mainnet" ? "Mainnet" : "Devnet · Test SOL"}</span
+                        >
+                      </div>
+                      <div class="sc-available">
+                        <div class="sc-balance-label">
+                          <span>Finalized balance</span
+                          ><button
+                            class="sc-quiet"
+                            aria-pressed=${this.hidden}
+                            @click=${() => {
+                              this.hidden = !this.hidden;
+                              c.paint();
+                            }}
+                          >
+                            ${this.hidden ? "Show" : "Hide"}
+                          </button>
+                        </div>
+                        <strong class="sc-total"
+                          ><svg
+                            class="sw-sol-icon"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                          >
+                            <path
+                              fill="currentColor"
+                              d="m6 3-4 4h16l4-4H6Zm-4 7 4 4h16l-4-4H2Zm4 7-4 4h16l4-4H6Z"
+                            /></svg
+                          >${this.hidden ? "••••" : sol(d.balanceLamports)}
+                          <small>SOL</small></strong
+                        >
+                      </div>
+                      <div class="sc-actions">
+                        <button
+                          class=${this.panel === "deposit" ? "selected" : ""}
+                          aria-pressed=${this.panel === "deposit"}
+                          @click=${() => {
+                            this.panel = "deposit";
+                            c.paint();
+                          }}
+                        >
+                          Deposit</button
+                        ><button
+                          class=${this.panel === "withdraw" ? "selected" : ""}
+                          aria-pressed=${this.panel === "withdraw"}
+                          @click=${() => {
+                            this.panel = "withdraw";
+                            c.paint();
+                          }}
+                        >
+                          Withdraw
+                        </button>
+                      </div>
+                      <button
+                        class="sc-refresh"
+                        ?disabled=${c.busy()}
+                        @click=${() => void c.act(() => this.refresh())}
+                      >
+                        ${c.busy() ? "Refreshing…" : "Refresh balance"}
+                      </button>
+                      <div class="sc-pastel sc-rose">
+                        <span>In matches</span
+                        ><strong
+                          >${this.hidden ? "••••" : sol(d.inMatchesLamports)}
+                          SOL</strong
+                        >
+                      </div>
+                      <div class="sc-pastel sc-lilac">
+                        <span>Pending transfers</span
+                        ><strong
+                          >${this.hidden ? "••••" : "See history"}</strong
+                        >
+                      </div>
+                    </section> `
+                  : ""
+              }
+              <div class="sw-details">
+                <a class="sc-profile-link" href="/profile"
+                  ><span>Player profile</span
+                  ><strong>${c.identity()?.name}</strong></a
+                >
+                <section class="fp-help sc-detail">
+                  <h2>Personal wallet</h2>
+                  <p>
+                    You approve wallet transfers through Privy. Sol of War does
+                    not add a server spending signer to this wallet. Protect
+                    your account and device, and keep a private backup using
+                    Privy’s export screen.
+                  </p>
+                  ${
+                    !d
+                      ? html`<p>
+                          Wallet verification is unavailable. Refresh to check
+                          ownership and balance before depositing.
+                        </p>`
+                      : !wallet
+                        ? html`<p>
+                              Create a new wallet in your account. Your existing
+                              custody balance will not move automatically.
+                            </p>
+                            <button
+                              class="fp-primary"
+                              ?disabled=${c.busy()}
+                              @click=${run(() => this.create())}
+                            >
+                              Create user-owned wallet
+                            </button>`
+                        : html`
+                            <div ?hidden=${this.panel !== "deposit"}>
+                              <h2>Add SOL</h2>
+                              <p class="sc-status">
+                                <strong
+                                  >${d.network === "mainnet" ? "Solana mainnet only" : "Solana devnet only · Test SOL"}</strong
+                                ><br />Only deposit native SOL on this network.
+                                Do not send other tokens or use another network.
+                              </p>
+                              <p>
+                                Send only native SOL on this network to this
+                                address.
+                              </p>
+                              <code class="sw-address">${wallet.address}</code>
+                              ${depositQR(wallet.address)}<button
+                                class="fp-text-button"
+                                @click=${run(() => navigator.clipboard.writeText(wallet.address))}
+                              >
+                                Copy deposit address
+                              </button>
+                            </div>
+                            <div ?hidden=${this.panel !== "withdraw"}>
+                              <h2>Withdraw SOL</h2>
+                              <label
+                                >Destination address<input
+                                  autocomplete="off"
+                                  .value=${this.destination}
+                                  @input=${(e: Event) => {
+                                    this.destination = (
+                                      e.target as HTMLInputElement
+                                    ).value;
+                                    this.acknowledged = false;
+                                    c.paint();
+                                  }}
+                              /></label>
+                              <label
+                                >Amount in SOL<input
+                                  inputmode="decimal"
+                                  autocomplete="off"
+                                  .value=${this.amount}
+                                  @input=${(e: Event) => {
+                                    this.amount = (
+                                      e.target as HTMLInputElement
+                                    ).value;
+                                    this.acknowledged = false;
+                                    c.paint();
+                                  }}
+                              /></label>
+                              <p>
+                                Your wallet pays the network fee. Leave enough
+                                SOL for the fee shown by your wallet.
                               </p>
                               <label class="sw-confirm"
                                 ><input
                                   type="checkbox"
-                                  .checked=${this.migrationConfirmed}
+                                  .checked=${this.acknowledged}
                                   @change=${(e: Event) => {
-                                    this.migrationConfirmed = (
+                                    this.acknowledged = (
                                       e.target as HTMLInputElement
                                     ).checked;
                                     c.paint();
                                   }}
-                                />I authorize moving ${this.migrationAmount()}
-                                SOL from my legacy wallet to this new
-                                wallet.</label
-                              ><button
-                                class="fp-primary"
-                                ?disabled=${c.busy() || !this.migrationConfirmed || d.legacy.availableLamports <= 0}
-                                @click=${run(() => this.migrate())}
+                                />I have reviewed the amount and
+                                destination.</label
                               >
-                                Approve migration with sign-in wallet
-                              </button>`
-                          : html`<p>
-                              Create your new wallet to review migration.
-                            </p>`
-                      }
-                      <p>
-                        Funds in active matches cannot migrate yet. Prior
-                        matches keep their original refund and payout
-                        destinations.
-                      </p>
-                    </section>`
-                  : ""
-              }
-              <button
-                class="fp-text-button"
-                ?disabled=${c.busy()}
-                @click=${run(c.openLegacy)}
-              >
-                Manage legacy custody wallet
-              </button>
-              <section class="fp-help sc-detail">
-                <h2>Wagered funds remain custodial</h2>
-                <p>
-                  Approving a game entry transfers SOL out of your personal
-                  wallet into a match pool controlled by Sol of War. The
-                  operator can sign pool payouts and refunds. Game results are
-                  verified by platform systems. Trustless escrow and an
-                  independent security audit have not been completed.
-                </p>
-                ${d ? html`<p>From your new wallet, currently in matches: ${sol(d.inMatchesLamports)} SOL.</p>` : ""}
-              </section>
-              ${this.notice ? html`<p role="status">${this.notice}</p>` : ""}${this.receipt && d ? html`<a href=${transactionLink(this.receipt.signature, d.network)} target="_blank" rel="noreferrer">View withdrawal transaction</a>` : ""}`
+                              <button
+                                class="fp-primary"
+                                ?disabled=${c.busy() || !this.acknowledged || !this.amount || !this.destination}
+                                @click=${run(() => this.withdraw())}
+                              >
+                                Review withdrawal in wallet
+                              </button>
+                              ${this.savedPending(`sow-user-wallet:withdrawal:${c.identity()?.id}`) ? html`<button class="fp-text-button" ?disabled=${c.busy()} @click=${run(() => this.cancelWithdrawal())}>Cancel unsubmitted request</button>` : ""}
+                            </div>
+                          `
+                  }
+                  <button
+                    class="fp-text-button"
+                    ?disabled=${c.busy()}
+                    @click=${run(() => this.refresh())}
+                  >
+                    Refresh wallet
+                  </button>
+                  ${
+                    this.recovery
+                      ? html`<button
+                            class="fp-text-button"
+                            ?disabled=${c.busy()}
+                            @click=${run(async () => {
+                              const address = this.recovery!.address;
+                              await (
+                                await c.walletLogin()
+                              ).exportUserWallet(address);
+                            })}
+                          >
+                            Export private key with Privy
+                          </button>
+                          <p>
+                            <small
+                              >Privy displays the key in its protected
+                              interface. Anyone with that key can spend the
+                              wallet’s funds. Never share it with Sol of War
+                              support.</small
+                            >
+                          </p>`
+                      : ""
+                  }
+                </section>
+                <section class="fp-help sc-detail">
+                  <h2>Recent withdrawal history</h2>
+                  <p>
+                    Receipts are saved with your account and remain available
+                    after a refresh. Your latest 25 requests appear here.
+                  </p>
+                  ${
+                    this.historyUnavailable
+                      ? html`<p>
+                          History is temporarily unavailable. Refresh before
+                          retrying a payment.
+                        </p>`
+                      : !this.withdrawals.length
+                        ? html`<p>No withdrawals recorded yet.</p>`
+                        : this.withdrawals.map(
+                            (w) =>
+                              html`<div class="sc-detail">
+                                <p>
+                                  ${sol(w.lamports)} SOL ·
+                                  ${w.network === "mainnet" ? "Mainnet" : "Devnet"}
+                                  ·
+                                  ${w.state === "awaiting_approval" ? "Awaiting your approval" : w.state === "finalized" ? "Finalized successfully" : w.state === "review" ? "Needs reconciliation or review" : w.state === "cancelled" ? "Cancelled in Sol of War" : "Signed; confirmation pending"}
+                                </p>
+                                <code style="overflow-wrap:anywhere"
+                                  >${w.destination}</code
+                                >
+                                ${w.signature ? html`<p><a href=${transactionLink(w.signature, w.network)} target="_blank" rel="noreferrer">View transaction</a></p>` : ""}
+                                ${w.state === "awaiting_approval" ? html`<button class="fp-text-button" ?disabled=${c.busy() || !wallet} @click=${run(async () => this.resumeWithdrawal(w))}>Review saved withdrawal</button><button class="fp-text-button" ?disabled=${c.busy()} @click=${run(() => this.cancelWithdrawal(w.requestID))}>Cancel unsubmitted request</button>` : ""}
+                              </div>`,
+                          )
+                  }
+                </section>
+                ${d?.legacyUnavailable ? html`<p role="status">Legacy custody wallet details are temporarily unavailable. Your personal wallet remains separate. Refresh before attempting a migration.</p>` : ""}
+                ${
+                  d?.legacy
+                    ? html`<section class="fp-help sc-detail">
+                        <h2>Legacy custody balance</h2>
+                        <p>
+                          Sol of War still controls the keys for this older
+                          wallet, including retained backups. Exporting its key
+                          would not remove that control. Migrate to your new
+                          address to move available funds out of custody.
+                        </p>
+                        <p>
+                          Available: ${sol(d.legacy.availableLamports)} SOL. In
+                          legacy matches: ${sol(d.legacy.inMatchesLamports)}
+                          SOL. Pending transfers:
+                          ${sol(d.legacy.reservedLamports)} SOL.
+                        </p>
+                        ${
+                          wallet
+                            ? html`<p>
+                                  Migration destination:
+                                  <code style="overflow-wrap:anywhere"
+                                    >${wallet.address}</code
+                                  >. Sol of War pays the migration network fee.
+                                </p>
+                                <label class="sw-confirm"
+                                  ><input
+                                    type="checkbox"
+                                    .checked=${this.migrationConfirmed}
+                                    @change=${(e: Event) => {
+                                      this.migrationConfirmed = (
+                                        e.target as HTMLInputElement
+                                      ).checked;
+                                      c.paint();
+                                    }}
+                                  />I authorize moving ${this.migrationAmount()}
+                                  SOL from my legacy wallet to this new
+                                  wallet.</label
+                                ><button
+                                  class="fp-primary"
+                                  ?disabled=${c.busy() || !this.migrationConfirmed || d.legacy.availableLamports <= 0}
+                                  @click=${run(() => this.migrate())}
+                                >
+                                  Approve migration with sign-in wallet
+                                </button>`
+                            : html`<p>
+                                Create your new wallet to review migration.
+                              </p>`
+                        }
+                        <p>
+                          Funds in active matches cannot migrate yet. Prior
+                          matches keep their original refund and payout
+                          destinations.
+                        </p>
+                      </section>`
+                    : ""
+                }
+                <button
+                  class="fp-text-button"
+                  ?disabled=${c.busy()}
+                  @click=${run(c.openLegacy)}
+                >
+                  Manage legacy custody wallet
+                </button>
+                <section class="fp-help sc-detail">
+                  <h2>Wagered funds remain custodial</h2>
+                  <p>
+                    Approving a game entry transfers SOL out of your personal
+                    wallet into a match pool controlled by Sol of War. The
+                    operator can sign pool payouts and refunds. Game results are
+                    verified by platform systems. Trustless escrow and an
+                    independent security audit have not been completed.
+                  </p>
+                  ${d ? html`<p>From your new wallet, currently in matches: ${sol(d.inMatchesLamports)} SOL.</p>` : ""}
+                </section>
+                ${this.notice ? html`<p role="status">${this.notice}</p>` : ""}${this.receipt && d ? html`<a href=${transactionLink(this.receipt.signature, d.network)} target="_blank" rel="noreferrer">View withdrawal transaction</a>` : ""}
+              </div>
+            </div>`
       }
     </main>`;
   }
