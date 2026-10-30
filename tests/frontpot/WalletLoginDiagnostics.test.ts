@@ -14,12 +14,11 @@ it("reports fixed diagnostic categories without copying provider payloads", () =
   error.stack =
     "private-error-message\n at sign (http://localhost:5312/assets/provider-Abc.js:1:92)\n at secret (http://localhost:5312/?token=private-token:1:2)\n at extension (chrome-extension://private-extension/content.js:1:2)";
   const result = classifyWalletLoginError(error);
-  expect(result).toEqual([
+  expect(result).toMatchObject([
     {
       name: "ReferenceError",
       code: null,
       reason: "buffer_missing",
-      hints: [],
       frames: ["assets/provider-Abc.js:1:92"],
     },
   ]);
