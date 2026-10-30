@@ -31,9 +31,10 @@ The result came from an actual private two-player test match and the saved repla
 
 Independent recovery signature: [view on Solana Explorer, devnet](https://explorer.solana.com/tx/f6EinPBT9PQBqyNYC3QUA3v5mjaytqs3fo2anYhnHgP3xhGECB2s4KEnP1GKzmBmGTVUL3NTND5FrkKVV8aMgXr?cluster=devnet). The local application was unavailable before and after chain verification. The recovered wallet paid Phantom's 0.000079934 test SOL network fee, and its finalized balance decreased by exactly the transfer plus that fee. The agent never read or copied the private key.
 
+Late legacy recovery also completed in match `0cb4ca60`. An approved legacy withdrawal emptied the test opponent’s old wallet while the game was running. The replay-verified [late prize payout](https://explorer.solana.com/tx/YoNWCwT54DYBumdTTBxDhLqEPVtiUqWcwx4rpQLaLfctsaHZiLDScynVRpLKxzoVjvsPR6SideyDJKSofgZgEhq?cluster=devnet) returned 0.00198 test SOL to that original funding address. A subsequent approved [registered-wallet migration](https://explorer.solana.com/tx/b7DQaeNp8Lp7UxhgUbN6XJUaJkyMd9tqgnrdy447B8CkxcVmLwWCtCat8QwdPaYU6YeVB8ugtnaPGYVGwgnbU8n?cluster=devnet) moved those proceeds to the fresh personal wallet. Independent RPC checks confirmed transfer order, exact amounts and recipients, and zero final legacy/pool balances. The initial transfer used the legacy withdrawal route; the final recovery used the registered-wallet migration route. This test used one explicitly approved fixture account and valueless devnet SOL.
+
 ## Remaining limits
 
-- A late old-match payout followed by approved legacy recovery still needs recorded acceptance evidence.
 - Earlier expired signed requests remain held for review. A fresh test does not erase an uncertain earlier receipt.
 - These devnet receipts do not establish that a production paid match has completed. Mainnet activation and separately approved production checks remain outstanding.
 - Fresh personal-wallet ownership does not remove custody of wagered funds. The operator still controls match pools and server game-result verification. On-chain escrow is not implemented.

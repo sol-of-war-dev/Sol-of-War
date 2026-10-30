@@ -60,7 +60,7 @@
     "Three earlier signed withdrawals expired and remain in review. No automatic replacement payments.",
     "Finalized-receipt reconciliation was exercised twice against the real stored receipt with RPC calls disabled; this does not test every ambiguous network failure.",
     "One earlier signed match entry expired and remains in review; its opponent was refunded.",
-    "Late legacy payout recovery and production activation remain outstanding.",
+    "Production activation and separately approved mainnet checks remain outstanding.",
     "Browser signing initialization loaded after Chrome debugger detachment and a hard reload. The exact interaction has not been isolated."
   ],
   "latestRehearsalCommit": "d262e1388d49e6062ed7c9bae2ed9b7ec1bf462b",
@@ -255,7 +255,7 @@
     "expiredSignedRequestPreserved": true
   },
   "browserReadinessObservation": "The main user wallet frame loaded after detaching the Chrome debugger and hard reloading. A native-browser approval then finalized. This points to a debugger interaction, but its exact cause has not been isolated.",
-  "currentRehearsalRelease": "e9d5824ea55cabb80c63d7bf1c66389b2d6b4f2e",
+  "currentRehearsalRelease": "4779f02a23ce5296a823f4bde2176d4b0788de6d",
   "winnerSettlement": {
     "checkedAt": "2026-10-30T19:25:22.254Z",
     "network": "devnet",
@@ -365,5 +365,120 @@
     "entriesPaused": true,
     "draining": true
   },
-  "protectedExport": "User privately completed Privy export, imported the wallet into Phantom, and completed a finalized devnet transfer during the local application outage. Agent did not access the private key."
+  "protectedExport": "User privately completed Privy export, imported the wallet into Phantom, and completed a finalized devnet transfer during the local application outage. Agent did not access the private key.",
+  "lateLegacyPayoutRecovery": {
+    "checkedAt": "2026-10-30T22:16:50.765Z",
+    "network": "devnet",
+    "matchID": "0cb4ca60",
+    "state": "settled",
+    "poolAddress": "6Uo7iQBZi8ndtXxMidzUoGfVodjwRTMEhR1jRDfAX22L",
+    "verificationHash": "8545af1b8186a7b8c23273d96a0ee8963e85ea07e1e459e01f8adb15dd714d39",
+    "recordingExists": true,
+    "poolLamports": 2000000,
+    "feeLamports": 20000,
+    "prizes": [
+      {
+        "to": "BtzPeXgx5DMarMRdk69L5LfuJ7gLSwPwp9k7xdx3eoY",
+        "lamports": 1980000
+      }
+    ],
+    "receipts": [
+      {
+        "kind": "entry",
+        "signature": "q933tUfzSpHiAose8siNNaRXm4hqPStNELaFJdKYrMceGh28D191areSU83XTeEDUpn444TsYxhk9d72RKMJ7RM",
+        "slot": 516915181,
+        "status": "finalized",
+        "feeLamports": 10000,
+        "feePayer": "5GwHZg4ZsM9DBHwvw89Z2JKdViRUrupGEqJMVFYZSJDr",
+        "transfers": [
+          {
+            "destination": "6Uo7iQBZi8ndtXxMidzUoGfVodjwRTMEhR1jRDfAX22L",
+            "lamports": 1000000,
+            "source": "BtzPeXgx5DMarMRdk69L5LfuJ7gLSwPwp9k7xdx3eoY"
+          }
+        ]
+      },
+      {
+        "kind": "entry",
+        "signature": "2JZGUcMokmqHo1z68PqQRKH2MWoux2MN1rVYUyee6Lg7w3dAJ8wnnZihmjdPokXRzAsX69uUiJVGnFGa6LasaeWZ",
+        "slot": 516915354,
+        "status": "finalized",
+        "feeLamports": 10000,
+        "feePayer": "5GwHZg4ZsM9DBHwvw89Z2JKdViRUrupGEqJMVFYZSJDr",
+        "transfers": [
+          {
+            "destination": "6Uo7iQBZi8ndtXxMidzUoGfVodjwRTMEhR1jRDfAX22L",
+            "lamports": 1000000,
+            "source": "7PhpCwM8VB7zb3k8wkwJPPJFBTpD4iLvKWaGRR62r26c"
+          }
+        ]
+      },
+      {
+        "kind": "winner payout and platform fee",
+        "signature": "YoNWCwT54DYBumdTTBxDhLqEPVtiUqWcwx4rpQLaLfctsaHZiLDScynVRpLKxzoVjvsPR6SideyDJKSofgZgEhq",
+        "slot": 516918798,
+        "status": "finalized",
+        "feeLamports": 10000,
+        "feePayer": "5GwHZg4ZsM9DBHwvw89Z2JKdViRUrupGEqJMVFYZSJDr",
+        "transfers": [
+          {
+            "destination": "BtzPeXgx5DMarMRdk69L5LfuJ7gLSwPwp9k7xdx3eoY",
+            "lamports": 1980000,
+            "source": "6Uo7iQBZi8ndtXxMidzUoGfVodjwRTMEhR1jRDfAX22L"
+          },
+          {
+            "destination": "Ab2LZLurTpCZJFse9kbzjHvYo9CatVGv2DMojeRQLDPY",
+            "lamports": 20000,
+            "source": "6Uo7iQBZi8ndtXxMidzUoGfVodjwRTMEhR1jRDfAX22L"
+          }
+        ]
+      },
+      {
+        "kind": "approved legacy withdrawal during play",
+        "signature": "2ty6gzXfHqpBspPtL4MsAbHE1QLNkPxz3B9hjJEajLVZTgxVY2ih2V7Ca55iGiRQhMjX4MRKWt8pNCZP8wvCF57U",
+        "slot": 516915708,
+        "status": "finalized",
+        "feeLamports": 10000,
+        "feePayer": "5GwHZg4ZsM9DBHwvw89Z2JKdViRUrupGEqJMVFYZSJDr",
+        "transfers": [
+          {
+            "destination": "4ufWpc8JJjK11cPs2EZhGxfrBdQ1RMefz3QHnUJmyzLk",
+            "lamports": 18000000,
+            "source": "BtzPeXgx5DMarMRdk69L5LfuJ7gLSwPwp9k7xdx3eoY"
+          }
+        ]
+      },
+      {
+        "kind": "approved registered-wallet migration after payout",
+        "signature": "b7DQaeNp8Lp7UxhgUbN6XJUaJkyMd9tqgnrdy447B8CkxcVmLwWCtCat8QwdPaYU6YeVB8ugtnaPGYVGwgnbU8n",
+        "slot": 516921427,
+        "status": "finalized",
+        "feeLamports": 10000,
+        "feePayer": "5GwHZg4ZsM9DBHwvw89Z2JKdViRUrupGEqJMVFYZSJDr",
+        "transfers": [
+          {
+            "destination": "4ufWpc8JJjK11cPs2EZhGxfrBdQ1RMefz3QHnUJmyzLk",
+            "lamports": 1980000,
+            "source": "BtzPeXgx5DMarMRdk69L5LfuJ7gLSwPwp9k7xdx3eoY"
+          }
+        ]
+      }
+    ],
+    "finalizedPoolBalanceLamports": 0,
+    "finalizedLegacyBalanceLamports": 0,
+    "fixtureLegacyWallet": "BtzPeXgx5DMarMRdk69L5LfuJ7gLSwPwp9k7xdx3eoY",
+    "fixturePersonalWallet": "4ufWpc8JJjK11cPs2EZhGxfrBdQ1RMefz3QHnUJmyzLk",
+    "orderedFinalizedSlots": {
+      "initialTransfer": 516915708,
+      "latePayout": 516918798,
+      "recovery": 516921427
+    },
+    "resultMethod": "Normal private two-player 12-minute match; test opponent submitted ordinary expansion intents, browser client reported the resulting winner, and the server verified its saved replay. The original legacy payout address remained frozen after the initial approved withdrawal emptied that wallet. After settlement, user-owned mode was restored and late proceeds moved through the registered-wallet migration route using the test account signed approval.",
+    "limitations": [
+      "Valueless devnet SOL and one explicitly approved fixture account; not an independent audit or a mainnet wager.",
+      "Initial balance transfer used the legacy withdrawal route while the game was running; final recovery used the registered new-wallet migration route."
+    ],
+    "serverPersonalWalletSpendingDelegationAdded": false,
+    "productionChanged": false
+  }
 }
