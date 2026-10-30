@@ -102,7 +102,7 @@ available through `npm run typecheck` and `npm test`.
 | [`tests/frontpot/`](tests/frontpot) | Application and payment regression tests |
 | [`src/client/`](src/client), [`src/server/`](src/server), [`packages/`](packages) | Game client, server and engine |
 | [`resources/`](resources) | Maps, translations and licensed assets |
-| [`Dockerfile.frontpot`](Dockerfile.frontpot) | Sol of War container build |
+| [`Dockerfile`](Dockerfile), [`Dockerfile.frontpot`](Dockerfile.frontpot) | Sol of War container build |
 
 The Sol of War entry points are `demo.html`, `vite.demo.config.ts` and
 `src/frontpot/Server.ts`. Internal `frontpot` and `solsiege` names remain for

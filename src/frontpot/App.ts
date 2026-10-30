@@ -2014,11 +2014,11 @@ function paint() {
             >
             <nav class="fp-footer-socials" aria-label="Community links">
               <a
-                href="https://github.com/openfrontio/OpenFrontIO"
+                href="https://github.com/sol-of-war-dev/Sol-of-War"
                 target="_blank"
                 rel="noopener noreferrer"
-                aria-label="OpenFront on GitHub"
-                title="OpenFront on GitHub"
+                aria-label="Sol of War on GitHub"
+                title="Sol of War on GitHub"
               >
                 <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
                   <path

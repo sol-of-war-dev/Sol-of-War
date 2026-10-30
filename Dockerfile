@@ -1,116 +1,43 @@
-# Use an official Node runtime as the base image
-FROM node:24-slim AS base
-WORKDIR /usr/src/app
+# syntax=docker/dockerfile:1
+# Maps are unchanged upstream assets. Fetch the pinned archive in the builder
+# instead of exceeding Railway's CLI upload limit with the full map library.
+FROM node:24.15.0-bookworm-slim AS maps
+WORKDIR /maps
+ADD --checksum=sha256:346243f6c470b4823ed04cb3194cea08e81e868e743af4138e577a0569f4cdc8 https://codeload.github.com/openfrontio/OpenFrontIO/tar.gz/d1f236242864f506a040f2d56cc5ddd41bf27612 /tmp/upstream.tar.gz
+RUN tar -xzf /tmp/upstream.tar.gz --strip-components=3 -C /maps OpenFrontIO-d1f236242864f506a040f2d56cc5ddd41bf27612/resources/maps && rm /tmp/upstream.tar.gz
+
+# Dedicated image for the wallet-matchmaking demo, not the upstream deployment.
+FROM node:24.15.0-bookworm-slim AS dependencies
+WORKDIR /app
+ENV HUSKY=0 NPM_CONFIG_IGNORE_SCRIPTS=true
 RUN npm install --global --ignore-scripts npm@12.1.0
-
-# Build stage - install ALL dependencies and build
-FROM base AS build
-ENV HUSKY=0
-# Copy package files first for better caching. The workspace manifests come
-# along so npm ci can link node_modules/@openfront/* to packages/*.
-COPY package*.json .npmrc ./
+COPY package.json package-lock.json .npmrc ./
 COPY packages/engine/package.json ./packages/engine/
 COPY packages/engine-api/package.json ./packages/engine-api/
 COPY packages/engine-lib/package.json ./packages/engine-lib/
 COPY packages/shared/package.json ./packages/shared/
 COPY packages/zbin/package.json ./packages/zbin/
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci --ignore-scripts
+RUN npm ci --ignore-scripts
 
-# Copy only what's needed for build
-COPY tsconfig.json tsconfig.base.json ./
-COPY vite.config.ts ./
-COPY index.html ./
-COPY client-api.json ./
-COPY resources ./resources
-COPY proprietary ./proprietary
-COPY src ./src
-COPY packages ./packages
-# build-prod runs scripts/buildAssetHashes.ts after vite, to emit
-# static/asset-hashes.json and static/core-version.txt for the desktop
-# release descriptor. Without this the image build fails at that step with
-# ERR_MODULE_NOT_FOUND -- the unit suite cannot catch it, because only the
-# container build runs build-prod from a copied tree.
-COPY scripts ./scripts
+FROM dependencies AS builder
+COPY . .
+COPY --from=maps /maps ./resources/maps
+RUN npm run build:demo
+# Prune in a separate stage so cached build dependencies stay available.
+FROM dependencies AS production-dependencies
+# Browser wallet SDKs are already compiled into dist-demo, never imported by the server.
+RUN npm pkg delete 'dependencies.@privy-io/react-auth' 'dependencies.@stripe/stripe-js' 'dependencies.react' 'dependencies.react-dom' \
+    && npm prune --omit=dev --ignore-scripts
 
-ARG GIT_COMMIT=unknown
-ENV GIT_COMMIT="$GIT_COMMIT"
-RUN npm run build-prod
-
-# Production dependencies stage - separate from build
-FROM base AS prod-deps
-ENV HUSKY=0
-ENV NPM_CONFIG_IGNORE_SCRIPTS=1
-COPY package*.json .npmrc ./
-COPY packages/engine/package.json ./packages/engine/
-COPY packages/engine-api/package.json ./packages/engine-api/
-COPY packages/engine-lib/package.json ./packages/engine-lib/
-COPY packages/shared/package.json ./packages/shared/
-COPY packages/zbin/package.json ./packages/zbin/
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci --omit=dev --ignore-scripts
-
-# Final production image
-FROM base
-
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    nginx \
-    curl \
-    wget \
-    supervisor \
-    apache2-utils \
-    && rm -rf /var/lib/apt/lists/*
-
-# Update worker_connections in nginx.conf
-RUN sed -i 's/worker_connections [0-9]*/worker_connections 8192/' /etc/nginx/nginx.conf
-
-# Setup supervisor configuration
-RUN mkdir -p /var/log/supervisor
-COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-
-# Copy Nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-RUN rm -f /etc/nginx/sites-enabled/default
-
-# Script that generates the create-game worker upstream at container start.
-COPY generate-nginx-upstream.sh /usr/local/bin/generate-nginx-upstream.sh
-RUN chmod +x /usr/local/bin/generate-nginx-upstream.sh
-
-# Copy production node_modules from prod-deps stage (cached separately from build)
-COPY --from=prod-deps /usr/src/app/node_modules ./node_modules
-COPY package*.json ./
-
-# Copy built artifacts from build stage
-COPY --from=build /usr/src/app/static ./static
-
-COPY resources ./resources
-
-# Remove maps because they are not used by the server.
-RUN rm -rf ./resources/maps
-COPY tsconfig.json tsconfig.base.json ./
-COPY client-api.json ./
-COPY src ./src
-# node_modules/@openfront/* are symlinks into packages/; without this copy
-# they dangle and the server dies at boot.
-COPY packages ./packages
-
-
-ARG GIT_COMMIT=unknown
-RUN echo "$GIT_COMMIT" > static/commit.txt
-
-ENV GIT_COMMIT="$GIT_COMMIT"
-
-RUN <<'EOF' tee /usr/local/bin/start.sh
-#!/bin/sh
-# Generate the create-game nginx upstream from NUM_WORKERS before nginx starts.
-/usr/local/bin/generate-nginx-upstream.sh
-
-if [ "$DOMAIN" = openfront.dev ] && [ "$SUBDOMAIN" != main ]; then
-    exec timeout 25h /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
-else
-    exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
-fi
-EOF
-RUN chmod +x /usr/local/bin/start.sh
-ENTRYPOINT ["/usr/local/bin/start.sh"]
+# Only runtime dependencies, server sources and served assets enter the image.
+FROM node:24.15.0-bookworm-slim AS runtime
+WORKDIR /app
+COPY --from=production-dependencies /app/node_modules ./node_modules
+COPY --from=builder /app/package.json /app/package-lock.json /app/tsconfig.json /app/tsconfig.base.json ./
+COPY --from=builder /app/LICENSE /app/LICENSE-ASSETS /app/LICENSING.md /app/CREDITS.md ./
+COPY --from=builder /app/packages ./packages
+COPY --from=builder /app/src ./src
+COPY --from=builder /app/resources ./resources
+COPY --from=builder /app/dist-demo ./dist-demo
+ENV NODE_ENV=production GAME_ENV=dev NUM_WORKERS=1 DOMAIN=localhost GIT_COMMIT=DEV HOST=0.0.0.0 PAYMENTS_MODE=simulation FRONTPOT_STATE_DIR=/data/frontpot
+CMD ["node", "--import", "tsx", "src/frontpot/Server.ts"]

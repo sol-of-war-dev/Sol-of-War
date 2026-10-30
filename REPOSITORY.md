@@ -30,6 +30,12 @@ The supported application entry point is `src/frontpot/Server.ts`, built with
 for compatibility. Other upstream build/deployment entry points are retained as source,
 but are not the Sol of War launch path.
 
+Both the root `Dockerfile` and `Dockerfile.frontpot` select this application.
+The original upstream container recipe is preserved as `Dockerfile.openfront`.
+Private production variables and the persistent ledger remain in Railway; they
+are not missing application source and must not be committed to make GitHub
+deployment work.
+
 ## GitHub connection
 
 The remote is [sol-of-war-dev/Sol-of-War](https://github.com/sol-of-war-dev/Sol-of-War).

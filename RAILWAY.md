@@ -1,6 +1,6 @@
 # Railway hosting
 
-Deploy Sol of War using `Dockerfile.frontpot`. Set the Railway service variable `RAILWAY_DOCKERFILE_PATH=Dockerfile.frontpot` and configure the following settings in the dashboard. Treat the hosting notes below as setup guidance; verify the intended service's current settings before a deployment.
+The root `Dockerfile` and `Dockerfile.frontpot` both build Sol of War. Railway's default Dockerfile detection therefore selects the application, and the existing service variable `RAILWAY_DOCKERFILE_PATH=Dockerfile.frontpot` remains supported. Both recipes use the same source, lockfile, assets and server entry point; keep them synchronized when changing the container build. The upstream recipe is retained separately as `Dockerfile.openfront` for reference and is not this application's deployment path. Treat the hosting notes below as setup guidance; verify the intended service's current settings before a deployment.
 
 - One Node 24.15.0 service with WebSocket support and the production frontend build.
 - Health check: `/healthz`, timeout 120 seconds; restart policy Always; Serverless disabled.
@@ -12,7 +12,15 @@ Deploy Sol of War using `Dockerfile.frontpot`. Set the Railway service variable 
 - Upload exclusions omit local credentials, SQLite databases, private state, dependencies, Git metadata, and proprietary upstream artwork. Do not upload an existing session database during normal deployments.
 - The unchanged map library is excluded from the CLI upload to fit Railway's upload limit. A Docker build stage fetches the pinned upstream commit archive, verifies its SHA-256, and copies all maps into the final image and source archive. When editing maps, update this strategy so the modified assets are included; do not silently deploy an older upstream copy.
 
-Deploy changes with Railway's official CLI from this source directory using a token restricted to the intended project environment and an explicit service ID. Keep deployment tokens outside this directory. Never deploy the upstream root Dockerfile; the service variable explicitly selects `Dockerfile.frontpot`. The image includes the corresponding-source archive served at `/source`.
+Deploy this source through a GitHub source connection or Railway's official CLI. For CLI uploads, use a token restricted to the intended project environment and an explicit service ID. Keep deployment tokens outside this directory. The image includes the corresponding-source archive served at `/source`, the lockfile, and the license served at `/license`.
+
+## Switching the existing service to GitHub
+
+Use `sol-of-war-dev/Sol-of-War`, branch `main`, with the repository root as the source directory. Keep the current production service, domains, `/data` volume, one-replica setting and private variables. Connecting source does not replace these with files from GitHub.
+
+Keep deployment timing manual so a code push cannot unexpectedly restart active matches. Do not enable automatic deployment until a suitable drain workflow is in place. Compare the deployed commit with GitHub after the first repository build. A clean local simulation build does not validate production provider credentials or move funds.
+
+The repository intentionally excludes `.env` files, player/session databases, wallet keys, backups and dependency/build directories. Railway supplies private configuration, the volume supplies existing state, and the Docker build installs locked dependencies and generates the frontend and source archive. None of those private or generated files should be copied into GitHub to make source deployment work.
 
 The hostname remains stable across deployments and is independent of a developer computer. Individual matches are still in process memory. Before a planned update, use `/admin` **Prepare for deployment** and wait for **Ready for a planned restart**: waiting lobbies close, paid entries are refunded, and active games finish normally. The drain flag persists across the deployment. After verification, end preparation and explicitly resume entries. See [OPERATIONS.md](OPERATIONS.md). Forced restarts can still interrupt active games; history, recordings and payment recovery records persist on the volume.
 
