@@ -37,3 +37,12 @@ Public branding is Sol of War. Name.com hosts DNS: solofwar.fun apex ANAME point
 The public `/tutorial` route is anonymous and runs locally. Guest sessions can also use Free Play and Solo. SOL wagers and account-wallet features require verified wallet sign-in and a claimed username. Verify that guest sessions cannot fund entries, withdraw another account's balance or access administrator operations.
 
 Queue administration: set `SOLSIEGE_ADMIN_WALLETS` to the administrator public wallet address (comma-separated for multiple explicitly authorized owners). It is server-only; `/admin` requires verified Privy login and a username. Settings and audit records live in the existing SQLite database on `/data`. Queued demo matches are regenerated on service restart.
+
+
+## Source identity and verification
+
+The GitHub workflow `.github/workflows/verify.yml` checks application/payment tests, TypeScript, the frontend build and runtime/source-archive integrity using simulation fixtures and no production secrets. It does not deploy. Keep the production source on `sol-of-war-dev/Sol-of-War`, branch `main`, and leave automatic deployment disabled until the drain workflow is integrated.
+
+Railway supplies `RAILWAY_GIT_COMMIT_SHA` to the Docker builder. The build records that revision plus content digests in `dist-demo/release-manifest.json`. A conflicting or dirty local checkout cannot claim a supplied commit. Production startup checks the runtime and served assets, including the downloadable source archive. The public `/frontpot/api/release` endpoint reports the revision and digests, and the footer links to that exact GitHub revision when available. CLI uploads without source metadata report no commit instead of inventing one. These records detect accidental mismatch; the operator still controls the server and they are not independent deployment attestation.
+
+After a repository deployment, compare the Railway deployment revision, public release revision, and the files in `/source` with that GitHub commit. Verify the real site health and preserve the existing volume, private variables, domain, and legacy recovery keys.

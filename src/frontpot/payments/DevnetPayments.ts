@@ -1,8 +1,10 @@
 import { getSignatureFromTransaction } from "@solana/kit";
-import { randomUUID } from "node:crypto";
+import canonicalize from "canonicalize";
+import { createHash, randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 import { FUNDED_MIN_ENTRY_LAMPORTS } from "../Amounts";
 import type { Pool } from "../MatchLedger";
+import { PLATFORM_FEE_BPS } from "../Rules";
 import { InputError, type Identity, type Room, type Seat } from "../Store";
 import {
   acceptDepositSignature,
@@ -35,6 +37,7 @@ type Entry = {
   playerID: string;
   wallet: string;
   paymentWallet?: string;
+  userSigned?: boolean;
   lamports: number;
   cancelled: boolean;
   wire: Wire;
@@ -52,7 +55,8 @@ type Entry = {
 };
 export type PaymentStatus = {
   network: PaymentNetwork;
-  fundingSource?: "balance" | "external";
+  fundingSource?: "balance" | "external" | "user-wallet";
+  fundingAddress?: string;
   matchID: string;
   state: Entry["state"] | "unfunded";
   lamports: number;
@@ -207,7 +211,12 @@ export class DevnetPayments {
         "The maximum number of funded matches is already open.",
       );
   }
-  async prepare(room: Room, identity: Identity, paymentWallet?: string) {
+  async prepare(
+    room: Room,
+    identity: Identity,
+    paymentWallet?: string,
+    userSigned = false,
+  ) {
     return this.exclusive("prepare", async () => {
       this.assertOpen(room, identity);
       if (!this.entry(room.id, identity.id)) this.assertLimits(room);
@@ -241,7 +250,9 @@ export class DevnetPayments {
         this.assertLimits(room);
         const wire = await this.transactions.rpc.build(
           paymentWallet ?? identity.wallet!,
-          paymentWallet ? this.payer.address : identity.wallet!,
+          paymentWallet && !userSigned
+            ? this.payer.address
+            : (paymentWallet ?? identity.wallet!),
           [{ to: m.wallet!.address, lamports: m.stakeLamports }],
         );
         this.assertOpen(room, identity);
@@ -251,6 +262,7 @@ export class DevnetPayments {
           playerID: identity.id,
           wallet: identity.wallet!,
           paymentWallet,
+          ...(userSigned ? { userSigned: true } : {}),
           lamports: m.stakeLamports,
           cancelled: false,
           wire,
@@ -264,7 +276,7 @@ export class DevnetPayments {
         ...this.status(room.id, identity.id),
         entryID: e.id,
         transaction:
-          e.state === "awaiting_signature" && !e.paymentWallet
+          e.state === "awaiting_signature" && (!e.paymentWallet || e.userSigned)
             ? e.wire.transaction
             : undefined,
       };
@@ -282,7 +294,7 @@ export class DevnetPayments {
         !e ||
         e.id !== entryID ||
         e.wallet !== identity.wallet ||
-        !!e.paymentWallet ||
+        (!!e.paymentWallet && !e.userSigned) ||
         typeof signed !== "string" ||
         signed.length > 1800
       )
@@ -295,7 +307,7 @@ export class DevnetPayments {
         const wire = await acceptDepositSignature(
           e.wire,
           signed,
-          e.wallet,
+          e.paymentWallet ?? e.wallet,
           this.transactions.rpc,
         );
         await this.transactions.persist(`deposit:${e.id}`, wire);
@@ -313,23 +325,48 @@ export class DevnetPayments {
     room: Room,
     identity: Identity,
     accounts: PlayerWallets,
+    proof?: unknown,
   ) {
     const wallet = accounts.vault.ensure(identity.id);
     const prepared = await this.prepare(room, identity, wallet.address);
     const e = this.entry(room.id, identity.id)!;
     // Old external-wallet intents keep their original funding and refund path.
-    if (!e.paymentWallet) return prepared;
+    if (!e.paymentWallet || e.userSigned) return prepared;
     if (e.paymentWallet !== wallet.address)
       throw new Error("Player wallet changed");
     if (e.state !== "awaiting_signature" && e.state !== "confirming")
       return this.status(room.id, identity.id);
     this.assertOpen(room, identity);
-    const transfer = await accounts.transfer({
+    const input = {
       id: `deposit:${e.id}`,
       playerID: identity.id,
-      kind: "wager",
+      kind: "wager" as const,
       destination: this.match(room.id)!.wallet!.address,
       lamports: e.lamports,
+      ...(accounts.authorizations
+        ? {
+            matchID: room.id,
+            termsHash: createHash("sha256")
+              .update(
+                canonicalize({
+                  mode: room.mode,
+                  rules: room.rules,
+                  feeBps: PLATFORM_FEE_BPS,
+                  treasury: this.match(room.id)!.treasury,
+                })!,
+              )
+              .digest("hex"),
+          }
+        : {}),
+    };
+    if (accounts.requiresApproval(input.id) && !proof)
+      return {
+        ...prepared,
+        approval: await accounts.requestApproval(input, identity.wallet!),
+      };
+    const transfer = await accounts.transfer(input, {
+      wallet: identity.wallet!,
+      proof,
     });
     if (transfer.state === "failed") {
       e.cancelled = true;
@@ -357,7 +394,14 @@ export class DevnetPayments {
       m = this.match(matchID);
     return {
       network: this.network,
-      fundingSource: e ? (e.paymentWallet ? "balance" : "external") : undefined,
+      fundingSource: e
+        ? e.userSigned
+          ? "user-wallet"
+          : e.paymentWallet
+            ? "balance"
+            : "external"
+        : undefined,
+      fundingAddress: e ? (e.paymentWallet ?? e.wallet) : undefined,
       matchID,
       state: e?.state ?? "unfunded",
       lamports: e?.lamports ?? m?.stakeLamports ?? 0,
@@ -473,7 +517,11 @@ export class DevnetPayments {
       } else return;
     }
     if (["paid", "refunded", "cancelled"].includes(input.state)) return;
-    if (input.paymentWallet && !this.transactions.get(`deposit:${input.id}`)) {
+    if (
+      input.paymentWallet &&
+      !input.userSigned &&
+      !this.transactions.get(`deposit:${input.id}`)
+    ) {
       const transfer = this.db
         .prepare("SELECT body FROM wallet_transfers WHERE id=?")
         .get(`deposit:${input.id}`);
@@ -624,7 +672,7 @@ export class DevnetPayments {
         const { actual } = await validateDepositSignature(
           e.wire,
           wire,
-          e.wallet,
+          e.paymentWallet ?? e.wallet,
         );
         signature = getSignatureFromTransaction(actual.tx);
       } catch {

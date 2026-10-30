@@ -4,8 +4,14 @@ import {
   getSignatureFromTransaction,
   getTransactionDecoder,
   getCompiledTransactionMessageDecoder,
+  getBase58Decoder,
 } from "@solana/kit";
-import { randomBytes, randomUUID } from "node:crypto";
+import {
+  randomBytes,
+  randomUUID,
+  generateKeyPairSync,
+  sign,
+} from "node:crypto";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -29,6 +35,12 @@ import {
 } from "../../src/frontpot/payments/Network";
 import { PlayerWallets } from "../../src/frontpot/payments/PlayerWallets";
 import { PlayerWalletVault } from "../../src/frontpot/payments/PlayerWalletVault";
+import {
+  spendApprovalMessage,
+  type SpendApproval,
+} from "../../src/frontpot/payments/SpendApproval";
+import { SpendAuthorizations } from "../../src/frontpot/payments/SpendAuthorizations";
+import { UserOwnedWallets } from "../../src/frontpot/payments/UserOwnedWallets";
 import { LobbyStore } from "../../src/frontpot/Store";
 const dbs: DatabaseSync[] = [];
 afterEach(() => {
@@ -37,6 +49,7 @@ afterEach(() => {
 function fixture(
   db = new DatabaseSync(":memory:"),
   network: PaymentNetwork = "devnet",
+  requireApproval = false,
 ) {
   dbs.push(db);
   const keyring = {
@@ -106,12 +119,21 @@ function fixture(
     },
   };
   const payerConfig = { id: "payer", address: payer.address };
+  const loginKeys = generateKeyPairSync("ed25519");
+  const loginAddress = getBase58Decoder().decode(
+    loginKeys.publicKey.export({ format: "der", type: "spki" }).subarray(-32),
+  );
+  const approvals = requireApproval
+    ? new SpendAuthorizations(db, network, "https://solofwar.fun")
+    : null;
   const wallets = new PlayerWallets(
     db,
     vault,
     transactions,
     payerConfig,
     signer,
+    async () => {},
+    approvals,
   );
   const transfer = (
     lamports = 3_000_000,
@@ -124,6 +146,19 @@ function fixture(
     lamports,
   });
   return {
+    loginAddress,
+    approvals,
+    approve: (a: SpendApproval) => ({
+      wallet: loginAddress,
+      proof: {
+        nonce: a.nonce,
+        signature: sign(
+          null,
+          Buffer.from(spendApprovalMessage(a)),
+          loginKeys.privateKey,
+        ).toString("base64"),
+      },
+    }),
     db,
     keyring,
     vault,
@@ -156,6 +191,61 @@ function fixture(
   };
 }
 describe("SolSiege player wallets", () => {
+  it("a stolen session cannot spend without exact wallet approval, while authorized retries spend once", async () => {
+    const f = fixture(undefined, "devnet", true);
+    const input = f.transfer();
+    await expect(f.wallets.transfer(input)).rejects.toThrow(
+      "Approve this exact payment",
+    );
+    expect(f.sends).toHaveLength(0);
+    expect((await f.wallets.snapshot("alice")).reservedLamports).toBe(0);
+    const a = await f.wallets.requestApproval(input, f.loginAddress);
+    const proof = f.approve(a);
+    await expect(
+      f.wallets.transfer({ ...input, destination: f.pool.address }, proof),
+    ).rejects.toThrow();
+    expect(f.sends).toHaveLength(0);
+    await f.wallets.transfer(input, proof);
+    const first = f.sends[0];
+    await f.wallets.transfer(input);
+    expect(new Set(f.sends)).toEqual(new Set([first]));
+    await expect(
+      f.wallets.transfer({ ...input, id: `withdrawal:${randomUUID()}` }, proof),
+    ).rejects.toThrow();
+    expect((await f.wallets.snapshot("alice")).reservedLamports).toBe(
+      input.lamports,
+    );
+  });
+  it("fails old unsigned requests without signing but recovers their already-signed counterparts", async () => {
+    const f = fixture();
+    const old = f.transfer();
+    await f.wallets.transfer(old);
+    const unsigned = f.transfer(1_000_000);
+    f.db
+      .prepare("INSERT INTO wallet_transfers VALUES(?,?,?)")
+      .run(
+        unsigned.id,
+        "alice",
+        JSON.stringify({ ...unsigned, state: "pending", created: Date.now() }),
+      );
+    const guarded = new PlayerWallets(
+      f.db,
+      f.vault,
+      f.transactions,
+      f.payerConfig,
+      f.signer,
+      async () => {},
+      new SpendAuthorizations(f.db, "devnet", "https://solofwar.fun"),
+    );
+    const original = f.sends[0];
+    await guarded.tick();
+    expect(new Set(f.sends)).toEqual(new Set([original]));
+    const snapshot = await guarded.snapshot("alice");
+    expect(snapshot.transfers.find((t) => t.id === unsigned.id)?.state).toBe(
+      "failed",
+    );
+    expect(snapshot.reservedLamports).toBe(old.lamports);
+  });
   it("returns an actual zero balance after the wallet is emptied", async () => {
     const f = fixture();
     f.balances.set(f.alice.address, 0);
@@ -831,3 +921,42 @@ describe.each(["devnet", "mainnet"] as const)(
     );
   },
 );
+
+it("migration leaves legacy balances untouched until exact approval, then preserves the authorized destination", async () => {
+  const f = fixture(undefined, "devnet", true);
+  const owner = {
+    id: "alice",
+    subject: "did:privy:alice",
+    wallet: f.loginAddress,
+    name: "Alice",
+    token: "session",
+    expires: Date.now() + 60000,
+  };
+  const verifier = {
+    verify: async (subject: string, id: string) => ({
+      subject,
+      id,
+      address: f.loginAddress,
+      verifiedAt: Date.now(),
+    }),
+  };
+  const owned = new UserOwnedWallets(f.db, verifier, f.transactions, f.wallets);
+  const wallet = await owned.register(owner, "wallet-fresh-alice");
+  expect(f.sends).toHaveLength(0);
+  const intent = { ...f.transfer(10_000_000), destination: wallet.address };
+  const approval = await f.wallets.requestApproval(intent, owner.wallet);
+  expect(f.sends).toHaveLength(0);
+  await expect(
+    f.wallets.transfer(intent, { wallet: owner.wallet, proof: undefined }),
+  ).rejects.toThrow();
+  await expect(
+    f.wallets.transfer(
+      { ...intent, destination: f.pool.address },
+      f.approve(approval),
+    ),
+  ).rejects.toThrow();
+  await f.wallets.transfer(intent, f.approve(approval));
+  expect(new Set(f.sends).size).toBe(1);
+  expect(f.vault.get("alice")?.address).toBe(f.alice.address);
+  expect((await f.wallets.snapshot("alice")).reservedLamports).toBe(10_000_000);
+});

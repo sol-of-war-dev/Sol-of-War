@@ -1,5 +1,6 @@
 import {
   PrivyProvider,
+  getIdentityToken,
   useLogin,
   usePrivy,
   type User,
@@ -8,14 +9,29 @@ import {
   useWallets,
   useSignTransaction,
   useSignAndSendTransaction,
+  useSignMessage,
+  useCreateWallet,
+  useExportWallet,
   toSolanaWalletConnectors,
 } from "@privy-io/react-auth/solana";
 import { createElement, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import type { PaymentNetwork } from "./payments/Network";
+import {
+  spendApprovalMessage,
+  type SpendApproval,
+  type SpendProof,
+} from "./payments/SpendApproval";
 
-export type WalletCredentials = { accessToken: string; wallet: string };
+export type WalletCredentials = {
+  accessToken?: string;
+  identityToken?: string;
+  wallet: string;
+};
 export type WalletLogin = {
+  createUserWallet(): Promise<{ id: string; address: string }>;
+  exportUserWallet(address: string): Promise<void>;
+  approvePayment(wallet: string, approval: SpendApproval): Promise<SpendProof>;
   sendDeposit(
     wallet: string,
     transaction: string,
@@ -36,6 +52,7 @@ export function initializePrivy(
   appId: string,
   clientId: string | null,
   onSignOut: () => void,
+  identityOnly = false,
 ): Promise<WalletLogin> {
   return new Promise((resolve, reject) => {
     const host = document.createElement("div");
@@ -51,6 +68,14 @@ export function initializePrivy(
       | ReturnType<typeof useSignAndSendTransaction>["signAndSendTransaction"]
       | null = null;
     let openLogin: (() => void) | null = null;
+    let signMessage: ReturnType<typeof useSignMessage>["signMessage"] | null =
+      null;
+    let createWallet:
+      | ReturnType<typeof useCreateWallet>["createWallet"]
+      | null = null;
+    let exportWallet:
+      | ReturnType<typeof useExportWallet>["exportWallet"]
+      | null = null;
     let previousUser: string | null = null;
     let pending: {
       resolve: (value: WalletCredentials | null) => void;
@@ -76,12 +101,82 @@ export function initializePrivy(
         ) ?? linked[0];
       if (!wallet || wallet.type !== "wallet")
         throw new Error("Sign in with a Solana wallet to continue.");
+      if (identityOnly) {
+        // Refresh provider auth only in the browser; do not forward this spending-capable token.
+        await current.getAccessToken();
+        const identityToken = await getIdentityToken();
+        if (!identityToken)
+          throw new Error(
+            "Identity-only sign-in is unavailable. Contact support before using user-owned wallets.",
+          );
+        return { identityToken, wallet: wallet.address };
+      }
       const accessToken = await current.getAccessToken();
       if (!accessToken)
         throw new Error("Your wallet sign-in expired. Please sign in again.");
       return { accessToken, wallet: wallet.address };
     }
     const controller: WalletLogin = {
+      async createUserWallet() {
+        if (!current?.authenticated || !createWallet)
+          throw new Error("Sign in before creating a wallet.");
+        const existing = current.user?.linkedAccounts.find(
+          (a) =>
+            a.type === "wallet" &&
+            a.chainType === "solana" &&
+            ["privy", "privy-v2"].includes(a.walletClientType ?? "") &&
+            !a.imported &&
+            !a.delegated,
+        );
+        const wallet =
+          existing?.type === "wallet"
+            ? existing
+            : (await createWallet()).wallet;
+        if (!wallet.id || wallet.delegated || wallet.imported)
+          throw new Error(
+            "This provider wallet cannot be verified as user-owned. No funds were moved. Contact support before depositing.",
+          );
+        return { id: wallet.id, address: wallet.address };
+      },
+      async exportUserWallet(address) {
+        if (
+          !current?.authenticated ||
+          !exportWallet ||
+          !current.user?.linkedAccounts.some(
+            (a) =>
+              a.type === "wallet" &&
+              a.chainType === "solana" &&
+              a.address === address &&
+              ["privy", "privy-v2"].includes(a.walletClientType ?? ""),
+          )
+        )
+          throw new Error("Sign in to the wallet owner account to export.");
+        await exportWallet({ address });
+      },
+      async approvePayment(walletAddress, approval) {
+        const wallet = solanaWallets.find((w) => w.address === walletAddress);
+        if (!wallet || !signMessage || !current?.authenticated)
+          throw new Error(
+            "Connect your sign-in wallet to approve this payment.",
+          );
+        if (
+          approval.version !== 1 ||
+          approval.origin !== location.origin ||
+          approval.wallet !== walletAddress ||
+          approval.expires <= Date.now()
+        )
+          throw new Error(
+            "Payment approval does not match this wallet or website. Please retry.",
+          );
+        const { signature } = await signMessage({
+          wallet,
+          message: new TextEncoder().encode(spendApprovalMessage(approval)),
+        });
+        return {
+          nonce: approval.nonce,
+          signature: btoa(String.fromCharCode(...signature)),
+        };
+      },
       async restore(preferredWallet) {
         return credentials(current?.user ?? null, preferredWallet);
       },
@@ -131,6 +226,9 @@ export function initializePrivy(
       const { wallets } = useWallets();
       const signing = useSignTransaction();
       const sending = useSignAndSendTransaction();
+      const messages = useSignMessage();
+      const creation = useCreateWallet();
+      const exporting = useExportWallet();
       const { login } = useLogin({
         onComplete: ({ user, loginAccount }) => {
           const waiting = pending;
@@ -163,6 +261,9 @@ export function initializePrivy(
         solanaWallets = wallets;
         signTransaction = signing.signTransaction;
         sendTransaction = sending.signAndSendTransaction;
+        signMessage = messages.signMessage;
+        createWallet = creation.createWallet;
+        exportWallet = exporting.exportWallet;
         openLogin = () => login({ loginMethods: ["wallet"] });
         if (!privy.ready) return;
         window.clearTimeout(timeout);
@@ -175,6 +276,9 @@ export function initializePrivy(
         wallets,
         signing.signTransaction,
         sending.signAndSendTransaction,
+        messages.signMessage,
+        creation.createWallet,
+        exporting.exportWallet,
       ]);
       return null;
     }
@@ -183,6 +287,10 @@ export function initializePrivy(
         appId,
         ...(clientId ? { clientId } : {}),
         config: {
+          // Do not mirror spending-capable provider sessions into site cookies.
+          ...(identityOnly
+            ? { sessions: { cookieWriteBehavior: "never" as const } }
+            : {}),
           loginMethods: ["wallet"],
           appearance: {
             theme: "dark",
@@ -207,6 +315,7 @@ export function initializePrivy(
             },
           },
           embeddedWallets: {
+            showWalletUIs: true,
             ethereum: { createOnLogin: "off" },
             solana: { createOnLogin: "off" },
           },

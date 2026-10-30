@@ -2,6 +2,10 @@
 
 This is a setup guide, not a record of current activation or custody assurance. The default local mode is `simulation`; the live mode must be checked separately. For payment behavior and evidence limits, see [PAYOUTS.md](PAYOUTS.md) and [PAYMENTS.md](PAYMENTS.md). The October 27 setup notes below are historical, not current balances or a completed funded rehearsal.
 
+## User-owned wallet rollout
+
+See [USER_OWNED_WALLETS.md](USER_OWNED_WALLETS.md) for provider prerequisites, identity-only authentication, migration approval and required live verification. `SOLSIEGE_USER_OWNED_WALLETS=enabled` is a separate opt-in flag. Do not enable it until a real test user can create a wallet, pass the read-only owner/quorum checks, approve a transfer and open protected export. Keep legacy keyrings and backups for outstanding balances and frozen old match destinations. The feature does not remove match-pool custody or supply audited escrow.
+
 ## Configuration completed October 27, 2026
 
 The operator approved a separate mainnet signer, native-SOL transfer policy and empty fee payer. Their configuration is saved in private Railway variables; the temporary local credential file is removed after verification. The prepared admission setting is invite-only and the state directory is `/data/solsiege-mainnet`. The official public mainnet RPC is used for setup checks; production RPC capacity/history still needs validation.

@@ -278,3 +278,47 @@ describe("payments integration boundaries", () => {
     db.close();
   });
 });
+
+it("user-owned wallet mode accepts identity tokens and rejects spending-capable access tokens", async () => {
+  const keys = await generateKeyPair("ES256", { extractable: true });
+  const linked = [{ type: "wallet", chain_type: "solana", address: a }];
+  const token = (claims: Record<string, unknown>) =>
+    new SignJWT(claims)
+      .setProtectedHeader({ alg: "ES256" })
+      .setSubject("did:privy:identity-test")
+      .setIssuer("privy.io")
+      .setAudience("app-test")
+      .setIssuedAt()
+      .setExpirationTime("1h")
+      .sign(keys.privateKey);
+  const request = vi.fn(
+    async () =>
+      new Response(
+        JSON.stringify({
+          id: "did:privy:identity-test",
+          linked_accounts: linked,
+        }),
+      ),
+  );
+  const auth = new PrivyIdentity(
+    {
+      appID: "app-test",
+      appSecret: "test-only",
+      verificationKey: await exportSPKI(keys.publicKey),
+      identityOnly: true,
+    },
+    request,
+  );
+  await expect(auth.verify(await token({}), a)).rejects.toThrow(
+    "Identity token required",
+  );
+  expect(request).not.toHaveBeenCalled();
+  expect(
+    (
+      await auth.verify(
+        await token({ linked_accounts: JSON.stringify(linked) }),
+        a,
+      )
+    ).wallet,
+  ).toBe(a);
+});

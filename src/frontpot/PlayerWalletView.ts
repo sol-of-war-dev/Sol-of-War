@@ -4,6 +4,7 @@ import "./AccountCards.css";
 import { depositQR } from "./DepositQR";
 import { transactionLink } from "./payments/PaymentView";
 import type { WalletSnapshot, WalletTransfer } from "./payments/PlayerWallets";
+import type { SpendApproval, SpendProof } from "./payments/SpendApproval";
 import type { Identity } from "./Store";
 const exactSol = (n: number) => {
   const value = BigInt(n),
@@ -45,6 +46,8 @@ export class PlayerWalletView {
       back: () => void;
       signIn: () => void;
       enabled: () => boolean;
+      legacyOnly?: () => boolean;
+      approvePayment: (approval: SpendApproval) => Promise<SpendProof>;
     },
   ) {}
   clear() {
@@ -109,6 +112,9 @@ export class PlayerWalletView {
     if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(destination))
       throw new Error("Enter a valid Solana wallet address.");
     const amount = parseSolAmount(this.amount, 1).stake;
+    const owner = this.context.identity();
+    if (!owner?.wallet || !this.data)
+      throw new Error("Sign in and refresh your wallet before withdrawing.");
     const terms = JSON.stringify([destination, amount]);
     const key = `solsiege-withdrawal:${this.context.identity()?.id}`;
     const saved = sessionStorage.getItem(key);
@@ -127,6 +133,39 @@ export class PlayerWalletView {
       );
     this.requestID ??= crypto.randomUUID();
     this.pendingTerms = terms;
+    let approval: SpendProof;
+    try {
+      const challenge = await this.context.api<SpendApproval>(
+        "/balance/withdraw/authorize",
+        { amount, destination, requestID: this.requestID },
+      );
+      if (
+        challenge.kind !== "withdrawal" ||
+        challenge.playerID !== owner.id ||
+        challenge.wallet !== owner.wallet ||
+        challenge.source !== this.data.address ||
+        challenge.network !== this.data.network ||
+        challenge.destination !== destination ||
+        challenge.lamports !== parseSolAmount(amount, 1).lamports ||
+        challenge.requestID !== `withdrawal:${this.requestID}` ||
+        challenge.matchID !== null ||
+        challenge.termsHash !== null
+      )
+        throw new Error(
+          "The payment approval changed your withdrawal details. No withdrawal was submitted.",
+        );
+      approval = await this.context.approvePayment(challenge);
+      if (this.context.identity()?.id !== owner.id)
+        throw new Error("Your account changed. Please sign in again.");
+    } catch (error) {
+      // No withdrawal POST has been made by this attempt. Preserve an earlier
+      // ambiguous request's ID, but do not trap a cancelled fresh wallet prompt.
+      if (!saved) {
+        this.requestID = null;
+        this.pendingTerms = "";
+      }
+      throw error;
+    }
     sessionStorage.setItem(key, JSON.stringify({ id: this.requestID, terms }));
     let result: WalletTransfer;
     try {
@@ -134,10 +173,11 @@ export class PlayerWalletView {
         amount,
         destination,
         requestID: this.requestID,
+        approval,
       });
     } catch (e) {
       const status = (e as { status?: number }).status;
-      if (status && status >= 400 && status < 500) {
+      if (!saved && status && status >= 400 && status < 500) {
         sessionStorage.removeItem(key);
         this.requestID = null;
         this.pendingTerms = "";
@@ -161,6 +201,7 @@ export class PlayerWalletView {
     await this.refresh();
   }
   render() {
+    if (this.context.legacyOnly?.()) this.panel = "withdraw";
     const c = this.context,
       d = this.data;
     return html`<main class="sw-wallet sc-account">
@@ -169,7 +210,10 @@ export class PlayerWalletView {
         <a href="/profile">Profile</a
         ><a href="/wallet" aria-current="page">Wallet</a>
       </nav>
-      <h1>Sol of War wallet</h1>
+      <h1>
+        ${c.legacyOnly?.() ? "Legacy custody wallet" : "Sol of War wallet"}
+      </h1>
+      ${c.legacyOnly?.() ? html`<p>Sol of War still controls this legacy wallet and its backups. You can approve a withdrawal here. New deposits belong in your user-owned wallet.</p>` : ""}
       <p class="sc-subtitle">Your balance and transfers, in one place.</p>
       ${
         !c.identity()?.name
@@ -220,6 +264,7 @@ export class PlayerWalletView {
                       <div class="sc-actions">
                         <button
                           class=${this.panel === "deposit" ? "selected" : ""}
+                          ?hidden=${c.legacyOnly?.()}
                           aria-pressed=${this.panel === "deposit"}
                           @click=${() => {
                             this.panel = "deposit";

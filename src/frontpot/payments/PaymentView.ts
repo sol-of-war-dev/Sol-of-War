@@ -33,6 +33,10 @@ export function paymentView(
   const state = status?.state ?? "unfunded";
   return html`<section class="sq-funding" aria-label="Your entry payment">
     <h3>Your entry</h3>
+    <p>
+      Wagered SOL enters a custodial match pool controlled by Sol of War.
+      Trustless escrow is not implemented.
+    </p>
     <p role="status">
       ${fromBalance && state === "awaiting_signature" ? "Entry not funded" : paymentLabel(state)}
     </p>

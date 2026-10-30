@@ -11,6 +11,7 @@ export type PrivyConfig = {
   appID: string;
   appSecret: string;
   verificationKey?: string;
+  identityOnly?: boolean;
 };
 export class PrivyIdentity {
   private readonly key: JWTVerifyGetKey;
@@ -34,6 +35,10 @@ export class PrivyIdentity {
       algorithms: ["ES256"],
       requiredClaims: ["exp", "iat", "sub"],
     });
+    if (this.config.identityOnly && typeof payload.linked_accounts !== "string")
+      throw new Error(
+        "Identity token required; access tokens are not accepted in user-owned wallet mode",
+      );
     if (!payload.sub?.startsWith("did:privy:"))
       throw new Error("Invalid Privy identity");
     const response = await this.request(

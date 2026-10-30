@@ -57,7 +57,7 @@ export function registerAuthRoutes(
       let verified;
       try {
         verified = await privy.verify(
-          String(req.body?.accessToken ?? ""),
+          String(req.body?.identityToken ?? req.body?.accessToken ?? ""),
           String(req.body?.wallet ?? ""),
         );
       } catch {

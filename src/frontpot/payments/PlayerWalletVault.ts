@@ -9,6 +9,10 @@ import {
   sign,
 } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
+import {
+  assertNativeTransfer,
+  type NativeTransferTerms,
+} from "./NativeTransferPolicy";
 import type { PaymentNetwork } from "./Network";
 import { bindPaymentDatabase } from "./PaymentDatabase";
 
@@ -147,6 +151,16 @@ export class PlayerWalletVault {
     }
   }
   /** Internal only: callers build and authorize the exact transfer first. */
+  signTransfer(
+    playerID: string,
+    transaction: string,
+    terms: NativeTransferTerms,
+  ): string {
+    if (this.get(playerID)?.address !== terms.source)
+      throw new Error("Wrong player wallet source");
+    assertNativeTransfer(transaction, terms);
+    return this.sign(playerID, transaction);
+  }
   sign(playerID: string, transaction: string): string {
     const wallet = this.get(playerID);
     const row = this.db

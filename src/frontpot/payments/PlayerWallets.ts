@@ -3,6 +3,8 @@ import { InputError } from "../Store";
 import { decodeAddress } from "../Wallet";
 import { DevnetTransactions, type PoolSigner } from "./DevnetTransactions";
 import { PlayerWalletVault } from "./PlayerWalletVault";
+import type { SpendProof, SpendTerms } from "./SpendApproval";
+import type { SpendAuthorizations } from "./SpendAuthorizations";
 
 export type WalletTransfer = {
   id: string;
@@ -14,7 +16,21 @@ export type WalletTransfer = {
   state: "pending" | "finalized" | "review" | "failed";
   signature?: string;
   finalizedSlot?: number;
+  approvingWallet?: string;
+  approval?: SpendProof;
+  matchID?: string;
+  termsHash?: string;
 };
+type TransferInput = Pick<
+  WalletTransfer,
+  | "id"
+  | "playerID"
+  | "kind"
+  | "destination"
+  | "lamports"
+  | "matchID"
+  | "termsHash"
+>;
 export type WalletSnapshot = {
   address: string;
   network: "mainnet" | "devnet";
@@ -37,6 +53,7 @@ export class PlayerWallets {
     private payer: { id: string; address: string },
     private payerSigner: PoolSigner,
     private ensureBackup: (created: number) => Promise<void> = async () => {},
+    readonly authorizations: SpendAuthorizations | null = null,
   ) {
     if (vault.network !== transactions.rpc.network)
       throw new Error("Player wallet network mismatch");
@@ -231,6 +248,13 @@ export class PlayerWallets {
       return transfer;
     const wallet = this.vault.get(transfer.playerID)!;
     try {
+      // Old fully signed jobs retain their exact recovery path. Old unsigned
+      // requests cannot gain new signing authority after this upgrade.
+      if (this.authorizations && !this.transactions.get(transfer.id))
+        this.authorizations.verifySaved(
+          this.approvalTerms(transfer, transfer.approvingWallet ?? ""),
+          transfer.approval,
+        );
       await this.transactions.send(
         transfer.id,
         { id: `player:${transfer.playerID}`, address: wallet.address },
@@ -239,7 +263,14 @@ export class PlayerWallets {
         {
           sign: async (id, tx) =>
             id === `player:${transfer.playerID}`
-              ? this.vault.sign(transfer.playerID, tx)
+              ? this.vault.signTransfer(transfer.playerID, tx, {
+                  source: wallet.address,
+                  payer: this.payer.address,
+                  transfers: [
+                    { to: transfer.destination, lamports: transfer.lamports },
+                  ],
+                  reference: transfer.id,
+                })
               : id === this.payer.id
                 ? this.payerSigner.sign(id, tx)
                 : Promise.reject(new Error("Unexpected wallet signer")),
@@ -254,11 +285,45 @@ export class PlayerWallets {
     }
     return this.sync(transfer.id);
   }
+  private approvalTerms(
+    input: TransferInput,
+    approvingWallet: string,
+  ): SpendTerms {
+    const source = this.vault.get(input.playerID)?.address;
+    if (!source) throw new InputError("Player wallet not found.");
+    return {
+      requestID: input.id,
+      playerID: input.playerID,
+      wallet: approvingWallet,
+      source,
+      destination: input.destination,
+      lamports: input.lamports,
+      network: this.vault.network,
+      kind: input.kind,
+      matchID: input.matchID ?? null,
+      termsHash: input.termsHash ?? null,
+    };
+  }
+  async requestApproval(input: TransferInput, approvingWallet: string) {
+    if (!this.authorizations)
+      throw new InputError("Wallet payment approvals are unavailable.");
+    // Preserve backup-before-disclosure and finalized balance validation.
+    const balance = await this.balance(input.playerID);
+    if (
+      input.lamports > balance.balance - balance.reserved &&
+      !this.get(input.id)
+    )
+      throw new InputError("Insufficient available SOL.");
+    return this.authorizations.issue(
+      this.approvalTerms(input, approvingWallet),
+    );
+  }
+  requiresApproval(id: string) {
+    return !!this.authorizations && !this.get(id);
+  }
   async transfer(
-    input: Pick<
-      WalletTransfer,
-      "id" | "playerID" | "kind" | "destination" | "lamports"
-    >,
+    input: TransferInput,
+    consent?: { wallet: string; proof: unknown },
   ) {
     if (
       !/^(withdrawal|deposit):[a-zA-Z0-9-]{8,128}$/.test(input.id) ||
@@ -277,7 +342,10 @@ export class PlayerWallets {
           existing.playerID !== input.playerID ||
           existing.destination !== input.destination ||
           existing.lamports !== input.lamports ||
-          existing.kind !== input.kind
+          existing.kind !== input.kind ||
+          (!!existing.approval &&
+            ((existing.matchID ?? null) !== (input.matchID ?? null) ||
+              (existing.termsHash ?? null) !== (input.termsHash ?? null)))
         )
           throw new InputError(
             "Transfer request does not match its original terms.",
@@ -321,6 +389,13 @@ export class PlayerWallets {
       try {
         if (this.revision() !== b.revision)
           throw new InputError("Your balance changed. Please retry.");
+        if (this.authorizations) {
+          transfer.approval = this.authorizations.consume(
+            this.approvalTerms(input, consent?.wallet ?? ""),
+            consent?.proof,
+          );
+          transfer.approvingWallet = consent!.wallet;
+        }
         this.db
           .prepare("INSERT INTO wallet_transfers VALUES(?,?,?)")
           .run(input.id, input.playerID, JSON.stringify(transfer));

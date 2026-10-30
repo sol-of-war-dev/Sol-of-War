@@ -19,6 +19,7 @@ import {
 } from "@solana/kit";
 import type { DatabaseSync } from "node:sqlite";
 import { InputError } from "../Store";
+import { assertNativeTransfer } from "./NativeTransferPolicy";
 import { GENESIS_HASHES, type PaymentNetwork } from "./Network";
 import { bindPaymentDatabase } from "./PaymentDatabase";
 import type { Transfer } from "./SettlementOutbox";
@@ -213,12 +214,15 @@ export class DevnetTransactions {
       createdAt: Date.now(),
     };
   }
-  async persist(id: string, wire: Wire) {
+  async persist(id: string, wire: Wire, authorize?: () => void) {
     const job = await this.signedJob(id, wire);
     // A receipt can fund an entry or be returned, never both. Check and claim
     // under the same SQLite write lock used to persist accidental-return plans.
     this.db.exec("BEGIN IMMEDIATE");
     try {
+      // Synchronous intent checks share the write lock with persistence. A
+      // cancellation cannot race signature verification and then broadcast.
+      authorize?.();
       if (
         id.startsWith("deposit:") &&
         this.db
@@ -352,6 +356,11 @@ export class DevnetTransactions {
       throw new Error(
         "Wait for a newer blockhash before retrying this payment",
       );
+    assertNativeTransfer(wire.transaction, {
+      source: source.address,
+      payer: payer.address,
+      transfers,
+    });
     let signed = await acceptSignature(
       wire.transaction,
       await signer.sign(source.id, wire.transaction),
@@ -414,6 +423,12 @@ export class DevnetTransactions {
         transfers,
         reference,
       );
+      assertNativeTransfer(wire.transaction, {
+        source: source.address,
+        payer: payer.address,
+        transfers,
+        reference,
+      });
       let signed = await acceptSignature(
         wire.transaction,
         await signer.sign(source.id, wire.transaction),

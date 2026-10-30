@@ -15,6 +15,7 @@ export function registerPaymentRoutes(
       | (Payments & Partial<Pick<DevnetPayments, "fundFromBalance">>)
       | null;
     accounts?: PlayerWallets | null;
+    userWalletFor?: (req: Request) => Promise<string>;
     identityFor: (req: Request) => Identity;
     allowed: Set<string> | null;
     roomFor: (id: string) => Room | undefined;
@@ -55,9 +56,21 @@ export function registerPaymentRoutes(
     options.advanceRoom(room);
     options.assertAdmissions?.();
     res.json(
-      options.accounts && payments.fundFromBalance
-        ? await payments.fundFromBalance(room, identity, options.accounts)
-        : await payments.prepare(room, identity),
+      options.userWalletFor
+        ? await payments.prepare(
+            room,
+            identity,
+            await options.userWalletFor(req),
+            true,
+          )
+        : options.accounts && payments.fundFromBalance
+          ? await payments.fundFromBalance(
+              room,
+              identity,
+              options.accounts,
+              req.body?.approval,
+            )
+          : await payments.prepare(room, identity),
     );
   });
   app.post("/frontpot/api/payments/:id/submit", async (req, res) => {

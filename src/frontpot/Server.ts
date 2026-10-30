@@ -38,10 +38,12 @@ import {
   type WalletKeyring,
 } from "./payments/PlayerWalletVault";
 import { PoolReconciliation } from "./payments/PoolReconciliation";
+import { SpendAuthorizations } from "./payments/SpendAuthorizations";
 import { PlayerAuth, AuthError } from "./PlayerAuth";
 import { PrivyIdentity } from "./PrivyIdentity";
 import { Profiles, registerProfileRoutes } from "./Profiles";
 import { visibleRank } from "./RankTiers";
+import { releaseIntegrity } from "./ReleaseIntegrity";
 import { verifyRecordedGame } from "./ResultVerification";
 import { gameConfig as makeGameConfig, PLATFORM_FEE_BPS } from "./Rules";
 import { SharedMatchmaking } from "./SharedMatchmaking";
@@ -62,7 +64,14 @@ import { registerPaymentRoutes } from "./payments/PaymentRoutes";
 import { PrivyPoolWallets } from "./payments/PrivyPoolWallets";
 import { PrivyTransactionSigner } from "./payments/PrivyTransactionSigner";
 
+import {
+  UserOwnedWallets,
+  PrivyUserWalletVerifier,
+} from "./payments/UserOwnedWallets";
+import { registerUserWalletRoutes } from "./payments/UserWalletRoutes";
+
 const root = process.cwd();
+const release = releaseIntegrity(root, process.env.NODE_ENV === "production");
 const paymentSettings = paymentConfig();
 const stateDir =
   paymentSettings?.stateDir ??
@@ -128,6 +137,32 @@ const playerWallets =
           if (!backups) throw new Error("Player wallet backups unavailable");
           await backups.ensureContains(created);
         },
+        new SpendAuthorizations(
+          ledger.db,
+          paymentSettings.network,
+          process.env.APP_ORIGIN ?? "http://localhost:3000",
+        ),
+      )
+    : null;
+const userOwnedWalletsEnabled =
+  process.env.SOLSIEGE_USER_OWNED_WALLETS === "enabled";
+if (
+  userOwnedWalletsEnabled &&
+  (!payments || !process.env.PRIVY_APP_ID || !process.env.PRIVY_APP_SECRET)
+)
+  throw new Error(
+    "User-owned wallets require Privy and a verified Solana payment network",
+  );
+const userOwnedWallets =
+  userOwnedWalletsEnabled && payments
+    ? new UserOwnedWallets(
+        ledger.db,
+        new PrivyUserWalletVerifier({
+          appID: process.env.PRIVY_APP_ID!,
+          appSecret: process.env.PRIVY_APP_SECRET!,
+        }),
+        payments.transactions,
+        playerWallets,
       )
     : null;
 const reconciliation = payments
@@ -242,6 +277,7 @@ const privy =
     ? new PrivyIdentity({
         appID: process.env.PRIVY_APP_ID,
         appSecret: process.env.PRIVY_APP_SECRET,
+        identityOnly: userOwnedWalletsEnabled,
         verificationKey: process.env.PRIVY_VERIFICATION_KEY?.replace(
           /\\n/g,
           "\n",
@@ -268,6 +304,10 @@ const live = new LiveMonitoring(() => ({
   })),
 }));
 const app = express();
+app.get("/frontpot/api/release", (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json(release);
+});
 app.use(live.middleware);
 app.disable("x-powered-by");
 // Railway and the optional local tunnel each contribute one trusted proxy hop.
@@ -528,7 +568,9 @@ app.get("/frontpot/api/availability", (_req, res) => {
 });
 app.get("/frontpot/api/config", (_req, res) =>
   res.json({
-    playerWalletsEnabled: !!playerWallets,
+    release,
+    playerWalletsEnabled: !!playerWallets || !!userOwnedWallets,
+    userOwnedWalletsEnabled: !!userOwnedWallets,
     paymentsMode: payments?.network ?? "simulation",
     feeBps: PLATFORM_FEE_BPS,
     minimumEntryLamports: store.minimumEntryLamports,
@@ -786,12 +828,23 @@ app.post("/frontpot/api/rooms/:id/leave", (req, res) => {
     ledger.refund(req.params.id, "Lobby cancelled. No platform fee.");
   res.json({ ok: true });
 });
-registerPlayerWalletRoutes(app, playerWallets, (req) =>
-  auth.auth(bearerToken(req)),
+registerPlayerWalletRoutes(
+  app,
+  playerWallets,
+  (req) => auth.auth(bearerToken(req)),
+  !!userOwnedWallets,
 );
+if (userOwnedWallets)
+  registerUserWalletRoutes(app, userOwnedWallets, (req) =>
+    auth.auth(bearerToken(req)),
+  );
 registerPaymentRoutes(app, {
   payments,
   accounts: playerWallets,
+  userWalletFor: userOwnedWallets
+    ? async (req) =>
+        (await userOwnedWallets.verified(auth.auth(bearerToken(req)))).address
+    : undefined,
   identityFor: (req) => auth.auth(bearerToken(req)),
   allowed: paymentSettings ? paymentSettings.allowed : new Set(),
   roomFor: (id) => store.rooms.get(id),
@@ -1083,6 +1136,7 @@ async function tickPayments() {
   try {
     let failures = (await playerWallets?.tick()) ?? 0;
     failures += await payments.tick();
+    await userOwnedWallets?.tick();
     for (const row of ledger.db.prepare("SELECT id FROM pools").all()) {
       const p = ledger.get(String(row.id))!;
       if (p.network !== payments.network || p.stakeLamports === 0) continue;

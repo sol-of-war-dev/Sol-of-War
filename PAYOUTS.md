@@ -1,5 +1,8 @@
 # How funds and payouts work
 
+**Wallet custody depends on the enabled flow.** The new opt-in personal wallet is created under the user’s Privy ownership without a server spending signer. Users approve its transfers and export through Privy. Existing account wallets remain under Sol of War custody until the user approves migration to a new address. Wagered SOL always leaves the personal wallet and enters operator-controlled match pools; trustless escrow is not implemented. See [the migration and verification requirements](USER_OWNED_WALLETS.md). The legacy flow below still applies wherever this feature has not been activated.
+
+
 Paid matches use native SOL. Eligible entries form the prize pool; the platform
 fee is **1% of that pool**, and the winner or winning team receives the remainder.
 Cancelled entries are returned in full without that platform fee.

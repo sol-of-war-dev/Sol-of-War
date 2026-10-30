@@ -134,13 +134,16 @@ it("requires authentication, ignores client ownership, and allows valid chosen d
         })
       ).status,
     ).toBe(200);
-    expect(accounts.transfer).toHaveBeenCalledWith({
-      id: `withdrawal:${requestID}`,
-      playerID: "owner",
-      kind: "withdrawal",
-      destination: chosenWallet,
-      lamports: 1_000_000,
-    });
+    expect(accounts.transfer).toHaveBeenCalledWith(
+      {
+        id: `withdrawal:${requestID}`,
+        playerID: "owner",
+        kind: "withdrawal",
+        destination: chosenWallet,
+        lamports: 1_000_000,
+      },
+      { wallet: identity.wallet, proof: undefined },
+    );
   } finally {
     await new Promise<void>((resolve) => server.close(() => resolve()));
   }

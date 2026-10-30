@@ -48,8 +48,10 @@ The prize pool shown in the app is gross. Settlement uses the funded roster lock
 at match start: 1% goes to the platform, and 99% to the winner or winning team.
 Eligible cancellations return the full entry without the platform fee.
 
-**Custody is explicit:** the platform controls account and pool signing keys.
-This is not trustless smart-contract escrow. The documentation explains the
+**Custody is explicit:** in the default legacy mode, the platform controls player
+and match-pool signing keys. An opt-in [user-owned wallet flow](USER_OWNED_WALLETS.md)
+is available in this source and requires provider verification before activation.
+Match pools remain custodial in either mode. This is not trustless smart-contract escrow. The documentation explains the
 implemented safeguards and the scope of the available verification evidence.
 
 | Start here | What you can inspect |

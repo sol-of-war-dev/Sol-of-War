@@ -22,6 +22,8 @@ RUN npm ci --ignore-scripts
 FROM dependencies AS builder
 COPY . .
 COPY --from=maps /maps ./resources/maps
+ARG RAILWAY_GIT_COMMIT_SHA
+ENV RAILWAY_GIT_COMMIT_SHA=${RAILWAY_GIT_COMMIT_SHA}
 RUN npm run build:demo
 # Prune in a separate stage so cached build dependencies stay available.
 FROM dependencies AS production-dependencies

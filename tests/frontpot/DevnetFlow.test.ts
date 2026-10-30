@@ -1588,3 +1588,40 @@ it("rejects Unranked deposits before any pool wallet, RPC request or signing", a
   expect(f.wallets.find).not.toHaveBeenCalled();
   expect(f.payments.fundedIDs(f.room.id)).toEqual([]);
 });
+
+it("user-owned funding requires its own signature, keeps login identity and freezes refund destinations", async () => {
+  const f = await fixture();
+  const prep = await f.payments.prepare(
+    f.room,
+    f.players[0],
+    f.addresses[2],
+    true,
+  );
+  expect(prep.fundingSource).toBe("user-wallet");
+  expect(prep.fundingAddress).toBe(f.addresses[2]);
+  expect(f.signer.sign).not.toHaveBeenCalled();
+  await expect(
+    f.payments.submit(f.room.id, f.players[0], prep.entryID, prep.transaction),
+  ).rejects.toThrow();
+  expect(f.sent.size).toBe(0);
+  await f.payments.submit(
+    f.room.id,
+    f.players[0],
+    prep.entryID,
+    await f.sign(2, prep.transaction!),
+  );
+  expect(f.sent.size).toBe(1);
+  expect(f.signer.sign).not.toHaveBeenCalled();
+  expect(
+    f.payments.payoutSeats(f.room.id, [
+      { ...f.players[0], team: 0, joined: Date.now() },
+    ])[0].wallet,
+  ).toBe(f.addresses[2]);
+  const retry = await f.payments.prepare(
+    f.room,
+    f.players[0],
+    f.addresses[3],
+    true,
+  );
+  expect(retry.fundingAddress).toBe(f.addresses[2]);
+});

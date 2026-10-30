@@ -13,6 +13,7 @@ function setup(address: string) {
     back: vi.fn(),
     signIn: vi.fn(),
     enabled: () => true,
+    approvePayment: vi.fn(),
   });
   const state = view as unknown as {
     customDestination: string;

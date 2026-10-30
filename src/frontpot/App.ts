@@ -19,11 +19,12 @@ import brandWordmark from "./assets/sol-of-war-wordmark.png";
 import { CountdownClock } from "./CountdownClock";
 import type { Pool } from "./MatchLedger";
 import type { PaymentStatus } from "./payments/DevnetPayments";
-import { currencyLabel, type PaymentMode } from "./payments/Network";
+import { assertNativeTransfer } from "./payments/NativeTransferPolicy";
 import "../client/LangSelector";
 import "../client/GameStartingModal";
 import "../client/styles.css";
 import "./style.css";
+import { currencyLabel, type PaymentMode } from "./payments/Network";
 import {
   paymentView,
   paymentLabel,
@@ -41,6 +42,7 @@ import { defaultRules, type Rules } from "./Rules";
 import type { SharedMatchmaking as Matchmaking } from "./SharedMatchmaking";
 import type { Identity, Mode, Room } from "./Store";
 import { tutorialLobby } from "./TutorialGame";
+import { UserWalletView } from "./UserWalletView";
 import { setMatchTerms } from "./WinResult";
 
 type PublicRoom = Omit<Room, "members"> & {
@@ -155,6 +157,8 @@ let authRestoring = true;
 let afterSignIn: (() => void | Promise<void>) | null = null;
 let authConfig: {
   playerWalletsEnabled?: boolean;
+  userOwnedWalletsEnabled?: boolean;
+  release?: { available: boolean; sourceCommit?: string | null };
   paymentsMode: PaymentMode;
   minimumEntryLamports: number;
   privyAppID: string | null;
@@ -180,14 +184,66 @@ async function fundEntry() {
     player = identity;
   if (!target || !roomWager(target) || !player?.wallet) return;
   const prepared = await api<
-    PaymentStatus & { entryID: string; transaction?: string }
+    PaymentStatus & {
+      entryID: string;
+      transaction?: string;
+      approval?: import("./payments/SpendApproval").SpendApproval;
+    }
   >(`/rooms/${target.id}/deposit`, {});
   funding = prepared;
   paint();
+  if (prepared.approval) {
+    const a = prepared.approval;
+    if (
+      a.kind !== "wager" ||
+      a.playerID !== player.id ||
+      a.wallet !== player.wallet ||
+      a.matchID !== target.id ||
+      a.network !== prepared.network ||
+      a.lamports !== target.lamports ||
+      a.destination !== prepared.poolAddress ||
+      a.requestID !== `deposit:${prepared.entryID}`
+    )
+      throw new Error(
+        "Payment approval does not match this match. No entry was submitted.",
+      );
+    const approval = await (
+      await getWalletLogin()
+    ).approvePayment(player.wallet, a);
+    if (identity?.id !== player.id || room?.id !== target.id)
+      throw new Error("Your account or match changed. No entry was submitted.");
+    funding = await api<PaymentStatus>(`/rooms/${target.id}/deposit`, {
+      approval,
+    });
+    paint();
+    return;
+  }
   if (!prepared.transaction) return;
+  let signingAddress = player.wallet;
+  if (prepared.fundingSource === "user-wallet") {
+    await userWalletView.refresh();
+    const owned = userWalletView.data?.wallet;
+    if (
+      !owned ||
+      prepared.fundingAddress !== owned.address ||
+      !prepared.poolAddress ||
+      prepared.lamports !== target.lamports
+    )
+      throw new Error("Entry does not match your user-owned wallet.");
+    signingAddress = owned.address;
+    assertNativeTransfer(prepared.transaction, {
+      source: signingAddress,
+      payer: signingAddress,
+      transfers: [{ to: prepared.poolAddress, lamports: target.lamports }],
+    });
+  }
+  if (identity?.id !== player.id || room?.id !== target.id)
+    throw new Error("Your account or match changed.");
   const signed = await (
     await getWalletLogin()
-  ).signDeposit(player.wallet, prepared.transaction, prepared.network);
+  ).signDeposit(signingAddress, prepared.transaction, prepared.network);
+  if (identity?.id !== player.id || room?.id !== target.id)
+    throw new Error("Your account or match changed. No entry was submitted.");
   const result = await api<PaymentStatus>(`/payments/${target.id}/submit`, {
     entryID: prepared.entryID,
     transaction: signed,
@@ -207,18 +263,66 @@ let accountMenuOpen = false;
 let showWallet = location.pathname === "/wallet";
 let balanceCheckedAt = 0;
 let balanceRefreshing = false;
-const playerWalletView = new PlayerWalletView({
+let showingLegacyWallet = false;
+const legacyWalletView = new PlayerWalletView({
+  api,
+  act,
+  paint,
+  identity: () => identity,
+  busy: () => busy,
+  back: () => {
+    if (showingLegacyWallet) {
+      showingLegacyWallet = false;
+      paint();
+    } else goPlay();
+  },
+  legacyOnly: () => !!authConfig?.userOwnedWalletsEnabled,
+  signIn: () => {
+    void act(openPlayerWallet);
+  },
+  enabled: () => !!authConfig?.playerWalletsEnabled,
+  approvePayment: async (approval) =>
+    (await getWalletLogin()).approvePayment(identity?.wallet ?? "", approval),
+});
+const userWalletView = new UserWalletView({
   api,
   act,
   paint,
   identity: () => identity,
   busy: () => busy,
   back: goPlay,
-  signIn: () => {
-    void act(openPlayerWallet);
+  signIn: () => void act(openPlayerWallet),
+  walletLogin: getWalletLogin,
+  openLegacy: async () => {
+    await legacyWalletView.refresh();
+    showingLegacyWallet = true;
+    paint();
   },
-  enabled: () => !!authConfig?.playerWalletsEnabled,
 });
+const playerWalletView = {
+  get data() {
+    return authConfig?.userOwnedWalletsEnabled
+      ? userWalletView.data
+        ? { availableLamports: userWalletView.data.balanceLamports }
+        : null
+      : legacyWalletView.data;
+  },
+  clear() {
+    showingLegacyWallet = false;
+    legacyWalletView.clear();
+    userWalletView.clear();
+  },
+  refresh() {
+    return authConfig?.userOwnedWalletsEnabled && !showingLegacyWallet
+      ? userWalletView.refresh()
+      : legacyWalletView.refresh();
+  },
+  render() {
+    return authConfig?.userOwnedWalletsEnabled && !showingLegacyWallet
+      ? userWalletView.render()
+      : legacyWalletView.render();
+  },
+};
 async function openPlayerWallet() {
   if (inGame) return;
   viewingRoom = false;
@@ -871,6 +975,7 @@ async function api<T>(url: string, body?: unknown): Promise<T> {
     throw Object.assign(new Error(rateLimitMessage), { status: 429 });
   }
   const response = await fetch(`/frontpot/api${url}`, {
+    credentials: "omit",
     ...(body === undefined
       ? { method: "GET" }
       : { method: "POST", body: JSON.stringify(body) }),
@@ -983,6 +1088,7 @@ async function getWalletLogin() {
         }
         paint();
       },
+      !!authConfig.userOwnedWalletsEnabled,
     ).catch((e) => {
       walletLogin = null;
       throw e;
@@ -1197,7 +1303,9 @@ async function enter(nextRoom: PublicRoom, background = false) {
 async function quickPlay(practice = false) {
   if (practice && (!identity || identity.expires <= Date.now())) {
     const suffix = crypto.randomUUID().replace(/-/g, "").slice(0, 10);
-    saveIdentity(await api<Identity>("/session/guest", { username: `Solo${suffix}` }));
+    saveIdentity(
+      await api<Identity>("/session/guest", { username: `Solo${suffix}` }),
+    );
   }
   if (!practice && ranked)
     stake = parseSolAmount(stake, authConfig?.minimumEntryLamports).stake;
@@ -1256,17 +1364,25 @@ async function watchLive(r: PublicRoom) {
   let loadTimeout: ReturnType<typeof setTimeout> | undefined;
   try {
     const ready = new Promise<void>((resolve, reject) => {
-      loadTimeout = setTimeout(() => reject(new Error("The spectator connection timed out. Please try watching again.")), 30_000);
+      loadTimeout = setTimeout(
+        () =>
+          reject(
+            new Error(
+              "The spectator connection timed out. Please try watching again.",
+            ),
+          ),
+        30_000,
+      );
       handle = client.joinLobby(new EventBus(), {
-      onGameReady: resolve,
-      onGameError: reject,
-      gameID: r.id,
-      playerName: identity!.name,
-      playerClanTag: null,
-      playerRole: null,
-      cosmetics: {},
-      turnstileToken: null,
-      spectator: true,
+        onGameReady: resolve,
+        onGameError: reject,
+        gameID: r.id,
+        playerName: identity!.name,
+        playerClanTag: null,
+        playerRole: null,
+        cosmetics: {},
+        turnstileToken: null,
+        spectator: true,
       });
     });
     await ready;
@@ -1301,31 +1417,49 @@ function stopWatching() {
 function liveGamesView() {
   const activeGames = liveGames.filter((r) => r.status === "playing");
   return html`<main class="sq-page sow-live-games">
-    <button class="fp-secondary" @click=${browseLobbies}>Back to lobbies</button>
+    <button class="fp-secondary" @click=${browseLobbies}>
+      Back to lobbies
+    </button>
     <h1>Live games</h1>
-    ${activeGames.length
-      ? html`<div class="sq-ordered-grid">
-          ${activeGames.map((r) => html`<button
-            class="sq-card"
-            ?disabled=${busy}
-            @click=${() => act(() => watchLive(r))}
-            aria-label=${`Watch ${mapName(r.rules.gameMap)} live`}
-          >
-            <span class="sq-card-map">
-              <img src=${mapImage(r.rules.gameMap)} alt="" loading="lazy" />
-              <span class="sq-card-badges"><span class="sq-entry">LIVE</span></span>
-              <span class="sq-card-map-caption">
-                <strong>${mapName(r.rules.gameMap)}</strong>
-                <span>${modeLabel(r.mode)} · ${r.members.length} players</span>
-              </span>
-            </span>
-            <span class="sq-card-bottom">
-              <span>Watch game</span>
-              ${roomWager(r) ? html`<span>${solIcon()} ${pot(r)} SOL</span>` : ""}
-            </span>
-          </button>`)}
-        </div>`
-      : html`<p>No games are live right now. Games will appear here when they start.</p>`}
+    ${
+      activeGames.length
+        ? html`<div class="sq-ordered-grid">
+            ${activeGames.map(
+              (r) =>
+                html`<button
+                  class="sq-card"
+                  ?disabled=${busy}
+                  @click=${() => act(() => watchLive(r))}
+                  aria-label=${`Watch ${mapName(r.rules.gameMap)} live`}
+                >
+                  <span class="sq-card-map">
+                    <img
+                      src=${mapImage(r.rules.gameMap)}
+                      alt=""
+                      loading="lazy"
+                    />
+                    <span class="sq-card-badges"
+                      ><span class="sq-entry">LIVE</span></span
+                    >
+                    <span class="sq-card-map-caption">
+                      <strong>${mapName(r.rules.gameMap)}</strong>
+                      <span
+                        >${modeLabel(r.mode)} · ${r.members.length}
+                        players</span
+                      >
+                    </span>
+                  </span>
+                  <span class="sq-card-bottom">
+                    <span>Watch game</span>
+                    ${roomWager(r) ? html`<span>${solIcon()} ${pot(r)} SOL</span>` : ""}
+                  </span>
+                </button>`,
+            )}
+          </div>`
+        : html`<p>
+            No games are live right now. Games will appear here when they start.
+          </p>`
+    }
   </main>`;
 }
 
@@ -1821,7 +1955,8 @@ function paint() {
                 aria-current=${showLobbies && liveOnly ? "page" : "false"}
                 @click=${browseLiveGames}
               >
-                Watch live${liveGames.length ? html` (${liveGames.length})` : ""}
+                Watch
+                live${liveGames.length ? html` (${liveGames.length})` : ""}
               </button>
             </nav>
             <div class="fp-nav-right">
@@ -1848,7 +1983,7 @@ function paint() {
                   ? html`<button
                       class="sp-balance-badge"
                       title="Available platform balance · Open wallet"
-                      aria-label=${`Platform balance: ${playerWalletView.data ? `${(playerWalletView.data.availableLamports / 1e9).toLocaleString("en-US", { maximumFractionDigits: 9 })} SOL` : "unavailable"}. Open wallet`}
+                      aria-label=${`Wallet balance: ${playerWalletView.data ? `${(playerWalletView.data.availableLamports / 1e9).toLocaleString("en-US", { maximumFractionDigits: 9 })} SOL` : "unavailable"}. Open wallet`}
                       ?disabled=${busy || inGame}
                       @click=${() => act(openPlayerWallet)}
                     >
@@ -2080,10 +2215,17 @@ function paint() {
             >
             <div class="fp-footer-links">
               <a
+                href=${authConfig?.release?.sourceCommit && /^[a-f0-9]{40}$/.test(authConfig.release.sourceCommit) ? `https://github.com/sol-of-war-dev/Sol-of-War/tree/${authConfig.release.sourceCommit}` : "https://github.com/sol-of-war-dev/Sol-of-War"}
+                target="_blank"
+                rel="noreferrer"
+                >${authConfig?.release?.sourceCommit && /^[a-f0-9]{40}$/.test(authConfig.release.sourceCommit) ? `Deployed source ${authConfig.release.sourceCommit.slice(0, 7)}` : "Sol of War source"}</a
+              >
+              <a href="/source">Download running source</a>
+              <a
                 href="https://github.com/openfrontio/OpenFrontIO"
                 target="_blank"
                 rel="noreferrer"
-                >${t("source")}</a
+                >OpenFront source</a
               ><a href="/terms" target="_blank" rel="noreferrer"
                 >Terms of Service</a
               ><a href="/license">${t("license")}</a
@@ -2094,7 +2236,18 @@ function paint() {
       </div>
       ${
         inGame
-          ? html`${watchingLive && spectatorLoading ? html`<div class="sow-spectator-loading" role="status"><span class="sow-lobby-spinner" aria-hidden="true"></span><p>Connecting to live game…</p><button class="fp-secondary" @click=${stopWatching}>Cancel</button></div>` : ""}<div class="fp-game-bar">
+          ? html`${
+                watchingLive && spectatorLoading
+                  ? html`<div class="sow-spectator-loading" role="status">
+                      <span class="sow-lobby-spinner" aria-hidden="true"></span>
+                      <p>Connecting to live game…</p>
+                      <button class="fp-secondary" @click=${stopWatching}>
+                        Cancel
+                      </button>
+                    </div>`
+                  : ""
+              }
+              <div class="fp-game-bar">
                 <img
                   class="sow-game-wordmark"
                   src=${brandWordmark}
@@ -2115,7 +2268,9 @@ function paint() {
                     : ""
                 }
                 ${room && roomRanked(room) && !watchingLive ? rankLabel(room.members.find((m) => m.id === identity?.id)?.rank) : ""}
-                <button @click=${() => watchingLive ? stopWatching() : act(leave)}>
+                <button
+                  @click=${() => (watchingLive ? stopWatching() : act(leave))}
+                >
                   ${tutorialActive ? "Exit tutorial" : watchingLive ? "Stop watching" : t("leave_match")}
                 </button>
               </div>
@@ -2184,12 +2339,11 @@ function lobbyCard(r: PublicRoom) {
   </button>`;
 }
 function homeView() {
-  const available = [...rooms]
-    .sort(
-      (a, b) =>
-        (a.queuePosition ?? Number.MAX_SAFE_INTEGER) -
-        (b.queuePosition ?? Number.MAX_SAFE_INTEGER),
-    );
+  const available = [...rooms].sort(
+    (a, b) =>
+      (a.queuePosition ?? Number.MAX_SAFE_INTEGER) -
+      (b.queuePosition ?? Number.MAX_SAFE_INTEGER),
+  );
   const featured = available[0];
   const upcoming = available.slice(1, 3);
   return html`<main class="sow-home">
@@ -2533,20 +2687,25 @@ function roomView() {
   const joined = room?.id === r.id;
   const open = ["waiting", "countdown"].includes(r.status);
   const full = r.members.length >= r.max;
-  const customLobby = !r.queueKey && !r.automaticTeams && !r.matchmakingRoster && !r.practice;
+  const customLobby =
+    !r.queueKey && !r.automaticTeams && !r.matchmakingRoster && !r.practice;
   return html`<main class="sq-waiting">
     <header class="sq-lobby-heading">
       <button class="fp-primary" @click=${browseLobbies}>Back to games</button>
       <h1>
         ${r.locked ? "Game started" : joined && customLobby && r.host === identity?.id ? "Your lobby" : "Waiting for game start"}
       </h1>
-      ${customLobby ? html`<button
-        class="sow-lobby-id"
-        @click=${copyInvite}
-        title="Copy invite link"
-      >
-        ${r.id} · Copy invite
-      </button>` : html`<span class="sow-lobby-id">Match ${r.id}</span>`}
+      ${
+        customLobby
+          ? html`<button
+              class="sow-lobby-id"
+              @click=${copyInvite}
+              title="Copy invite link"
+            >
+              ${r.id} · Copy invite
+            </button>`
+          : html`<span class="sow-lobby-id">Match ${r.id}</span>`
+      }
       <span class="fp-pill">${matchLabel(r)}</span>
       ${
         joined
@@ -2719,7 +2878,7 @@ function roomView() {
                         return html`<button
                           class="fp-create"
                           aria-pressed=${selected}
-                          ?disabled=${busy || !open || r.teamsLocked || (r.allowTeamSelection === false && r.host !== identity?.id) || selected || members.length >= 2}
+                          ?disabled=${busy || !open || r.teamsLocked === true || (r.allowTeamSelection === false && r.host !== identity?.id) || selected || members.length >= 2}
                           @click=${() =>
                             act(async () => {
                               const updated = await api<PublicRoom>(
@@ -2778,7 +2937,7 @@ function roomView() {
                                 ><strong
                                   >${m.name}${m.id === identity?.id ? " (you)" : ""}</strong
                                 >
-                                ${html`<small>${m.rank?.tier ?? "Unranked"}${m.rank?.rating != null ? ` · ${m.rank.rating.toLocaleString()} Elo` : ""}</small>`}
+                                ${html`<small>${m.rank?.tier ?? "Unranked"}${typeof m.rank?.rating === "number" ? ` · ${m.rank.rating.toLocaleString()} Elo` : ""}</small>`}
                                 <small
                                   >${customLobby && m.id === r.host ? "Host · " : ""}${r.mode === "2v2" ? `Team ${m.team === 0 ? "A" : "B"} · ` : ""}${m.ready ? "Ready" : isFunded() && roomWager(r) ? "Waiting for funded entry" : "Connecting…"}</small
                                 ></span
@@ -2791,7 +2950,7 @@ function roomView() {
               </div>
             </section>
             <div class="sq-lobby-entry">
-              ${joined && isFunded() && roomWager(r) ? paymentView(funding, r.stake, () => void act(fundEntry), busy, isMainnet() ? "mainnet" : "devnet", !!authConfig?.playerWalletsEnabled && funding?.fundingSource !== "external") : ""}
+              ${joined && isFunded() && roomWager(r) ? paymentView(funding, r.stake, () => void act(fundEntry), busy, isMainnet() ? "mainnet" : "devnet", !!authConfig?.playerWalletsEnabled && !authConfig?.userOwnedWalletsEnabled && funding?.fundingSource !== "external") : ""}
             </div>
           </div>`
     }
@@ -2841,20 +3000,45 @@ function termsView() {
     <h1>Terms of Service</h1>
     <p class="sq-terms-date">Updated October 29, 2026</p>
     ${
-      authConfig?.playerWalletsEnabled
-        ? html`<h2>Sol of War wallets</h2>
+      authConfig?.userOwnedWalletsEnabled
+        ? html`<h2>Personal wallets and legacy balances</h2>
             <p>
-              Sol of War creates and manages a dedicated Solana wallet for your
-              account and controls its signing keys. Funding your wallet does
-              not join a match. Confirming a Ranked entry authorizes its
-              transfer to that match’s pool. Withdrawals require your
-              confirmation and return available SOL to your verified connected
-              wallet. The platform currently covers outgoing network fees. SOL
-              sent to your deposit address appears after final confirmation;
-              unsupported tokens are not credited.
+              Your new wallet is owned by your Privy account. Sol of War
+              registers no server spending signer. You approve transfers through
+              your wallet and can export your key through Privy’s protected
+              interface. Protect your sign-in methods and device; this does not
+              remove provider, account compromise or website risks. Your wallet
+              pays its outgoing network fees.
+            </p>
+            <p>
+              Older account wallets remain under platform custody until you
+              approve migration to your new wallet. Existing match refunds and
+              payouts keep their original destinations. Sol of War retains
+              legacy keys and backups; exporting an old key would not eliminate
+              that custody.
             </p>`
-        : ""
+        : authConfig?.playerWalletsEnabled
+          ? html`<h2>Sol of War wallets</h2>
+              <p>
+                Sol of War creates and manages a dedicated Solana wallet for
+                your account and controls its signing keys. Funding your wallet
+                does not join a match. Confirming a Ranked entry authorizes its
+                transfer to that match’s pool. Withdrawals require your
+                confirmation and return available SOL to your verified connected
+                wallet or another valid destination you select. The platform
+                currently covers outgoing network fees. SOL sent to your deposit
+                address appears after final confirmation; unsupported tokens are
+                not credited.
+              </p>`
+          : ""
     }
+    <h2>Custodial match pools</h2>
+    <p>
+      Wagering transfers SOL into match pools controlled by Sol of War. The
+      operator retains signing authority for these pools and platform systems
+      determine game results. Trustless escrow is not implemented, and no
+      independent security audit has been completed.
+    </p>
     <h2>Ranked, FFA Wagers and Free Play</h2>
     <p>
       Ranked offers paid 1v1 and 2v2 with separate Elo ratings. FFA Wagers have
@@ -2884,11 +3068,12 @@ function termsView() {
         ? html`<h2>Real SOL entries</h2>
             <p>
               Wagered matches use SOL on Solana mainnet. Each entry requires a
-              ${authConfig?.playerWalletsEnabled ? "confirmation using your Sol of War balance. Winnings and refunds return to the wallet that funded the entry." : "separate wallet approval."}
+              ${authConfig?.playerWalletsEnabled && !authConfig?.userOwnedWalletsEnabled ? "confirmation using your legacy Sol of War balance." : "separate wallet approval."}
+              Winnings and refunds return to the wallet that funded the entry.
               Only finalized deposits qualify. Late or cancelled entries are
               refunded in full, excluding the original deposit network fee. The
               platform pays payout and refund network fees. Prizes remain
-              pending until the result is independently verified and the payout
+              pending until platform systems verify the result and the payout
               transaction is finalized. The tutorial is free.
             </p>`
         : ""
@@ -2906,7 +3091,12 @@ function termsView() {
         : ""
     }
     <h2>Guest Free Play</h2>
-    <p>Guests can choose a temporary username and play Free Play without a wallet. Guest sessions do not save XP, profile statistics or ranked progression. Guest sessions expire and may end when the service restarts. SOL wagers and account features require verified wallet sign-in.</p>
+    <p>
+      Guests can choose a temporary username and play Free Play without a
+      wallet. Guest sessions do not save XP, profile statistics or ranked
+      progression. Guest sessions expire and may end when the service restarts.
+      SOL wagers and account features require verified wallet sign-in.
+    </p>
     <h2>Entry and prize pools</h2>
     <p>
       The displayed entry amount applies to each player. The prize pool equals

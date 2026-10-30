@@ -55,3 +55,14 @@ these results are not an independent security audit.
 The GitHub remote is configured, and the dedicated SSH key authenticates as
 `sol-of-war-dev`. Deployment status is tracked separately from these local verification
 results. No real funds were used by the automated tests.
+
+
+## October 29: local wallet-security implementation
+
+An opt-in user-owned wallet flow, provider-protected export, explicit legacy migration, exact transfer authorization, and source/build integrity checks have been implemented locally. This is not a deployment or an independent audit. Default mode remains legacy custody; wager pools remain operator-controlled. See [activation requirements and evidence limits](USER_OWNED_WALLETS.md). The real provider flow, user key export and mainnet transactions have not been exercised by this implementation task.
+
+The final application/payment regression run passed 390 tests across 49 files, including the current profile-view regression tests. RPC and provider tests use mocks. This does not establish live provider configuration or successful mainnet transfers.
+
+## User-owned wallet and release regression checks — October 29, 2026
+
+402 tests across 51 application test files passed, along with TypeScript, the production frontend build and runtime/source-archive integrity checks. Coverage includes wallet ownership rejection, identity-only authentication, user-approved migration, durable signed transfers, withdrawal receipt recovery, cancellation races and release revision validation. These local checks use simulated provider/RPC responses; they are not an independent audit or a completed devnet/mainnet rehearsal. The user-owned-wallet feature remains disabled until the prerequisites in `USER_OWNED_WALLETS.md` are verified.

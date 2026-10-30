@@ -1,0 +1,33 @@
+name: Verify application and payments
+on:
+  push:
+    branches: [main, 'codex/**']
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: verify-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      HUSKY: '0'
+      GAME_ENV: dev
+      GIT_COMMIT: DEV
+      PAYMENTS_MODE: simulation
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24.15.0
+          cache: npm
+      - run: npm install --global --ignore-scripts npm@12.1.0
+      - run: npm ci --ignore-scripts
+      - run: npm run verify:sow
+      - name: Verify built runtime and source archive
+        run: node --import tsx -e 'import {releaseIntegrity} from "./src/frontpot/ReleaseIntegrity.ts"; console.log(releaseIntegrity(process.cwd(), true));'
