@@ -22,7 +22,10 @@ if (
   !settings.PRIVY_APP_ID ||
   settings.PRIVY_APP_ID !== setup.appId ||
   settings.HOST !== "127.0.0.1" ||
-  settings.APP_ORIGIN !== `http://127.0.0.1:${settings.PORT}` ||
+  ![
+    `http://127.0.0.1:${settings.PORT}`,
+    `http://localhost:${settings.PORT}`,
+  ].includes(settings.APP_ORIGIN) ||
   settings.SOLANA_DEVNET_RPC_URL !== "https://api.devnet.solana.com" ||
   settings.FRONTPOT_STATE_DIR !== path.join(root, "state") ||
   settings.NODE_ENV !== "development"

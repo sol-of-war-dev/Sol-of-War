@@ -20,6 +20,7 @@ export type UserWalletSnapshot = {
   balanceLamports: number;
   inMatchesLamports: number;
   legacy: WalletSnapshot | null;
+  legacyUnavailable: boolean;
 };
 export type UserWithdrawal = {
   requestID: string;
@@ -202,9 +203,17 @@ export class UserOwnedWallets {
   async snapshot(identity: PlayerSession): Promise<UserWalletSnapshot> {
     const saved = this.get(identity.id);
     const wallet = saved ? await this.verified(identity) : null;
-    const legacy = this.legacy?.vault.get(identity.id)
-      ? await this.legacy.snapshot(identity.id)
-      : null;
+    let legacy: WalletSnapshot | null = null;
+    let legacyUnavailable = false;
+    if (this.legacy?.vault.get(identity.id)) {
+      try {
+        legacy = await this.legacy.snapshot(identity.id);
+      } catch {
+        // Legacy backup/RPC failures must not block an independent personal wallet.
+        // Do not expose an unverified legacy balance or enable migration from it.
+        legacyUnavailable = true;
+      }
+    }
     let balanceLamports = 0,
       inMatchesLamports = 0;
     if (wallet) {
@@ -243,6 +252,7 @@ export class UserOwnedWallets {
       balanceLamports,
       inMatchesLamports,
       legacy,
+      legacyUnavailable,
     };
   }
   private withdrawalID(value: unknown) {

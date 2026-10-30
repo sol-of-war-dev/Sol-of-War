@@ -51,7 +51,7 @@ Create `privy-app.json` privately with `appId` and `appSecret`, then run:
 node scripts/prepareUserWalletDevnet.mjs /private/rehearsal/privy-app.json /private/rehearsal TESTER_PUBLIC_WALLET
 ```
 
-This provisions a separate operator-owned test fee payer and a restrictive pool transfer policy. It does not create a personal wallet or add any personal-wallet signers. The helper saves an uncertain-write marker before provider provisioning; reconcile a pending operation instead of deleting the marker and provisioning again. Configure the new app's allowed origin as `http://127.0.0.1:5312`, enable identity tokens, retain provider confirmation modals and verify TEE support.
+This provisions a separate operator-owned test fee payer and a restrictive pool transfer policy. It does not create a personal wallet or add any personal-wallet signers. The helper saves an uncertain-write marker before provider provisioning; reconcile a pending operation instead of deleting the marker and provisioning again. Configure the new app's allowed origin as `http://localhost:5312`, enable identity tokens, retain provider confirmation modals and verify TEE support. Open that exact origin in the browser with the wallet extension; the server binds only to `127.0.0.1`.
 
 Fund the printed fixture address with free devnet SOL from the official faucet. Then:
 

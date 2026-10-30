@@ -37,6 +37,7 @@ function fixture() {
     balanceLamports: 10000000,
     inMatchesLamports: 0,
     legacy: null,
+    legacyUnavailable: false,
   };
   const api = vi.fn(async (path: string, _body?: object): Promise<unknown> =>
     path === "/wallet/account/withdrawals"
@@ -83,6 +84,27 @@ function fixture() {
     paint: () => render(view.render(), host),
   };
 }
+it("separates unavailable legacy details from personal wallet creation and export", async () => {
+  const f = fixture();
+  f.snapshot.legacyUnavailable = true;
+  f.snapshot.wallet = null;
+  await f.view.refresh();
+  f.paint();
+  expect(f.host.textContent).toContain("Create user-owned wallet");
+  expect(f.host.textContent).toContain(
+    "Legacy custody wallet details are temporarily unavailable",
+  );
+  expect(f.host.textContent).not.toContain(
+    "Approve migration with sign-in wallet",
+  );
+  f.snapshot.wallet = wallet;
+  await f.view.refresh();
+  f.paint();
+  expect(f.host.textContent).toContain("Export private key with Privy");
+  expect(f.host.textContent).not.toContain(
+    "Approve migration with sign-in wallet",
+  );
+});
 it("recovers a recorded withdrawal after reload without asking for a second signature", async () => {
   const f = fixture();
   sessionStorage.setItem(
@@ -145,6 +167,7 @@ it("does not discard an unresolved request when the server refuses cancellation"
             balanceLamports: 0,
             inMatchesLamports: 0,
             legacy: null,
+            legacyUnavailable: false,
           },
   );
   await f.view.cancelWithdrawal();

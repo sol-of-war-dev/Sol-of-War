@@ -212,7 +212,7 @@ const environment = {
   HOST: "127.0.0.1",
   PORT: "5312",
   GIT_COMMIT: "DEVNET-REHEARSAL",
-  APP_ORIGIN: "http://127.0.0.1:5312",
+  APP_ORIGIN: "http://localhost:5312",
   FRONTPOT_STATE_DIR: path.join(root, "state"),
   PAYMENTS_MODE: "devnet",
   SOLANA_DEVNET_RPC_URL: "https://api.devnet.solana.com",

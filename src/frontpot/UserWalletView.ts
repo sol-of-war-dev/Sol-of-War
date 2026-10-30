@@ -494,6 +494,7 @@ export class UserWalletView {
                         )
                 }
               </section>
+              ${d?.legacyUnavailable ? html`<p role="status">Legacy custody wallet details are temporarily unavailable. Your personal wallet remains separate. Refresh before attempting a migration.</p>` : ""}
               ${
                 d?.legacy
                   ? html`<section class="fp-help sc-detail">

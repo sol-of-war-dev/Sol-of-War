@@ -14,6 +14,7 @@ import {
   DevnetTransactions,
 } from "../../src/frontpot/payments/DevnetTransactions";
 import { GENESIS_HASHES } from "../../src/frontpot/payments/Network";
+import type { PlayerWallets } from "../../src/frontpot/payments/PlayerWallets";
 import {
   PrivyUserWalletVerifier,
   UserOwnedWallets,
@@ -204,6 +205,33 @@ async function walletFixture() {
     },
   };
 }
+it("keeps personal wallet creation and reads available when legacy backup fails", async () => {
+  const f = await walletFixture();
+  f.db.exec("CREATE TABLE player_wallets(address TEXT)");
+  const legacy = {
+    vault: { get: vi.fn(() => ({ address: destination })) },
+    snapshot: vi.fn(async () => {
+      throw new Error("Offsite wallet backup is required");
+    }),
+  } as unknown as PlayerWallets;
+  const service = new UserOwnedWallets(f.db, f.verifier, f.tx, legacy);
+  expect(await service.snapshot(f.identity)).toMatchObject({
+    wallet: null,
+    legacy: null,
+    legacyUnavailable: true,
+  });
+  await service.register(f.identity, id);
+  expect(await service.snapshot(f.identity)).toMatchObject({
+    wallet: { address: f.ownedAddress },
+    balanceLamports: 10_000_000,
+    legacy: null,
+    legacyUnavailable: true,
+  });
+  f.verifier.verify.mockRejectedValueOnce(new Error("Ownership unavailable"));
+  await expect(service.snapshot(f.identity)).rejects.toThrow(
+    "Ownership unavailable",
+  );
+});
 it("registration stores only public identifiers and cannot swap the registered wallet", async () => {
   const f = await walletFixture();
   expect((await f.service.snapshot(f.identity)).wallet).toBeNull();

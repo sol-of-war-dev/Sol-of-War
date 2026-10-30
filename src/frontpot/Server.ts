@@ -526,9 +526,9 @@ registerAuthRoutes(
         if (client.persistentID === id) client.ws.close(1008, "Signed out");
   },
   (id) => {
-    // Personal wallets are available to every authenticated account.
-    // Ranked match admission remains controlled separately by PaymentRoutes.
-    playerWallets?.vault.ensure(id);
+    // User-owned mode creates personal wallets only through the provider UI.
+    // Keep existing legacy wallets available without creating new custody keys.
+    if (!userOwnedWalletsEnabled) playerWallets?.vault.ensure(id);
   },
 );
 const adminStats = new AdminStats(
