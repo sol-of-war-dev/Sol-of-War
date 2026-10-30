@@ -13,7 +13,7 @@ import "./GameSetup";
 import "../client/components/LevelBadge";
 import "./PrizePot";
 import { parseSolAmount } from "./Amounts";
-import { readApiResponse } from "./ApiResponse";
+import { requestApi } from "./ApiResponse";
 import brandSymbol from "./assets/sol-of-war-symbol.png";
 import brandWordmark from "./assets/sol-of-war-wordmark.png";
 import { CountdownClock } from "./CountdownClock";
@@ -974,23 +974,22 @@ async function api<T>(url: string, body?: unknown): Promise<T> {
     rateLimitMessage = `Requests are temporarily limited. Please try again in ${Math.ceil(((body === undefined ? apiRetryAt : apiActionRetryAt) - requestedAt) / 1000)} seconds.`;
     throw Object.assign(new Error(rateLimitMessage), { status: 429 });
   }
-  const response = await fetch(`/frontpot/api${url}`, {
-    credentials: "omit",
-    ...(body === undefined
-      ? { method: "GET" }
-      : { method: "POST", body: JSON.stringify(body) }),
-    headers: {
-      "Content-Type": "application/json",
-      ...(sessionStorage.getItem("frontpot-session")
-        ? {
-            Authorization: `Bearer ${sessionStorage.getItem("frontpot-session")}`,
-          }
-        : {}),
-    },
-  });
   let data;
   try {
-    data = await readApiResponse(response);
+    data = await requestApi(`/frontpot/api${url}`, {
+      credentials: "omit",
+      ...(body === undefined
+        ? { method: "GET" }
+        : { method: "POST", body: JSON.stringify(body) }),
+      headers: {
+        "Content-Type": "application/json",
+        ...(sessionStorage.getItem("frontpot-session")
+          ? {
+              Authorization: `Bearer ${sessionStorage.getItem("frontpot-session")}`,
+            }
+          : {}),
+      },
+    });
   } catch (e) {
     if (e instanceof Error && "status" in e && e.status === 429) {
       const delay =

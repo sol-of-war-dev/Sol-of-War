@@ -1,5 +1,52 @@
-import { expect, it } from "vitest";
-import { readApiResponse } from "../../src/frontpot/ApiResponse";
+import { expect, it, vi } from "vitest";
+import { readApiResponse, requestApi } from "../../src/frontpot/ApiResponse";
+it.each(["headers", "body"])(
+  "releases a stalled %s request without duplicating a payment",
+  async (stage) => {
+    const request = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async (_url, init) => {
+        if (stage === "headers")
+          return new Promise<Response>((_resolve, reject) => {
+            init!.signal!.addEventListener(
+              "abort",
+              () => reject(init!.signal!.reason),
+              { once: true },
+            );
+          });
+        return new Response(
+          new ReadableStream({
+            start(controller) {
+              controller.enqueue(new TextEncoder().encode('{"state":'));
+              init!.signal!.addEventListener(
+                "abort",
+                () => controller.error(init!.signal!.reason),
+                { once: true },
+              );
+            },
+          }),
+        );
+      });
+    try {
+      const body = JSON.stringify({ requestID: "saved-payment-request" });
+      await expect(
+        requestApi(
+          "/frontpot/api/wallet/account/withdraw/submit",
+          { method: "POST", credentials: "omit", body },
+          20,
+        ),
+      ).rejects.toThrow("may still complete");
+      expect(request).toHaveBeenCalledTimes(1);
+      expect(request.mock.calls[0][1]).toMatchObject({
+        method: "POST",
+        credentials: "omit",
+        body,
+      });
+    } finally {
+      request.mockRestore();
+    }
+  },
+);
 it("handles the plain-text rate limit response with a retry delay", async () => {
   await expect(
     readApiResponse(

@@ -1,3 +1,24 @@
+/** Bound the whole response, including its body. Never retry a payment automatically. */
+export async function requestApi(
+  url: string,
+  options: RequestInit,
+  timeoutMs = 60_000,
+) {
+  const deadline = AbortSignal.timeout(timeoutMs);
+  const signal = options.signal
+    ? AbortSignal.any([deadline, options.signal])
+    : deadline;
+  try {
+    return await readApiResponse(await fetch(url, { ...options, signal }));
+  } catch (error) {
+    if (deadline.aborted)
+      throw new Error(
+        "The request timed out and may still complete. Check your wallet history before retrying a payment.",
+      );
+    throw error;
+  }
+}
+
 /** Parse API errors without exposing HTML/proxy responses or JSON parser errors. */
 export async function readApiResponse(response: Response, now = Date.now()) {
   const raw = await response.text();
