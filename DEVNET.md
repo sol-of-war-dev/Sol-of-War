@@ -71,3 +71,7 @@ npm run build:demo
 ```
 
 The local RPC test suite uses real ephemeral Ed25519 signatures but simulated confirmations. It is deliberately labelled as such; passing it is not a completed real devnet rehearsal.
+
+## Local wallet sign-in diagnostics
+
+For an isolated localhost rehearsal, build with `vite build --config vite.demo.config.ts --mode wallet-diagnostics`, then run `node scripts/packageDemo.mjs`. This opt-in build classifies nested provider authentication errors using fixed labels and local asset locations. It does not log provider payloads, tokens, signatures, signed messages, or keys, and the diagnostic logger runs only on localhost or 127.0.0.1. Standard release builds omit it. Rebuild normally before deployment.
