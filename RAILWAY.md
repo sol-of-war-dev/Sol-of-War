@@ -30,14 +30,13 @@ Before calling a deployment ready, check `/healthz`, the homepage, a map asset, 
 
 Primary URL: https://solofwar.fun
 
-Railway project: Frontpot. Environment: production. Service: frontpot. Region: US West. Persistent volume: frontpot-volume at `/data`. This deployment uses CLI source uploads; GitHub autodeploy is not configured.
+Railway project: Frontpot. Environment: production. Service: frontpot. Region: US West. Persistent volume: frontpot-volume at `/data`. The service builds from `sol-of-war-dev/Sol-of-War`; production releases are manually selected by exact commit after deployment preparation. GitHub autodeploy remains disabled.
 
 Public branding is Sol of War. Name.com hosts DNS: solofwar.fun apex ANAME points to `cuvaw3wg.up.railway.app`; www CNAME points to `39fe64wz.up.railway.app`. Preserve Railway ownership TXT records `_railway-verify` and `_railway-verify.www`. Both domains route to port 8080 with Railway-managed HTTPS. `APP_ORIGIN=https://solofwar.fun`; apex and www are allowed in the existing Privy app. The old solsiege.fun domains and Railway hostname remain connected and redirect website requests to the new apex, preserving paths and queries. Existing users, wallet addresses and balances remain in the same service/database. Browser sessions may require sign-in again on the new origin.
 
 The public `/tutorial` route is anonymous and runs locally. Guest sessions can also use Free Play and Solo. SOL wagers and account-wallet features require verified wallet sign-in and a claimed username. Verify that guest sessions cannot fund entries, withdraw another account's balance or access administrator operations.
 
 Queue administration: set `SOLSIEGE_ADMIN_WALLETS` to the administrator public wallet address (comma-separated for multiple explicitly authorized owners). It is server-only; `/admin` requires verified Privy login and a username. Settings and audit records live in the existing SQLite database on `/data`. Queued demo matches are regenerated on service restart.
-
 
 ## Source identity and verification
 
@@ -46,3 +45,11 @@ The GitHub workflow `.github/workflows/verify.yml` checks application/payment te
 Railway supplies `RAILWAY_GIT_COMMIT_SHA` to the Docker builder. The build records that revision plus content digests in `dist-demo/release-manifest.json`. A conflicting or dirty local checkout cannot claim a supplied commit. Production startup checks the runtime and served assets, including the downloadable source archive. The public `/frontpot/api/release` endpoint reports the revision and digests, and the footer links to that exact GitHub revision when available. CLI uploads without source metadata report no commit instead of inventing one. These records detect accidental mismatch; the operator still controls the server and they are not independent deployment attestation.
 
 After a repository deployment, compare the Railway deployment revision, public release revision, and the files in `/source` with that GitHub commit. Verify the real site health and preserve the existing volume, private variables, domain, and legacy recovery keys.
+
+## GitHub Production deployment history
+
+The **Record Production deployment** workflow maintains GitHub's **Deployments / Production** section and links it to https://solofwar.fun. It checks the public health and release endpoints, requires successful main-branch verification for a newly observed commit, and creates the record against that live commit, even when GitHub main has newer changes. It never deploys code, calls Railway's API, accesses wallet credentials, or moves funds. Its short-lived GitHub token can read repository/Actions metadata and write deployment records; it cannot change source code.
+
+Run it from GitHub Actions after verifying a production release for an immediate update. A scheduled check also runs approximately every 15 minutes, subject to GitHub scheduling delays and inactivity limits. Unchanged releases do not create duplicate records. Rollbacks create a new record; superseded records from this workflow become inactive. This records observed release changes, not every Railway container restart, and can miss a release replaced between checks.
+
+The green status means the release identity and public health check passed when recorded. It is not a continuous uptime guarantee, financial safety certification, or independent hosting attestation. Keep the existing source-archive comparison and payment/provider checks in the release procedure. The About sidebar's **Deployments** option must be enabled for this history to appear.

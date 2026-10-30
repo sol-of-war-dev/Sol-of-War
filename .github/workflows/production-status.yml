@@ -1,0 +1,40 @@
+name: Record Production deployment
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/production-status.yml"
+      - "scripts/reportProduction.mjs"
+      - "scripts/reportProduction.test.mjs"
+  schedule:
+    - cron: "13,28,43,58 * * * *"
+permissions: {}
+concurrency:
+  group: production-deployment-record
+  cancel-in-progress: false
+jobs:
+  record:
+    if: github.repository == 'sol-of-war-dev/Sol-of-War' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      contents: read
+      actions: read
+      deployments: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          sparse-checkout: scripts
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24.15.0
+      - name: Check deployment-record safeguards
+        run: node --test scripts/reportProduction.test.mjs
+      # No environment block: its automatic record would use the workflow's SHA,
+      # which can differ from the commit actually running on Railway.
+      - name: Verify and record the running commit
+        run: node scripts/reportProduction.mjs --write
+        env:
+          GH_TOKEN: ${{ github.token }}
