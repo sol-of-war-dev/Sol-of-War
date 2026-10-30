@@ -1247,6 +1247,17 @@ async function enter(nextRoom: PublicRoom, background = false) {
   if (requestGeneration !== generation) return;
   const lobby = client.joinLobby(new EventBus(), {
     gameID: room.id,
+    onGameError: (failure) => {
+      if (requestGeneration !== generation || room?.id !== nextRoom.id) return;
+      connected = false;
+      error =
+        failure.message === "full-lobby"
+          ? "This lobby is full. Return to lobbies to choose another match."
+          : failure.message === "game-started"
+            ? "This match has already started. Return to lobbies to choose another match."
+            : `Unable to join this match: ${failure.message}`;
+      paint();
+    },
     onLobbyConnected: () => {
       if (requestGeneration !== generation || connected) return;
       connected = true;

@@ -574,6 +574,16 @@ export class GameServer {
       return "not_trusted";
     }
 
+    // Managed matches authenticate one account per seat. A fresh join frame
+    // after a reload or from another tab must reuse that seat before checking
+    // capacity, including while the lobby is still waiting for payment.
+    if (
+      this.managedMatch &&
+      this.rejoinClient(client.ws, client.persistentID, 0)
+    ) {
+      return "joined";
+    }
+
     // Being routed is not a refusal, so it must not consume the "full" or
     // "started" answer that belongs to the lobby they end up on.
     const redirect = this.poolRedirectFor(client);

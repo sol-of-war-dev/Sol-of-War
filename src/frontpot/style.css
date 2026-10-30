@@ -2037,6 +2037,12 @@ in-game-promo {
   }
 }
 
+/* Privy's dark theme uses the same success color for the receipt icon and
+   its circle. Use its contrasting success token for the SVG stroke. */
+svg[stroke="var(--privy-color-success)"] {
+  stroke: var(--privy-color-success-dark, #aceecb);
+}
+
 /* Shared game queue and pre-game lobby. */
 .fp-content {
   width: min(1160px, calc(100% - 48px));

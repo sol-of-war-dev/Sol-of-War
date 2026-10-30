@@ -155,6 +155,7 @@ export function makeClient(opts: ClientOpts = {}): Client {
 export const mockWsOf = (client: Client): MockWs => client.ws as any;
 
 export interface GameOpts {
+  managedMatch?: boolean;
   id?: string;
   log?: any;
   createdAt?: number;
@@ -185,6 +186,7 @@ export function makeGame(opts: GameOpts = {}): GameServer {
   return new GameServer(
     {
       id: opts.id ?? cid("game"),
+      managedMatch: opts.managedMatch,
       log: opts.log ?? mockLogger(),
       createdAt: opts.createdAt ?? Date.now(),
       gameConfig: testGameConfig(opts.config),
