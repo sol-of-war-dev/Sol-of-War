@@ -77,6 +77,8 @@ The isolated test pool policy now includes the verified personal wallet as an al
 
 Match entry preparation now checks browser signing readiness before issuing a short-lived transaction. Reopening an expired unsigned entry returns a clear error and preserves the original request; it never silently substitutes a new blockhash. This addresses an issue observed during the real rehearsal. Match refunds, winner payouts, legacy migration, and external recovery still need their recorded acceptance evidence.
 
+The migration rehearsal also found that the isolated pool/fee-payer policy rejects the Memo instruction used to bind legacy transfers to their request IDs. A fee-payer-only comparison accepted the native transfer without the memo and rejected it with the memo; neither diagnostic was broadcast. The attempted migration is saved as failed before broadcast. Its required policy addition remains a separate approval, and the migration is not yet verified. The wallet UI now validates the returned migration receipt, reports failed/review/pending/finalized states accurately, and updates the notice when a saved receipt finalizes.
+
 ## Primary provider references
 
 - [Wallet export](https://docs.privy.io/wallets/wallets/export)

@@ -4,6 +4,7 @@ import { depositQR } from "./DepositQR";
 import type { Wire, ChainJob } from "./payments/DevnetTransactions";
 import { assertNativeTransfer } from "./payments/NativeTransferPolicy";
 import { transactionLink } from "./payments/PaymentView";
+import type { WalletTransfer } from "./payments/PlayerWallets";
 import type { SpendApproval } from "./payments/SpendApproval";
 import type {
   UserWalletSnapshot,
@@ -23,6 +24,17 @@ function withdrawalNotice(receipt: ChainJob) {
       : "This withdrawal needs reconciliation or review. Keep its receipt. No automatic replacement payment was created.";
   return "Signed withdrawal recorded. Waiting for Solana confirmation.";
 }
+function migrationNotice(receipt: WalletTransfer) {
+  const status =
+    receipt.state === "failed"
+      ? "Migration failed. Check its saved receipt in your legacy wallet history before making another request."
+      : receipt.state === "review"
+        ? "Migration needs reconciliation or review. No automatic replacement payment was created."
+        : receipt.state === "finalized"
+          ? "Migration finalized."
+          : "Migration recorded. Waiting for Solana confirmation.";
+  return `${status} Existing match payouts may still return to your legacy wallet.`;
+}
 type Pending = { id: string; amount: string; destination: string };
 export class UserWalletView {
   data: UserWalletSnapshot | null = null;
@@ -33,6 +45,7 @@ export class UserWalletView {
   private migrationConfirmed = false;
   private notice = "";
   private receipt: ChainJob | null = null;
+  private migrationReceipt: WalletTransfer | null = null;
   private withdrawals: UserWithdrawal[] = [];
   private historyUnavailable = false;
   constructor(
@@ -55,6 +68,7 @@ export class UserWalletView {
     this.acknowledged = false;
     this.migrationConfirmed = false;
     this.receipt = null;
+    this.migrationReceipt = null;
     this.withdrawals = [];
     this.historyUnavailable = false;
   }
@@ -102,6 +116,15 @@ export class UserWalletView {
       if (owner === this.c.identity()?.id) {
         this.data = data;
         this.recovery = data.wallet;
+        const previousMigration = this.migrationReceipt;
+        const latestMigration =
+          previousMigration &&
+          data.legacy?.transfers.find((t) => t.id === previousMigration.id);
+        if (previousMigration && latestMigration) {
+          if (this.notice === migrationNotice(previousMigration))
+            this.notice = migrationNotice(latestMigration);
+          this.migrationReceipt = latestMigration;
+        }
         const key = `sow-user-wallet:migration:${owner}`;
         const pending = this.savedPending(key);
         if (
@@ -265,16 +288,31 @@ export class UserWalletView {
       await this.c.walletLogin()
     ).approvePayment(owner.wallet, approval);
     this.sameOwner(owner.id);
-    await this.c.api("/wallet/account/migrate/submit", {
-      requestID: pending.id,
-      amount: pending.amount,
-      approval: proof,
-    });
-    sessionStorage.removeItem(`sow-user-wallet:migration:${owner.id}`);
+    const receipt = await this.c.api<WalletTransfer>(
+      "/wallet/account/migrate/submit",
+      {
+        requestID: pending.id,
+        amount: pending.amount,
+        approval: proof,
+      },
+    );
     this.sameOwner(owner.id);
+    if (
+      !receipt ||
+      receipt.id !== `withdrawal:${pending.id}` ||
+      receipt.playerID !== owner.id ||
+      receipt.kind !== "withdrawal" ||
+      receipt.destination !== d.wallet.address ||
+      receipt.lamports !== lamports ||
+      !["pending", "finalized", "review", "failed"].includes(receipt.state)
+    )
+      throw new Error(
+        "Migration receipt could not be verified. Check legacy wallet history before retrying.",
+      );
+    sessionStorage.removeItem(`sow-user-wallet:migration:${owner.id}`);
     this.migrationConfirmed = false;
-    this.notice =
-      "Migration submitted. Your balance updates after final confirmation. Existing match payouts may still return to your legacy wallet.";
+    this.migrationReceipt = receipt;
+    this.notice = migrationNotice(receipt);
     await this.refresh();
   }
   async withdraw() {

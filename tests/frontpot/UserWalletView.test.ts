@@ -296,7 +296,17 @@ it("retries the amount the player approved when new legacy deposits arrive", asy
             matchID: null,
             termsHash: null,
           }
-        : f.snapshot,
+        : path.endsWith("/submit")
+          ? {
+              id: `withdrawal:${requestID}`,
+              playerID: "alice",
+              kind: "withdrawal",
+              destination: wallet.address,
+              lamports: 2000000,
+              state: "pending",
+              created: Date.now(),
+            }
+          : f.snapshot,
   );
   await f.view.refresh();
   f.paint();
@@ -314,3 +324,83 @@ it("retries the amount the player approved when new legacy deposits arrive", asy
   });
   expect(f.approvePayment).toHaveBeenCalledTimes(1);
 });
+
+it.each([
+  ["failed", "Migration failed."],
+  ["review", "Migration needs reconciliation or review."],
+  ["pending", "Migration recorded. Waiting for Solana confirmation."],
+  ["finalized", "Migration finalized."],
+] as const)(
+  "shows the actual %s migration state and preserves its receipt",
+  async (state, message) => {
+    const f = fixture();
+    f.snapshot.legacy = {
+      address: entry.destination,
+      network: "devnet",
+      availableLamports: 2000000,
+      reservedLamports: 0,
+      inMatchesLamports: 0,
+      balanceLamports: 2000000,
+      checkedAt: Date.now(),
+      transfers: [],
+    };
+    sessionStorage.setItem(
+      "sow-user-wallet:migration:alice",
+      JSON.stringify({
+        id: requestID,
+        amount: "0.002",
+        destination: wallet.address,
+      }),
+    );
+    const receipt = {
+      id: `withdrawal:${requestID}`,
+      playerID: "alice",
+      kind: "withdrawal" as const,
+      destination: wallet.address,
+      lamports: 2000000,
+      state,
+      created: Date.now(),
+    };
+    f.api.mockImplementation(async (path) => {
+      if (path.endsWith("/withdrawals")) return [];
+      if (path.endsWith("/authorize"))
+        return {
+          source: entry.destination,
+          destination: wallet.address,
+          playerID: "alice",
+          wallet: wallet.address,
+          lamports: 2000000,
+          network: "devnet",
+          requestID: receipt.id,
+          kind: "withdrawal",
+          matchID: null,
+          termsHash: null,
+        };
+      if (path.endsWith("/submit")) {
+        f.snapshot.legacy!.transfers = [receipt];
+        return receipt;
+      }
+      return f.snapshot;
+    });
+    await f.view.refresh();
+    f.paint();
+    const check = [...f.host.querySelectorAll("label")]
+      .find((l) => l.textContent?.includes("I authorize moving"))!
+      .querySelector("input")!;
+    check.checked = true;
+    check.dispatchEvent(new Event("change"));
+    await f.view.migrate();
+    f.paint();
+    expect(f.host.textContent).toContain(message);
+    expect(f.host.textContent).not.toContain("Migration submitted.");
+    expect(
+      sessionStorage.getItem("sow-user-wallet:migration:alice"),
+    ).toBeNull();
+    if (state === "pending") {
+      f.snapshot.legacy!.transfers = [{ ...receipt, state: "finalized" }];
+      await f.view.refresh();
+      f.paint();
+      expect(f.host.textContent).toContain("Migration finalized.");
+    }
+  },
+);
