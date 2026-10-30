@@ -232,6 +232,16 @@ export function initializePrivy(
         const { signedTransaction } = await signTransaction({
           wallet,
           chain: network === "mainnet" ? "solana:mainnet" : "solana:devnet",
+          options: {
+            uiOptions: {
+              showWalletUIs: true,
+              description:
+                "Review the transfer. After approving, close the signed confirmation promptly to submit before it expires.",
+              successHeader: "Signature ready",
+              successDescription:
+                "Close this dialog now to submit the signed transaction. The transfer is not complete until Solana finalizes it.",
+            },
+          },
           transaction: Uint8Array.from(atob(transaction), (c) =>
             c.charCodeAt(0),
           ),
@@ -396,6 +406,7 @@ export function initializePrivy(
           },
           embeddedWallets: {
             showWalletUIs: true,
+            priceDisplay: { primary: "native-token", secondary: null },
             ethereum: { createOnLogin: "off" },
             solana: { createOnLogin: "off" },
           },

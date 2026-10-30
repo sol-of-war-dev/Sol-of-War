@@ -344,6 +344,20 @@ function transfers(wire: string) {
   };
 }
 describe("integrated devnet payments (local RPC fixture, no network funds)", () => {
+  it("uses a fresh blockhash with matching broadcast preflight", async () => {
+    const f = await fixture();
+    await f.fund(0);
+    const calls = f.request.mock.calls.map(([, init]) =>
+      JSON.parse(init!.body as string),
+    );
+    expect(calls.find((c) => c.method === "getLatestBlockhash").params).toEqual(
+      [{ commitment: "confirmed" }],
+    );
+    expect(
+      calls.find((c) => c.method === "sendTransaction").params[1]
+        .preflightCommitment,
+    ).toBe("confirmed");
+  });
   it("drains a funded waiting match and waits for its full refund and ledger confirmation", async () => {
     const f = await fixture();
     await f.fund(0);

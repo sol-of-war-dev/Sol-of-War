@@ -15,6 +15,14 @@ import type { Identity } from "./Store";
 import "./AccountCards.css";
 
 const sol = (n: number) => (n / 1e9).toFixed(9).replace(/\.?0+$/, "") || "0";
+function withdrawalNotice(receipt: ChainJob) {
+  if (receipt.state === "finalized") return "Withdrawal finalized.";
+  if (receipt.state === "review")
+    return receipt.reviewReason === "expired_unconfirmed"
+      ? "The signed transaction expired without a confirmed result. Keep its receipt for review. No automatic replacement payment was created."
+      : "This withdrawal needs reconciliation or review. Keep its receipt. No automatic replacement payment was created.";
+  return "Signed withdrawal recorded. Waiting for Solana confirmation.";
+}
 type Pending = { id: string; amount: string; destination: string };
 export class UserWalletView {
   data: UserWalletSnapshot | null = null;
@@ -289,8 +297,7 @@ export class UserWalletView {
       sessionStorage.removeItem(`sow-user-wallet:withdrawal:${owner.id}`);
       this.receipt = prepared.receipt;
       this.acknowledged = false;
-      this.notice =
-        "This withdrawal was already recorded. View its transaction while it confirms.";
+      this.notice = withdrawalNotice(prepared.receipt);
       await this.refresh();
       return;
     }
@@ -315,10 +322,7 @@ export class UserWalletView {
     this.sameOwner(owner.id);
     this.receipt = receipt;
     this.acknowledged = false;
-    this.notice =
-      receipt.state === "finalized"
-        ? "Withdrawal finalized."
-        : "Withdrawal submitted. Keep the transaction receipt while it confirms.";
+    this.notice = withdrawalNotice(receipt);
     await this.refresh();
   }
   render() {
@@ -483,7 +487,7 @@ export class UserWalletView {
                                 ${sol(w.lamports)} SOL ·
                                 ${w.network === "mainnet" ? "Mainnet" : "Devnet"}
                                 ·
-                                ${w.state === "awaiting_approval" ? "Awaiting your approval" : w.state === "finalized" ? "Finalized successfully" : w.state === "review" ? "Needs reconciliation or review" : w.state === "cancelled" ? "Cancelled in Sol of War" : "Submitted; confirmation pending"}
+                                ${w.state === "awaiting_approval" ? "Awaiting your approval" : w.state === "finalized" ? "Finalized successfully" : w.state === "review" ? "Needs reconciliation or review" : w.state === "cancelled" ? "Cancelled in Sol of War" : "Signed; confirmation pending"}
                               </p>
                               <code style="overflow-wrap:anywhere"
                                 >${w.destination}</code

@@ -7,7 +7,10 @@ const fake = vi.hoisted(() => ({
   onComplete: null as (() => void) | null,
   config: null as {
     sessions?: { cookieWriteBehavior: string };
-    embeddedWallets: { showWalletUIs: boolean };
+    embeddedWallets: {
+      showWalletUIs: boolean;
+      priceDisplay: { primary: string; secondary: null };
+    };
     solana: {
       rpcs: Record<string, { rpc: unknown; rpcSubscriptions: unknown }>;
     };
@@ -79,6 +82,10 @@ it("keeps spending tokens in the provider client and disables their site-cookie 
   });
   expect(fake.config!.sessions!.cookieWriteBehavior).toBe("never");
   expect(fake.config!.embeddedWallets.showWalletUIs).toBe(true);
+  expect(fake.config!.embeddedWallets.priceDisplay).toEqual({
+    primary: "native-token",
+    secondary: null,
+  });
   fake.getIdentityToken.mockResolvedValueOnce(null);
   await expect(wallet.restore()).rejects.toThrow("Identity-only sign-in");
 });
@@ -148,6 +155,18 @@ it("configures both confirmation networks and signs only with the requested wall
         wallet: selected,
         chain,
         transaction: new Uint8Array([1, 2, 3]),
+        options: {
+          uiOptions: {
+            showWalletUIs: true,
+            description: expect.stringContaining(
+              "close the signed confirmation",
+            ),
+            successHeader: "Signature ready",
+            successDescription: expect.stringContaining(
+              "Close this dialog now to submit",
+            ),
+          },
+        },
       });
     }
     const warning = vi.spyOn(console, "warn").mockImplementation(() => {});

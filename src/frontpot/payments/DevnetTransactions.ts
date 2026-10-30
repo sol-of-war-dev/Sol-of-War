@@ -81,9 +81,11 @@ export class DevnetRPC {
         p.to === source
       )
         throw new Error("Invalid transfer");
+    // A fresher blockhash leaves time for wallet approval and matches the
+    // broadcast preflight commitment. Balances and success still require finality.
     const { value: latest } = await this.call<{
       value: { blockhash: string; lastValidBlockHeight: number };
-    }>("getLatestBlockhash", [{ commitment: "finalized" }]);
+    }>("getLatestBlockhash", [{ commitment: "confirmed" }]);
     const tx = pipe(
       createTransactionMessage({ version: 0 }),
       (m) => setTransactionMessageFeePayer(address(feePayer), m),
