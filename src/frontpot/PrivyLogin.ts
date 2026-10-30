@@ -250,10 +250,43 @@ export function initializePrivy(
           const waiting = pending;
           pending = null;
           if (code === "exited_auth_flow") waiting?.resolve(null);
-          else
+          else {
+            // Never log provider error payloads, tokens, or signed messages.
+            const safeCode = [
+              "missing_or_invalid_privy_app_id",
+              "missing_or_invalid_token",
+              "invalid_data",
+              "invalid_captcha",
+              "allowlist_rejected",
+              "unknown_auth_error",
+              "unknown_connect_wallet_error",
+              "generic_connect_wallet_error",
+              "client_request_timeout",
+              "invalid_credentials",
+              "invalid_message",
+              "unable_to_sign",
+              "captcha_timeout",
+              "captcha_failure",
+              "captcha_disabled",
+              "session_storage_unavailable",
+              "too_many_requests",
+              "max_accounts_reached",
+              "disallowed_login_method",
+              "buffer_not_defined",
+              "unsupported_wallet_type",
+              "no_solana_accounts",
+            ].includes(code)
+              ? code
+              : "unknown_auth_error";
+            console.warn("Wallet sign-in error code:", safeCode);
             waiting?.reject(
-              new Error("Wallet sign-in failed. Please try again."),
+              new Error(
+                safeCode === "disallowed_login_method"
+                  ? "Solana wallet sign-in is unavailable. Please contact support."
+                  : "Wallet sign-in failed. Please try again.",
+              ),
             );
+          }
         },
       });
       useEffect(() => {
