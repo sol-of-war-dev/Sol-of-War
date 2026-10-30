@@ -59,6 +59,112 @@
   "limitations": [
     "Three earlier signed withdrawals expired and remain in review. No automatic replacement payments.",
     "Finalized-receipt reconciliation was exercised twice against the real stored receipt with RPC calls disabled; this does not test every ambiguous network failure.",
-    "Match funding/refund/payout, legacy migration, late payout recovery, external key recovery and production activation remain outstanding."
-  ]
+    "Winner payout, late legacy payout recovery, external key recovery and production activation remain outstanding. Browser signing initialization has been intermittent after reload; the successful entry followed a reload and foreground interaction, which does not establish the cause."
+  ],
+  "latestRehearsalCommit": "d262e1388d49e6062ed7c9bae2ed9b7ec1bf462b",
+  "migration": {
+    "checkedAt": "2026-10-30T18:20:04.996Z",
+    "network": "devnet",
+    "requestID": "withdrawal:52481671-23b3-4ea0-b595-ebbf26aa4032",
+    "signature": "ZZSQYYB7G52ubWcdeG15tXzTVuStUPSMB5QCeFgJgn6kVXBoNg3CwmuFiiDVhKoPtBsHM4r9CSG2UinXxL2BuGH",
+    "status": {
+      "confirmationStatus": "finalized",
+      "confirmations": null,
+      "err": null,
+      "slot": 516862436,
+      "status": {
+        "Ok": null
+      }
+    },
+    "slot": 516862436,
+    "feeLamports": 10000,
+    "feePayer": "5GwHZg4ZsM9DBHwvw89Z2JKdViRUrupGEqJMVFYZSJDr",
+    "transfers": [
+      {
+        "destination": "2rv7CM4VRHjin6YRRkWXhqGakjJVTzspneeibnpN2u1c",
+        "lamports": 20000000,
+        "source": "7PhpCwM8VB7zb3k8wkwJPPJFBTpD4iLvKWaGRR62r26c"
+      }
+    ],
+    "memo": "withdrawal:52481671-23b3-4ea0-b595-ebbf26aa4032",
+    "finalizedBalances": {
+      "legacyLamports": 0,
+      "personalLamports": 38995000
+    },
+    "approval": "Browser approval flow returned a proof verified by the backend; agent did not observe or click the extension signature button",
+    "oldFailedReceiptRetained": true
+  },
+  "matchEntryAndRefund": {
+    "checkedAt": "2026-10-30T18:23:24.298Z",
+    "network": "devnet",
+    "matchID": "1126265a",
+    "entryID": "0b86ce7f-7ef1-4f99-87f9-3aeec9da047e",
+    "entryState": "refunded",
+    "platformFeeLamports": 0,
+    "personalWalletAuthorityChanged": false,
+    "receipts": [
+      {
+        "kind": "deposit",
+        "id": "deposit:0b86ce7f-7ef1-4f99-87f9-3aeec9da047e",
+        "signature": "3TDXzXbwmQy7Mih2EfoYMFFw1RHJfPRbKkDf8bxKLfXGko1seHQpEjYUFCM7yAm4egi2LVSoo4DGNQYnr2SU4hDk",
+        "slot": 516862863,
+        "status": "finalized",
+        "feeLamports": 5000,
+        "feePayer": "2rv7CM4VRHjin6YRRkWXhqGakjJVTzspneeibnpN2u1c",
+        "transfers": [
+          {
+            "destination": "89gsGcqZpLLaYTmEVuMvPyWXEiF7FJJSB1pxLebr9YZh",
+            "lamports": 1000000,
+            "source": "2rv7CM4VRHjin6YRRkWXhqGakjJVTzspneeibnpN2u1c"
+          }
+        ]
+      },
+      {
+        "kind": "refund",
+        "id": "refund:0b86ce7f-7ef1-4f99-87f9-3aeec9da047e",
+        "signature": "2JXvbsJ4AEKtsnM588M1Drnu1duEJKsneKQ9LZifQAPMsVp4oK34ZmLzBsvWKoue4bt4SozFrgrC3g5dAuGQWq7N",
+        "slot": 516863073,
+        "status": "finalized",
+        "feeLamports": 10000,
+        "feePayer": "5GwHZg4ZsM9DBHwvw89Z2JKdViRUrupGEqJMVFYZSJDr",
+        "transfers": [
+          {
+            "destination": "2rv7CM4VRHjin6YRRkWXhqGakjJVTzspneeibnpN2u1c",
+            "lamports": 1000000,
+            "source": "89gsGcqZpLLaYTmEVuMvPyWXEiF7FJJSB1pxLebr9YZh"
+          }
+        ]
+      }
+    ],
+    "finalizedBalances": {
+      "personalLamports": 38990000,
+      "poolLamports": 0
+    }
+  },
+  "memoPolicyVerification": {
+    "checkedAt": "2026-10-30T18:18:50.383Z",
+    "network": "devnet",
+    "appId": "cmvufc1a800000gktrq44unsi",
+    "policyId": "sgjuc9dg96fm9kftgbw5i4io",
+    "feePayerOnly": true,
+    "legacySourceSignatureRequested": false,
+    "broadcast": false,
+    "results": [
+      {
+        "test": "allowed legacy migration with memo",
+        "allowed": true,
+        "status": 200
+      },
+      {
+        "test": "unlisted recipient with memo",
+        "allowed": false,
+        "status": 400
+      },
+      {
+        "test": "excess amount with memo",
+        "allowed": false,
+        "status": 400
+      }
+    ]
+  }
 }
