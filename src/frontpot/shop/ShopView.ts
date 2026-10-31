@@ -340,9 +340,8 @@ export class ShopView {
                 players when used in matches.
               </p>
               <p>
-                Static PNG, up to 128 KB and 512 × 512 pixels. Artwork is
-                resized to fit.
-                ${this.category === "pattern" ? "Your PNG repeats with its original colors and transparency. Transparent areas show the territory underneath. Preview the tile and the in-game result before buying." : "Use transparency for flags and crowns if desired."}
+                Static PNG, up to 128 KB and 512 × 512 pixels.
+                ${this.category === "pattern" ? "Pattern tiles keep their uploaded size. Your PNG repeats with its original colors and transparency. Transparent areas show the territory underneath. Preview the tile and the in-game result before buying." : "Artwork is resized to fit. Use transparency for flags and crowns if desired."}
               </p>
               ${
                 identity && !identity.guest
