@@ -137,6 +137,7 @@ describe("Ranked and Unranked", () => {
           ranked: false,
         });
         players.slice(1).forEach((p) => store.join(p, room.id));
+        store.requestCountdown(players[0], room.id, 120);
         expect(
           advanceLobby(
             room,

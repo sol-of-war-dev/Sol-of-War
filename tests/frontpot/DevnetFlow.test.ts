@@ -68,6 +68,7 @@ async function fixture(
     .map((a, i) => store.identity(`Player${i}`, a));
   const room = store.create(players[0], { mode, stake: "0.25" });
   players.slice(1).forEach((p) => store.join(p, room.id));
+  store.requestCountdown(players[0], room.id, 120);
   ledger.open(room);
   let height = 100,
     finalized = false,
@@ -621,10 +622,10 @@ describe("integrated devnet payments (local RPC fixture, no network funds)", () 
     await f.fund(0);
     f.finalize();
     await f.payments.tick();
-    expect(f.lock()).toBe("expired");
+    expect(f.lock()).toBe("waiting");
     expect(f.ledger.get(f.room.id)?.state).toBe("waiting");
     expect(f.room.readyIDs).toEqual([f.players[0].id]);
-    // Mirror the server's expiry handler; the funded entry is returned in full.
+    // The host-controlled lobby remains open; explicit cancellation returns the entry in full.
     f.payments.cancel(f.room.id);
     f.ledger.refund(f.room.id, "Not enough ready players. No platform fee.");
     await f.payments.tick();

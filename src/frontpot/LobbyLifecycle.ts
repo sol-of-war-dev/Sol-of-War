@@ -27,7 +27,9 @@ export function advanceLobby(
   room.readyIDs = entrants.map((m) => m.id);
   // A full public roster can start from any queue position. Pending deposits,
   // spectators and disconnected seats never count toward capacity.
+  const hostControlled = !room.queueKey && !room.automaticStart && !room.matchmakingRoster && !room.practice;
   const full =
+    !hostControlled &&
     !room.private &&
     !room.practice &&
     entrants.length === limits(room).max &&
@@ -43,7 +45,7 @@ export function advanceLobby(
     room.startsAt = null;
     return "waiting";
   }
-  if (room.private && !room.practice && room.startsAt === null) {
+  if (hostControlled && room.startsAt === null) {
     room.status = "waiting";
     return "waiting";
   }
@@ -58,7 +60,7 @@ export function advanceLobby(
     room.members = room.members.filter(
       (m) => entrants.some((e) => e.id === m.id) || reservedIDs.includes(m.id),
     );
-    if (room.private && !room.practice) {
+    if (hostControlled) {
       room.status = "waiting";
       room.startsAt = null;
       return "waiting";

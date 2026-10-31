@@ -6,6 +6,7 @@ import {
   isRanked,
   limits,
   LobbyStore,
+  LOBBY_COUNTDOWN_MS,
   parseStake,
   type Identity,
   type Mode,
@@ -551,6 +552,9 @@ export class Matchmaking {
         } finally {
           this.formingGroup = [];
         }
+        result.automaticStart = true;
+        result.startsAt = this.now() + LOBBY_COUNTDOWN_MS;
+        result.status = "countdown";
         result.automaticTeams = true;
         result.matchmakingSkillProtected = t.ranked;
       }

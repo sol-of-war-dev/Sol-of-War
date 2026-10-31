@@ -42,6 +42,7 @@ export type Room = {
   practice: boolean;
   ranked?: boolean;
   automaticTeams?: boolean;
+  automaticStart?: boolean;
   matchmakingSkillProtected?: boolean;
   matchmakingRoster?: string[];
   parties?: string[][];
@@ -262,12 +263,9 @@ export class LobbyStore {
       teamsLocked: false,
       host: identity.id,
       members: [],
-      status: input.practice || input.private ? "waiting" : "countdown",
+      status: "waiting",
       created: this.now(),
-      startsAt:
-        input.practice || input.private
-          ? null
-          : this.now() + LOBBY_COUNTDOWN_MS,
+      startsAt: null,
       readyIDs: [],
     };
     this.rooms.set(id, room);
@@ -296,6 +294,7 @@ export class LobbyStore {
       !room ||
       room.host !== identity.id ||
       room.queueKey ||
+      room.automaticStart ||
       room.practice ||
       room.matchmakingRoster
     )
@@ -321,10 +320,7 @@ export class LobbyStore {
       rulesKey: validated.rulesKey,
     });
     room.members[0].team = 0;
-    room.status = room.private ? "waiting" : "countdown";
-    room.startsAt = room.private
-      ? null
-      : (room.startsAt ?? this.now() + LOBBY_COUNTDOWN_MS);
+    room.status = room.startsAt === null ? "waiting" : "countdown";
     return room;
   }
   requestCountdown(identity: Identity, id: string, seconds: unknown): Room {
@@ -332,6 +328,7 @@ export class LobbyStore {
     if (
       !room ||
       room.queueKey ||
+      room.automaticStart ||
       room.practice ||
       room.matchmakingRoster ||
       room.host !== identity.id
@@ -356,9 +353,9 @@ export class LobbyStore {
   }
   requestStart(identity: Identity, id: string): Room {
     const room = this.rooms.get(id);
-    if (!room || !room.private || room.practice || room.host !== identity.id)
-      throw new InputError("Only the host can start an invite-only match.");
-    if (room.status !== "waiting" || room.locked)
+    if (!room || room.queueKey || room.automaticStart || room.matchmakingRoster || room.practice || room.host !== identity.id)
+      throw new InputError("Only the host can start a custom match.");
+    if (!["waiting", "countdown"].includes(room.status) || room.locked)
       throw new InputError("This match is already starting.");
     if (
       room.members.length < limits(room).min ||

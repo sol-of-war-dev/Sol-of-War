@@ -262,10 +262,14 @@ const matchmaking = new SharedMatchmaking(
 const parties = new Parties(store, (identity) => matchmaking.cancel(identity));
 function publicRoom(room: Parameters<typeof store.publicRoom>[0]) {
   const result = store.publicRoom(room);
+  const funded = new Set(payments && isWager(room)
+    ? [...payments.fundedIDs(room.id), ...(payments.match(room.id)?.state === "locked" ? payments.match(room.id)?.roster ?? [] : [])]
+    : []);
   return {
     ...result,
     members: result.members.map((member) => ({
       ...member,
+      funded: funded.has(member.id),
       levelBadge: profiles.badge(member.id),
       rank:
         room.mode === "ffa"

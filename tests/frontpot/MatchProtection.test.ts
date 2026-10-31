@@ -10,6 +10,33 @@ import { LobbyStore } from "../../src/frontpot/Store";
 import { authorizeIntent } from "../../src/server/IntentAuthorization";
 
 describe("Managed match protection", () => {
+  it.each([false, true])("waits for the host in a full custom lobby (private=%s)", (privateLobby) => {
+    let now = 1000;
+    const store = new LobbyStore(() => now);
+    const host = store.identity("Host"), guest = store.identity("Guest");
+    const room = store.create(host, { mode: "1v1", ranked: false, stake: "0", private: privateLobby });
+    store.join(guest, room.id);
+    const ids = [host.id, guest.id];
+    const lock = () => ({ poolLamports: 0, feeLamports: 0 });
+    expect(advanceLobby(room, ids, now, lock)).toBe("waiting");
+    expect(room.startsAt).toBeNull();
+    expect(() => store.requestStart(guest, room.id)).toThrow("Only the host");
+    store.requestCountdown(host, room.id, 120);
+    now += 1000;
+    expect(advanceLobby(room, ids, now, lock)).toBe("countdown");
+    expect(room.startsAt).toBe(121000);
+    store.requestStart(host, room.id);
+    expect(advanceLobby(room, ids, now, lock)).toBe("locked");
+  });
+  it("refuses an immediate start until every player is eligible", () => {
+    const store = new LobbyStore(() => 1000);
+    const host = store.identity("Host"), guest = store.identity("Guest");
+    const room = store.create(host, { mode: "1v1", stake: "0.1" });
+    store.join(guest, room.id);
+    advanceLobby(room, [host.id, guest.id], 1000, () => { throw new Error("Must not lock"); }, [host.id]);
+    expect(() => store.requestStart(host, room.id)).toThrow("entries confirmed");
+    expect(room.startsAt).toBeNull();
+  });
   it("rejects privileged client controls even for a claimed admin host", () => {
     for (const type of [
       "update_game_config",

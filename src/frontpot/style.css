@@ -3646,7 +3646,11 @@ svg[stroke="var(--privy-color-success)"] {
   margin: 0 0 8px;
 }
 .sq-funding button {
-  width: 100%;
+  width: auto;
+  max-width: 100%;
+  min-height: 46px;
+  border-radius: 999px;
+  padding: 12px 24px;
   margin: 10px 0;
 }
 .sq-funding small {
@@ -4133,6 +4137,89 @@ svg[stroke="var(--privy-color-success)"] {
   border-bottom: 1px solid #ffffff18;
   text-transform: uppercase;
   font-size: 20px;
+}
+.sow-lobby-settings .sow-countdown-card {
+  margin-top: 24px;
+  padding: clamp(20px, 4vw, 32px);
+  border: 1px solid #f7973b50;
+  border-radius: 24px;
+  background: #21152e;
+}
+.sow-countdown-card h2 {
+  margin: 0 0 10px;
+  padding: 0;
+  border: 0;
+  text-transform: none;
+  font-size: 26px;
+}
+.sow-countdown-form {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin: 24px 0 14px;
+}
+.sow-countdown-field {
+  flex: 1 1 220px;
+  max-width: 360px;
+}
+.sow-countdown-field label {
+  display: block;
+  margin-bottom: 10px;
+  font-weight: 700;
+}
+.sow-countdown-pill {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  padding: 0 24px;
+  border: 1px solid #71547e;
+  border-radius: 999px;
+  background: #130b1e;
+}
+.sow-countdown-pill:focus-within {
+  outline: 2px solid #ff9b32;
+  outline-offset: 3px;
+}
+.sow-countdown-pill input {
+  width: 100%;
+  min-width: 0;
+  padding: 12px 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  font-size: 28px;
+  font-weight: 700;
+  color-scheme: dark;
+}
+.sow-countdown-pill span {
+  color: #c6b6cf;
+  font-size: 16px;
+}
+.sow-countdown-start {
+  min-height: 64px;
+  padding: 16px 32px;
+  border-radius: 999px;
+  font-size: 18px;
+}
+.sow-countdown-start:focus-visible {
+  outline: 2px solid #ffbf77;
+  outline-offset: 3px;
+}
+.sow-countdown-note {
+  margin-bottom: 0;
+}
+@media (max-width: 560px) {
+  .sow-countdown-field {
+    max-width: none;
+    flex-basis: 100%;
+  }
+  .sow-countdown-start {
+    width: 100%;
+  }
 }
 .sow-setting-options {
   display: flex;
@@ -5413,3 +5500,7 @@ html.sow-software-rendering body * {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
+
+.sow-custody-note { margin: 4px 0 8px; }
+.sow-funded-bag { display: inline-flex; vertical-align: middle; margin-left: 8px; }
+.sow-funded-bag svg { width: 22px; height: 25px; flex-shrink: 0; }

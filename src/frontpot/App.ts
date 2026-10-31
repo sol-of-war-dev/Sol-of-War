@@ -60,6 +60,7 @@ type PublicRoom = Omit<Room, "members"> & {
     team: number;
     wallet?: string;
     ready: boolean;
+    funded?: boolean;
     levelBadge?: { level: number; prestige: number; legend: boolean };
     rank?: VisibleRank;
     icon?: ProfileIcon;
@@ -1628,7 +1629,7 @@ const countdown = (r: PublicRoom) => {
   if (r.locked) return "Locked";
   if (r.queueKey && r.startsAt === null)
     return `Queue ${r.queuePosition ?? "…"}`;
-  if (!r.startsAt) return r.private && !r.practice ? "Host starts" : "Waiting";
+  if (!r.startsAt) return !r.queueKey && !r.automaticTeams && !r.matchmakingRoster && !r.practice ? "Host starts" : "Waiting";
   const seconds = lobbyClock.seconds(r.startsAt);
   return seconds
     ? `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`
@@ -2702,37 +2703,63 @@ function lobbySettings(r: PublicRoom) {
     <p class="fp-small">
       ${locked && !busy ? "Settings are locked after another player joins or a deposit is prepared." : "Choose the settings, then invite players using your lobby link."}
     </p>
-    <fieldset ?disabled=${busy || (!!r.startsAt && r.members.length > 1)}>
-      <h2>Custom countdown</h2>
-      <p class="fp-small">
-        Start automatically after 10–3600 seconds. Players must be connected and
-        entries confirmed. The countdown cannot be changed after guests join.
+    <fieldset
+      class="sow-countdown-card"
+      ?disabled=${busy}
+    >
+      <h2>Start your match</h2>
+      <p id="sow-countdown-help" class="fp-small">
+        Start now or set a countdown. All players must be
+        connected${roomWager(r) ? " and entries are confirmed" : ""}.
       </p>
-      <input
-        id="sow-countdown-seconds"
-        type="number"
-        min="10"
-        max="3600"
-        value="120"
-        aria-label="Countdown in seconds"
-      />
-      <button
-        @click=${() =>
-          act(async () => {
-            const seconds = Number(
-              (
-                document.getElementById(
-                  "sow-countdown-seconds",
-                ) as HTMLInputElement
-              ).value,
-            );
+      <form
+        class="sow-countdown-form"
+        @submit=${(e: Event) => {
+          e.preventDefault();
+          const input = document.getElementById(
+            "sow-countdown-seconds",
+          ) as HTMLInputElement;
+          if (!input.reportValidity()) return;
+          const seconds = input.valueAsNumber;
+          void act(async () => {
             room = await api<PublicRoom>(`/rooms/${r.id}/countdown`, {
               seconds,
             });
-          })}
+          });
+        }}
       >
-        Start countdown
-      </button>
+        <div class="sow-countdown-field">
+          <label for="sow-countdown-seconds">Start in</label>
+          <div class="sow-countdown-pill">
+            <input
+              id="sow-countdown-seconds"
+              type="number"
+              inputmode="numeric"
+              min="10"
+              max="3600"
+              step="1"
+              required
+              ?disabled=${!!r.startsAt && r.members.length > 1}
+              value="120"
+              aria-describedby="sow-countdown-help sow-countdown-range"
+            />
+            <span>seconds</span>
+          </div>
+        </div>
+        <button type="submit" class="fp-primary sow-countdown-start" ?disabled=${!!r.startsAt && r.members.length > 1}>
+          ${busy ? "Starting…" : "Start countdown"}
+        </button>
+        <button type="button" class="fp-primary sow-countdown-start"
+          ?disabled=${!connected || r.readyCount < r.min || r.readyCount !== r.members.length}
+          @click=${() => act(async () => { room = await api<PublicRoom>(`/rooms/${r.id}/start`, {}); })}>Start game</button>
+      </form>
+      <p id="sow-countdown-range" class="fp-small sow-countdown-note">
+        ${
+          r.startsAt && r.members.length > 1
+            ? "Countdown started. It’s locked while guests are in the lobby."
+            : "10–3,600 seconds. Once started, the countdown locks when guests join."
+        }
+      </p>
     </fieldset>
     <fieldset ?disabled=${locked}>
       <h2>Visibility</h2>
@@ -2901,7 +2928,6 @@ function roomView() {
                 >${r.rules.randomSpawn ? "Random spawn" : "Choose your spawn"}</span
               >${r.private ? html`<span>Invite only</span>` : ""}
             </div>
-            ${joined && customLobby && r.host === identity?.id && open ? lobbySettings(r) : ""}
             ${
               joined && customLobby && r.mode === "2v2"
                 ? html`<section
@@ -3039,7 +3065,7 @@ function roomView() {
                                 ${rankBadge(m.rank?.tier ?? "Unranked")} </span
                               ><span
                                 ><strong
-                                  >${m.name}${m.id === identity?.id ? " (you)" : ""}</strong
+                                  >${m.name}${m.id === identity?.id ? " (you)" : ""}${roomWager(r) && m.funded ? html`<span class="sow-funded-bag" role="img" aria-label="Entry funded" title="Entry funded"><svg viewBox="0 0 16 18" aria-hidden="true" shape-rendering="crispEdges"><path fill="#ffbb42" d="M4 1h8v2h-2v2h2v2h2v3h1v6H1v-6h1V7h2V5h2V3H4z"/><path fill="#805016" d="M4 5h8v2H4zM7 8h2v1h2v2H7v1h4v3H9v1H7v-1H5v-2h4v-1H5V9h2z"/></svg></span>` : ""}</strong
                                 >
                                 ${html`<small>${m.rank?.tier ?? "Unranked"}${typeof m.rank?.rating === "number" ? ` · ${m.rank.rating.toLocaleString()} Elo` : ""}</small>`}
                                 <small
@@ -3056,28 +3082,18 @@ function roomView() {
             <div class="sq-lobby-entry">
               ${joined && isFunded() && roomWager(r) ? paymentView(funding, r.stake, () => void act(fundEntry), busy, isMainnet() ? "mainnet" : "devnet", !!authConfig?.playerWalletsEnabled && !authConfig?.userOwnedWalletsEnabled && funding?.fundingSource !== "external") : ""}
             </div>
+            ${joined && customLobby && r.host === identity?.id && open ? lobbySettings(r) : ""}
           </div>`
     }
     <footer class="sq-lobby-footer">
       <div>
         <small>STATUS</small
         ><strong
-          >${r.status === "finished" ? "Match complete" : r.locked ? "Match started" : joined && !connected ? "Connecting to game…" : r.startsAt ? (countdown(r) === "Closing…" ? "Closing entries…" : `Starting in ${countdown(r)}`) : r.queueKey ? `${countdown(r)} · Waiting for earlier games` : r.private ? "Waiting for host to start" : "Waiting for players"}</strong
+          >${r.status === "finished" ? "Match complete" : r.locked ? "Match started" : joined && !connected ? "Connecting to game…" : r.startsAt ? (countdown(r) === "Closing…" ? "Closing entries…" : `Starting in ${countdown(r)}`) : r.queueKey ? `${countdown(r)} · Waiting for earlier games` : customLobby ? "Waiting for host to start" : "Waiting for players"}</strong
         >
       </div>
       ${
-        joined && customLobby && r.private && open && r.host === identity?.id
-          ? html`<button
-              class="fp-primary"
-              ?disabled=${busy || !connected || r.readyCount < r.min || r.readyCount !== r.members.length}
-              @click=${() =>
-                act(async () => {
-                  room = await api<PublicRoom>(`/rooms/${r.id}/start`, {});
-                })}
-            >
-              Start match
-            </button>`
-          : joined
+        joined
             ? html`<span class="sq-seated"
                 >${r.locked ? "In game" : "You're in the lobby"}</span
               >`
