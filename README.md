@@ -94,10 +94,11 @@ purchase transaction's network fee**. Ownership unlocks only after finalization.
 Cosmetics do not change combat statistics, win conditions, matchmaking, or payouts.
 SOL wagers and their custodial match pools remain separate from the cosmetic shop.
 
-The shop is in development, with checkout disabled by default. The
+Catalog prices and custom uploads were approved on October 30, 2026. Checkout
+is enabled through explicit production configuration and remains off by default. The
 [devnet evidence](SHOP_DEVNET_EVIDENCE.md) uses a separate test mint and is not a
 mainnet purchase. See [shop mechanics and trust](COSMETIC_SHOP.md) and the
-[catalog and draft prices](COSMETIC_CATALOG.md) for activation status and details.
+[catalog and approved prices](COSMETIC_CATALOG.md) for activation status and details.
 
 ## Run it yourself
 

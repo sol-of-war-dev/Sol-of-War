@@ -1,8 +1,10 @@
 # Sol of War cosmetic shop
 
-Implementation status: local preview, automated checkout tests, and a completed
+Validation: local preview, automated checkout tests, and a completed
 [isolated devnet burn and sponsorship rehearsal](SHOP_DEVNET_EVIDENCE.md). Purchases
-are **disabled by default**. Draft prices require approval before activation.
+are **disabled by default**. The project owner approved all catalog prices and
+the 500,000 $SOLOFWAR custom-upload price on October 30, 2026. Production activation
+requires the explicit settings below.
 The rehearsals used separate test mints; they were not mainnet purchases.
 A [custom PNG purchase and match rehearsal](CUSTOM_PNG_DEVNET_EVIDENCE.md) also
 verified upload, preview, a 500,000-token burn, equipment, and visible territory
@@ -16,7 +18,7 @@ account/payment backend instead of OpenFront's currency and commerce APIs.
 The catalog contains **39 original cosmetics and 3 bundles**, arranged into Ember,
 Violet, and Solar collections. Artwork and effect definitions are authored in
 `src/frontpot/shop/Catalog.ts`; no premium store artwork is copied. The complete
-item and draft-price list is in [COSMETIC_CATALOG.md](COSMETIC_CATALOG.md).
+item and approved-price list is in [COSMETIC_CATALOG.md](COSMETIC_CATALOG.md).
 
 | Category           | Choices | Equip behavior                                                |
 | ------------------ | ------: | ------------------------------------------------------------- |
@@ -99,6 +101,25 @@ Wallet keys remain controlled by the user. Token burns are irreversible. Cosmeti
 entitlements and availability are managed by the platform. SOL wagers remain a
 separate system with custodial match pools and server-verified results.
 
+## Production fee sponsorship
+
+The platform fee payer uses a separate Privy policy from match-pool wallets.
+Its cosmetic rule permits only Token-2022 `BurnChecked` for the fixed $SOLOFWAR
+mint, six decimals, and a positive amount up to 500,000 $SOLOFWAR per instruction.
+The backend additionally requires the exact approved price, user token account,
+user signature, purchase memo, and fee budget before sponsorship.
+
+Existing native-SOL transfer and memo permissions are preserved. Private-key
+export and message signing remain denied. Personal wallets receive no server
+spending delegation, and match-pool token permissions are unchanged.
+
+The [provider-policy evidence](evidence/shop-production-sponsor-policy.json)
+records isolated positive/negative checks and a production signature-only check.
+No mainnet purchase was broadcast by these checks. The separate
+[devnet purchase evidence](SHOP_DEVNET_EVIDENCE.md) and
+[custom-PNG evidence](CUSTOM_PNG_DEVNET_EVIDENCE.md) cover actual finalized test
+burns. These checks are developer verification, not an independent audit.
+
 ## Configuration and activation
 
 - `/shop` is the preview page. Catalog and original artwork are public.
@@ -106,7 +127,8 @@ separate system with custodial match pools and server-verified results.
   Omit this setting to keep checkout disabled. Recovery of already-submitted burns
   and existing inventories continue while checkout is disabled.
 - `SOW_SHOP_PRICES` must be a JSON object containing positive integer whole-token
-  prices for all three item IDs. Explicit prices are mandatory when enabled.
+  prices for all 42 catalog item and bundle IDs. Use the approved values in
+  [`config/shop-prices.json`](config/shop-prices.json). Explicit prices are mandatory when enabled.
 - `SOW_SHOP_DEVNET_MINT` is mandatory for enabled devnet checkout. Mainnet has no
   mint override.
 - User-owned wallets and a configured platform fee sponsor are required.
@@ -146,7 +168,7 @@ specified in [LICENSING.md](LICENSING.md).
 
 Players can upload their own flags, territory patterns, skins, and crowns for
 **500,000 $SOLOFWAR per item**. This custom-item price is fixed on the server and
-was selected by the project owner; ordinary catalog prices remain drafts.
+was selected by the project owner; ordinary catalog prices were also approved on October 30, 2026.
 The complete price is burned, and the platform sponsors the network fee using
 exactly the existing user-signed checkout route. Uploading a draft is free.
 
@@ -193,7 +215,7 @@ from `/frontpot/api/shop/custom-art/:id.png` with PNG content type, `nosniff`, a
 restrictive content-security headers. No user filename becomes a filesystem path.
 
 Custom-upload privacy, fixed-price signed checkout, finality, persistence, equip
-ownership, draft caps, and invalid-image cases have automated tests. The earlier
-[devnet receipts](SHOP_DEVNET_EVIDENCE.md) cover predefined items, not a 500,000
-$SOLOFWAR custom-upload burn. Production checkout remains disabled; a custom-item
-devnet rehearsal and the production release checks remain before activation.
+ownership, draft caps, and invalid-image cases have automated tests. The [predefined-item rehearsal](SHOP_DEVNET_EVIDENCE.md) and
+[custom-PNG rehearsal](CUSTOM_PNG_DEVNET_EVIDENCE.md) include finalized devnet
+burns with platform-paid fees. The custom PNG was also equipped and verified in
+a running practice match. These are devnet receipts, not mainnet shop purchases.

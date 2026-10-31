@@ -10,7 +10,7 @@ import {
   type Skin,
 } from "@openfront/shared/CosmeticSchemas";
 import type { PlayerCosmetics } from "@openfront/shared/WireSchemas";
-/** Original procedural Sol of War artwork. All prices remain drafts. */
+/** Original procedural Sol of War artwork. Catalog prices approved October 30, 2026. */
 export const SHOP_MINT = "4KdB5zg8VuuUKJEk4DvkVZnrT9DJQxvWbjfDRF4cpump";
 export const CATEGORIES = {
   flag: "Flags",

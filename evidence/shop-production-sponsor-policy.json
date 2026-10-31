@@ -1,0 +1,280 @@
+{
+  "checkedAt": "2026-10-31T05:06:17.179Z",
+  "feePayer": "2AQfBHZ12g7NogBgLfia6gzpMueTTz6T4PmzbQmssCG2",
+  "policyID": "h20f0fkn93rod27tc5lgrnke",
+  "network": "mainnet",
+  "mint": "4KdB5zg8VuuUKJEk4DvkVZnrT9DJQxvWbjfDRF4cpump",
+  "program": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+  "burnCheckedDiscriminator": 15,
+  "decimals": 6,
+  "maximumWholeTokens": "500000",
+  "rules": [
+    {
+      "id": "fdbnl9qp6pqs8e81j4ssy8qh",
+      "name": "Native SOL transfers only",
+      "method": "signTransaction",
+      "conditions": [
+        {
+          "field_source": "solana_program_instruction",
+          "field": "programId",
+          "operator": "eq",
+          "value": "11111111111111111111111111111111"
+        },
+        {
+          "field_source": "solana_system_program_instruction",
+          "field": "instructionName",
+          "operator": "eq",
+          "value": "Transfer"
+        }
+      ],
+      "action": "ALLOW"
+    },
+    {
+      "id": "m59o20snla4f5t42wijcj6t4",
+      "name": "Disable private-key export",
+      "method": "exportPrivateKey",
+      "conditions": [],
+      "action": "DENY"
+    },
+    {
+      "id": "zugwxx3f5tblsqu5zrct09bj",
+      "name": "Disable message signing",
+      "method": "signMessage",
+      "conditions": [],
+      "action": "DENY"
+    },
+    {
+      "id": "vdh12kxv63r30xmy7np6q5hs",
+      "name": "Allow transaction reference memos",
+      "method": "signTransaction",
+      "conditions": [
+        {
+          "field_source": "solana_program_instruction",
+          "field": "programId",
+          "operator": "eq",
+          "value": "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"
+        }
+      ],
+      "action": "ALLOW"
+    },
+    {
+      "id": "ap23zctbzpkpfg9kxx9jbifw",
+      "name": "Sol of War cosmetic BurnChecked only",
+      "method": "signTransaction",
+      "conditions": [
+        {
+          "field_source": "solana_program_instruction",
+          "field": "programId",
+          "operator": "eq",
+          "value": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "field_source": "solana_instruction_data",
+          "field": "instruction_name",
+          "idl": {
+            "instructions": [
+              {
+                "args": [
+                  {
+                    "name": "amount",
+                    "type": "u64"
+                  },
+                  {
+                    "name": "decimals",
+                    "type": "u8"
+                  }
+                ],
+                "name": "burn_checked",
+                "accounts": [
+                  {
+                    "name": "account"
+                  },
+                  {
+                    "name": "mint"
+                  },
+                  {
+                    "name": "authority"
+                  }
+                ],
+                "discriminator": [15]
+              }
+            ]
+          },
+          "operator": "eq",
+          "value": "burn_checked"
+        },
+        {
+          "field_source": "solana_instruction_data",
+          "field": "burn_checked.accounts.mint",
+          "idl": {
+            "instructions": [
+              {
+                "args": [
+                  {
+                    "name": "amount",
+                    "type": "u64"
+                  },
+                  {
+                    "name": "decimals",
+                    "type": "u8"
+                  }
+                ],
+                "name": "burn_checked",
+                "accounts": [
+                  {
+                    "name": "account"
+                  },
+                  {
+                    "name": "mint"
+                  },
+                  {
+                    "name": "authority"
+                  }
+                ],
+                "discriminator": [15]
+              }
+            ]
+          },
+          "operator": "eq",
+          "value": "4KdB5zg8VuuUKJEk4DvkVZnrT9DJQxvWbjfDRF4cpump"
+        },
+        {
+          "field_source": "solana_instruction_data",
+          "field": "burn_checked.args.amount",
+          "idl": {
+            "instructions": [
+              {
+                "args": [
+                  {
+                    "name": "amount",
+                    "type": "u64"
+                  },
+                  {
+                    "name": "decimals",
+                    "type": "u8"
+                  }
+                ],
+                "name": "burn_checked",
+                "accounts": [
+                  {
+                    "name": "account"
+                  },
+                  {
+                    "name": "mint"
+                  },
+                  {
+                    "name": "authority"
+                  }
+                ],
+                "discriminator": [15]
+              }
+            ]
+          },
+          "operator": "gt",
+          "value": "0"
+        },
+        {
+          "field_source": "solana_instruction_data",
+          "field": "burn_checked.args.amount",
+          "idl": {
+            "instructions": [
+              {
+                "args": [
+                  {
+                    "name": "amount",
+                    "type": "u64"
+                  },
+                  {
+                    "name": "decimals",
+                    "type": "u8"
+                  }
+                ],
+                "name": "burn_checked",
+                "accounts": [
+                  {
+                    "name": "account"
+                  },
+                  {
+                    "name": "mint"
+                  },
+                  {
+                    "name": "authority"
+                  }
+                ],
+                "discriminator": [15]
+              }
+            ]
+          },
+          "operator": "lte",
+          "value": "500000000000"
+        },
+        {
+          "field_source": "solana_instruction_data",
+          "field": "burn_checked.args.decimals",
+          "idl": {
+            "instructions": [
+              {
+                "args": [
+                  {
+                    "name": "amount",
+                    "type": "u64"
+                  },
+                  {
+                    "name": "decimals",
+                    "type": "u8"
+                  }
+                ],
+                "name": "burn_checked",
+                "accounts": [
+                  {
+                    "name": "account"
+                  },
+                  {
+                    "name": "mint"
+                  },
+                  {
+                    "name": "authority"
+                  }
+                ],
+                "discriminator": [15]
+              }
+            ]
+          },
+          "operator": "eq",
+          "value": "6"
+        }
+      ],
+      "action": "ALLOW"
+    }
+  ],
+  "isolatedPolicyTests": [
+    {
+      "name": "valid",
+      "allowed": true,
+      "policyDenied": false
+    },
+    {
+      "name": "wrong-mint",
+      "allowed": false,
+      "policyDenied": true
+    },
+    {
+      "name": "over-cap",
+      "allowed": false,
+      "policyDenied": true
+    },
+    {
+      "name": "wrong-decimals",
+      "allowed": false,
+      "policyDenied": true
+    },
+    {
+      "name": "wrong-program",
+      "allowed": false,
+      "policyDenied": true
+    }
+  ],
+  "productionSignatureOnlyCheckPassed": true,
+  "transactionsBroadcast": false,
+  "matchPoolPolicyUnchanged": true
+}
