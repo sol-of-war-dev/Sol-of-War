@@ -6,6 +6,7 @@ import {
   invalidateCosmetics,
   type ResolvedCosmetic,
 } from "../../client/Cosmetics";
+import brandSymbol from "../assets/sol-of-war-symbol.png";
 import type { WalletLogin } from "../PrivyLogin";
 import type { Identity } from "../Store";
 import { assertBurn } from "./BurnPolicy";
@@ -510,12 +511,16 @@ export class ShopView {
                             after finalization and cannot be traded or refunded.
                           </p>
                           ${overlap ? html`<p>You own an item in this bundle. Choose remaining items individually to avoid paying twice.</p>` : ""}<button
-                            class="fp-primary"
+                            class="fp-primary sow-shop-purchase"
+                            aria-label=${`Purchase for ${Number(item.tokens).toLocaleString()} $SOLOFWAR`}
                             ?disabled=${this.c.busy() || !catalog.enabled || !identity || !!identity.guest || overlap === true}
                             @click=${() => this.c.act(() => this.buy())}
                           >
-                            ${catalog.enabled ? "Review burn in wallet" : "Checkout not enabled"}
-                          </button>`
+                            <span>Purchase</span>
+                            <span>${Number(item.tokens).toLocaleString()}</span>
+                            <img src=${brandSymbol} alt="" aria-hidden="true" />
+                          </button>
+                          ${!catalog.enabled ? html`<p class="fp-muted">Checkout is not enabled in this preview.</p>` : ""}`
                   }
                   ${
                     item.id.startsWith("custom-") && !owned

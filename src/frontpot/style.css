@@ -5381,3 +5381,18 @@ body:has(.sow-home):has(.fp-content > .fp-message) {
 .sow-shop-receive form label:has(input[type="checkbox"]) { display: flex; align-items: flex-start; }
 .sow-shop-receive form input[type="checkbox"] { width: 18px; height: 18px; flex: none; accent-color: #ff9b21; }
 .sow-shop-receive form input:not([type="checkbox"]) { width: 100%; min-width: 0; background: #160c22; color: #fff; border: 1px solid #51355d; padding: 12px; border-radius: 8px; }
+
+.sow-shop-review .sow-shop-purchase {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.sow-shop-review .sow-shop-purchase img {
+  width: 24px;
+  height: 24px;
+  max-width: none;
+  flex: 0 0 24px;
+  object-fit: contain;
+  border-radius: 0;
+}
