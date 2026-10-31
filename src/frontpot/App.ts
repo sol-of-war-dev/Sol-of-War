@@ -10,13 +10,14 @@ import { UserSettings } from "../client/UserSettings";
 import { translateText } from "../client/Utils";
 import { adminView, clearAdmin, refreshAdmin } from "./AdminView";
 import "./GameSetup";
+import { parseSolAmount } from "./Amounts";
 import "../client/components/LevelBadge";
 import "./PrizePot";
-import { parseSolAmount } from "./Amounts";
 import { requestApi } from "./ApiResponse";
 import brandSymbol from "./assets/sol-of-war-symbol.png";
 import brandWordmark from "./assets/sol-of-war-wordmark.png";
 import { CountdownClock } from "./CountdownClock";
+import { gameRulesContent } from "./GameRulesView";
 import type { Pool } from "./MatchLedger";
 import type { PaymentStatus } from "./payments/DevnetPayments";
 import { assertNativeTransfer } from "./payments/NativeTransferPolicy";
@@ -343,7 +344,13 @@ async function openPlayerWallet() {
   if (!requireIdentity(openPlayerWallet)) return;
   hideProfile();
   showWallet = true;
-  showHistory = showLobbies = showTerms = showAdmin = setupOpen = false;
+  showHistory =
+    showLobbies =
+    showHowToPlay =
+    showTerms =
+    showAdmin =
+    setupOpen =
+      false;
   previewRoom = null;
   history.replaceState(null, "", "/wallet");
   paint();
@@ -375,7 +382,13 @@ async function openProfile(target = "me", edit = false) {
   accountMenuOpen = false;
   showWallet = false;
   showProfile = true;
-  showHistory = showLobbies = showTerms = showAdmin = setupOpen = false;
+  showHistory =
+    showLobbies =
+    showHowToPlay =
+    showTerms =
+    showAdmin =
+    setupOpen =
+      false;
   previewRoom = null;
   history.replaceState(
     null,
@@ -395,6 +408,7 @@ let showHistory = false;
 let showLobbies = location.pathname === "/lobbies";
 let liveOnly = new URLSearchParams(location.search).get("view") === "live";
 let showTerms = location.pathname === "/terms";
+let showHowToPlay = location.pathname === "/how-to-play";
 let showAdmin = location.pathname === "/admin";
 let queueFilter: Mode | "all" = "all";
 let entryFilter = "all";
@@ -425,7 +439,7 @@ function openSetup(practice = false) {
     return;
   }
   previewRoom = null;
-  showTerms = false;
+  showHowToPlay = showTerms = false;
   showAdmin = false;
   history.replaceState(null, "", "/");
   practiceSetup = practice;
@@ -441,7 +455,7 @@ async function openHistory() {
   hideProfile();
   if (!(await ensureIdentity(openHistory))) return;
   previewRoom = null;
-  showTerms = false;
+  showHowToPlay = showTerms = false;
   showAdmin = false;
   history.replaceState(null, "", "/");
   matchHistory = await api<Pool[]>("/history");
@@ -600,7 +614,13 @@ function openMatchmaking() {
   hideProfile();
   viewingRoom = false;
   previewRoom = null;
-  showTerms = showAdmin = showHistory = showLobbies = setupOpen = false;
+  showHowToPlay =
+    showTerms =
+    showAdmin =
+    showHistory =
+    showLobbies =
+    setupOpen =
+      false;
   showMatchmaking = true;
   history.replaceState(null, "", "/matchmaking");
   paint();
@@ -1191,6 +1211,7 @@ async function startTutorial() {
   previewRoom = null;
   new UserSettings().setTutorialDismissed(false);
   authOpen = false;
+  showHowToPlay = false;
   tutorialActive = true;
   inGame = true;
   document.body.classList.add("in-game");
@@ -1285,7 +1306,13 @@ async function enter(nextRoom: PublicRoom, background = false) {
     if (requestGeneration !== generation || room?.id !== nextRoom.id || inGame)
       return;
     hideProfile();
-    showTerms = showAdmin = showHistory = showLobbies = setupOpen = false;
+    showHowToPlay =
+      showTerms =
+      showAdmin =
+      showHistory =
+      showLobbies =
+      setupOpen =
+        false;
     showMatchmaking = authOpen = false;
     afterSignIn = null;
     previewRoom = null;
@@ -1513,7 +1540,13 @@ function returnToMatch() {
     return;
   }
   hideProfile();
-  showTerms = showAdmin = showHistory = showLobbies = setupOpen = false;
+  showHowToPlay =
+    showTerms =
+    showAdmin =
+    showHistory =
+    showLobbies =
+    setupOpen =
+      false;
   previewRoom = null;
   viewingRoom = true;
   history.replaceState(null, "", `/room/${room.id}`);
@@ -1634,7 +1667,7 @@ function goPlay() {
   viewingRoom = false;
   hideProfile();
   previewRoom = null;
-  showTerms = false;
+  showHowToPlay = showTerms = false;
   showAdmin = false;
   history.replaceState(null, "", "/");
   setupOpen = false;
@@ -1656,7 +1689,7 @@ function browseLobbies() {
   viewingRoom = false;
   hideProfile();
   previewRoom = null;
-  showTerms = false;
+  showHowToPlay = showTerms = false;
   showAdmin = false;
   history.replaceState(null, "", "/lobbies");
   setupOpen = false;
@@ -1998,7 +2031,7 @@ function paint() {
                 aria-label="How to play"
                 title="How to play"
                 ?disabled=${busy || !!room}
-                @click=${() => act(startTutorial)}
+                @click=${() => location.assign("/how-to-play")}
               >
                 ${icon("help")}
               </button>
@@ -2144,30 +2177,37 @@ function paint() {
                   ? playerWalletView.render()
                   : showProfile
                     ? profiles.render()
-                    : showTerms
-                      ? termsView()
-                      : loadingLobby
-                        ? html`<div class="sow-queue-loading" aria-busy="true">
-                            <div inert>
-                              ${showLobbies ? lobbiesView() : homeView()}
-                            </div>
-                            <span class="sow-queue-loading-label" role="status"
-                              >Loading lobby…</span
+                    : showHowToPlay
+                      ? howToPlayView()
+                      : showTerms
+                        ? termsView()
+                        : loadingLobby
+                          ? html`<div
+                              class="sow-queue-loading"
+                              aria-busy="true"
                             >
-                          </div>`
-                        : (room && viewingRoom) || previewRoom
-                          ? roomView()
-                          : showHistory
-                            ? historyView()
-                            : setupOpen
-                              ? setupView()
-                              : showLobbies
-                                ? lobbiesView()
-                                : showMatchmaking
-                                  ? html`<main class="sow-matchmaking-page">
-                                      ${matchmakingPanel()}
-                                    </main>`
-                                  : homeView()
+                              <div inert>
+                                ${showLobbies ? lobbiesView() : homeView()}
+                              </div>
+                              <span
+                                class="sow-queue-loading-label"
+                                role="status"
+                                >Loading lobby…</span
+                              >
+                            </div>`
+                          : (room && viewingRoom) || previewRoom
+                            ? roomView()
+                            : showHistory
+                              ? historyView()
+                              : setupOpen
+                                ? setupView()
+                                : showLobbies
+                                  ? lobbiesView()
+                                  : showMatchmaking
+                                    ? html`<main class="sow-matchmaking-page">
+                                        ${matchmakingPanel()}
+                                      </main>`
+                                    : homeView()
           }
         </div>
         <footer class="fp-footer">
@@ -2235,7 +2275,7 @@ function paint() {
             </nav>
             <button
               ?disabled=${busy || !!room}
-              @click=${() => act(startTutorial)}
+              @click=${() => location.assign("/how-to-play")}
               class="fp-text-button"
             >
               How to play
@@ -2390,7 +2430,7 @@ function homeView() {
       <button
         class="fp-text-button"
         ?disabled=${busy}
-        @click=${() => act(startTutorial)}
+        @click=${() => location.assign("/how-to-play")}
       >
         How to play
       </button>
@@ -2589,10 +2629,8 @@ function queueView(withInvite: boolean) {
         : ""
     }
     <div class="sq-secondary-actions">
-      <button @click=${() => act(startTutorial)} ?disabled=${busy}>
-        ${icon("help")}How to play<small
-          >Free tutorial · No account needed</small
-        >
+      <button @click=${() => location.assign("/how-to-play")} ?disabled=${busy}>
+        ${icon("help")}How to play<small>Game rules and free tutorial</small>
       </button>
       <button @click=${() => openSetup(true)} ?disabled=${busy}>
         ${icon("user")}Solo practice<small
@@ -3025,6 +3063,27 @@ function roomView() {
     </footer>
   </main>`;
 }
+function howToPlayView() {
+  return html`<main class="sq-terms">
+    <a class="fp-primary" href="/">Back to games</a>
+    <p class="fp-eyebrow">SOL OF WAR</p>
+    <h1>How to Play</h1>
+    <p>
+      Choose a spawn, expand your territory and eliminate the opposition. Learn
+      the controls in the free tutorial, then review the rules below before
+      joining a match.
+    </p>
+    <button
+      class="fp-primary"
+      ?disabled=${busy || !!room}
+      @click=${() => act(startTutorial)}
+    >
+      Start free tutorial
+    </button>
+    ${gameRulesContent()}
+    <p><a href="/terms">Payment information and terms</a></p>
+  </main>`;
+}
 function termsView() {
   return html`<main class="sq-terms">
     <a class="fp-primary" href="/">Back to games</a>
@@ -3078,8 +3137,8 @@ function termsView() {
       Ranked offers paid 1v1 and 2v2 with separate Elo ratings. FFA Wagers have
       a SOL entry fee and prize pool but no Elo. Free Play offers all three
       modes without an entry fee or prize. Verified Free Play and FFA Wagers
-      earn XP. Multiplayer requires a signed-in profile; the free tutorial
-      requires no account.
+      earn XP. SOL wagers and saved progression require a signed-in profile;
+      guests can play free, and the tutorial requires no account.
     </p>
     ${
       isDevnet()
@@ -3089,11 +3148,13 @@ function termsView() {
               monetary value and cannot be redeemed. Each entry needs a separate
               wallet approval. Only finalized deposits from connected players
               count toward the prize. Late, cancelled and excluded entries are
-              refunded without a platform fee. Deposit network fees are not
-              refundable. The platform covers payout and refund transaction
-              fees. A result is not paid until its transaction is finalized;
-              failed or expired transactions require reconciliation. Do not send
-              mainnet SOL or transfers outside the entry button.
+              refunded without a platform fee. New supported in-app entries and
+              withdrawals use platform-paid network fees. External deposit
+              network fees are not refundable. The platform also covers payout
+              and refund transaction fees. A result is not paid until its
+              transaction is finalized; failed or expired transactions require
+              reconciliation. Do not send mainnet SOL or transfers outside the
+              entry button.
             </p>`
         : ""
     }
@@ -3105,10 +3166,13 @@ function termsView() {
               ${authConfig?.playerWalletsEnabled && !authConfig?.userOwnedWalletsEnabled ? "confirmation using your legacy Sol of War balance." : "separate wallet approval."}
               Winnings and refunds return to the wallet that funded the entry.
               Only finalized deposits qualify. Late or cancelled entries are
-              refunded in full, excluding the original deposit network fee. The
-              platform pays payout and refund network fees. Prizes remain
-              pending until platform systems verify the result and the payout
-              transaction is finalized. The tutorial is free.
+              refunded in full without a platform fee. New supported in-app
+              entries and withdrawals use platform-paid network fees, subject to
+              availability and limits. External direct deposits and older
+              prepared requests may charge the sender; those network fees are
+              not refunded. The platform pays payout and refund network fees.
+              Prizes remain pending until platform systems verify the result and
+              the payout transaction is finalized. The tutorial is free.
             </p>`
         : ""
     }
@@ -3144,7 +3208,7 @@ function termsView() {
       <strong>Example</strong>
       <p>
         25 players × 0.25 SOL = 6.25 SOL in entries.<br />1% platform fee =
-        0.0625 SOL.<br /><b>Displayed prize pool = 6.1875 SOL.</b>
+        0.0625 SOL.<br /><b>Winner payout after fee = 6.1875 SOL.</b>
       </p>
     </div>
     <h2>Matchmaking acceptance</h2>
@@ -3184,7 +3248,8 @@ function termsView() {
       entries cannot alter them. Disconnecting after the lock does not reduce
       the pool.
     </p>
-    <h2>Results and payouts</h2>
+    ${gameRulesContent()}
+    <h2>Settlement and payout rounding</h2>
     <p>
       Free-for-all and 1v1 award the whole net prize to the winner. In 2v2, the
       two winning teammates split it equally. Calculations use whole lamports (1
@@ -3383,7 +3448,7 @@ function setupView() {
           : html`<p>Free practice. No entry stake.</p>`
       }
     </div>
-    ${mode !== "ffa" && !practiceSetup ? html`<p class="fp-small">${mode} uses fixed human teams with no Tribes or Nations. Other rules below apply.</p>` : ""}
+    ${mode !== "ffa" && !practiceSetup ? html`<p class="fp-small">${mode} uses 100 tribes on Compact maps or 400 on Normal maps, with nations disabled. Only human players can win. Other rules below apply.</p>` : ""}
     <frontpot-game-setup
       .ranked=${!practiceSetup && ranked}
       .mode=${practiceSetup ? "ffa" : mode}

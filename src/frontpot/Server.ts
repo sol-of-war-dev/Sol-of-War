@@ -918,6 +918,7 @@ app.get(
     "/",
     "/admin",
     "/terms",
+    "/how-to-play",
     "/lobbies",
     "/matchmaking",
     "/tutorial",

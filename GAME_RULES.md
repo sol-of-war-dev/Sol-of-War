@@ -5,6 +5,9 @@ These rules describe the implementation deployed in release
 on October 30, 2026 (Pacific time). Check the lobby's displayed map, entry,
 capacity and timer before joining. Archived matches retain their recorded rules.
 
+Read these rules on the site in [How to Play](https://solofwar.fun/how-to-play)
+and [payment information](https://solofwar.fun/terms#game-rules).
+
 ## Modes, tribes and nations
 
 Tribes are the small neutral AI countries (`bots` in the code). Nations are the
