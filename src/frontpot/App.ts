@@ -2327,7 +2327,10 @@ function paint() {
               ><a href="/terms" target="_blank" rel="noreferrer"
                 >Terms of Service</a
               ><a href="/license">${t("license")}</a
-              ><span>© OpenFront and Contributors</span>
+              ><a href="/privacy">Privacy Policy</a>
+              <a href="mailto:team@solofwar.fun">Contact</a>
+              <span>© 2026 Sol of War inc.</span>
+              <span>© OpenFront and Contributors</span>
             </div>
           </div>
         </footer>
@@ -2375,7 +2378,7 @@ function paint() {
               <footer class="fp-game-credit">
                 <a href="https://openfront.io/" target="_blank" rel="noreferrer"
                   >${t("powered_by")}</a
-                ><span>© OpenFront and Contributors</span
+                ><a href="mailto:team@solofwar.fun">Contact</a><span>© 2026 Sol of War inc.</span><span>© OpenFront and Contributors</span
                 ><a
                   href="https://github.com/openfrontio/OpenFrontIO"
                   target="_blank"
@@ -3115,7 +3118,48 @@ function termsView() {
     <a class="fp-primary" href="/">Back to games</a>
     <p class="fp-eyebrow">SOL OF WAR · ${modeBadge()}</p>
     <h1>Terms of Service</h1>
-    <p class="sq-terms-date">Updated October 30, 2026</p>
+    <p class="sq-terms-date">Updated October 31, 2026</p>
+    <h2>Using Sol of War and contacting us</h2>
+    <p>Sol of War inc., a California corporation, operates Sol of War at solofwar.fun.
+    These terms govern accounts,
+    games, wallets and cosmetics. By using the service you agree to these terms.
+    You must be able to enter this agreement. Paid play is for adults of at least
+    18 years old, or the higher applicable legal age, and only where participation
+    is lawful. Availability of a feature is not confirmation that you are eligible.</p>
+    <p>For account support, payment questions or concerns about these terms,
+    email <a href="mailto:team@solofwar.fun">team@solofwar.fun</a>.
+    Our <a href="/privacy">Privacy Policy</a> explains information handling.</p>
+    <h2>Accounts, cosmetics and uploaded content</h2>
+    <p>Use accounts you control, keep sign-in methods secure and report suspected
+    compromise. Never send support your private key or recovery phrase.</p>
+    <p>Cosmetics are optional and do not provide gameplay advantages. The shop
+    displays the price in $SOLOFWAR before approval. A purchase burns the specified
+    tokens on Solana; it is not a SOL payment or a payment of tokens to the operator.
+    An entitlement is granted after the purchase is verified. The platform sponsors
+    supported purchase network fees subject to availability and limits; buying tokens
+    or sending funds through external services may incur separate fees.</p>
+    <p>A finalized burn cannot be reversed on-chain. Contact support about failed
+    delivery, duplicate charges or other purchase problems; this does not exclude
+    statutory remedies or rights that cannot lawfully be waived. A cosmetic purchase
+    does not convey ownership of the platform or promise resale value, investment
+    returns, token price or future features.</p>
+    <p>You retain rights you hold in uploaded images and must have permission to use
+    them. You grant Sol of War a non-exclusive permission to store, process and display
+    them as needed to provide previews, purchased cosmetics and gameplay. Do not upload
+    unlawful, infringing, abusive or malicious content. We may restrict content or accounts
+    for rights complaints, abuse or security reasons. Contact support to report a concern
+    or request review of a moderation decision, identifying the item and relevant rights.</p>
+    <h2>Availability, external services and changes</h2>
+    <p>Features may change or become unavailable. Keep copies of your uploaded work
+    and protect wallet recovery information. External wallets, Privy and linked services
+    have their own terms. No uninterrupted service, game outcome or token value is promised.
+    Nothing in these terms removes rights or protections that cannot lawfully be excluded.</p>
+    <p>You may stop using the service and contact us to request account deletion.
+    Unsettled payments, disputes and records required for legal or security purposes
+    may need to be resolved or retained, as explained in the Privacy Policy. Material
+    changes to these terms will receive notice or consent where required.</p>
+    <p>© 2026 Sol of War inc.</p>
+
     ${
       authConfig?.userOwnedWalletsEnabled
         ? html`<h2>Personal wallets and legacy balances</h2>

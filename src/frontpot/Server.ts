@@ -918,6 +918,11 @@ app.get("/source", (_req, res) =>
     "frontpot-source.tar.gz",
   ),
 );
+app.get(["/privacy", "/privacy-policy", "/privacy-policy.html", "/public/privacy-policy.html"], (_req, res) => {
+  res.setHeader("Cache-Control", "no-cache");
+  res.sendFile(path.join(root, "resources/sol-of-war-privacy.html"));
+});
+app.get(["/terms-of-service.html", "/public/terms-of-service.html"], (_req, res) => res.redirect(302, "/terms"));
 app.get("/license", (_req, res) => res.sendFile(path.join(root, "LICENSE")));
 app.use(
   express.static(path.join(root, "dist-demo"), { index: false, maxAge: "1h" }),

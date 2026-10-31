@@ -164,3 +164,9 @@ not endorsed by OpenFront. OpenFront is a fork/rewrite of
 [Licensing details](LICENSING.md) · [Credits](CREDITS.md).
 Upstream proprietary artwork is excluded. The application retains its
 [corresponding-source download](https://solofwar.fun/source).
+
+## Contact and policies
+
+[Contact](mailto:team@solofwar.fun) · [Privacy Policy](https://solofwar.fun/privacy) · [Terms of Service](https://solofwar.fun/terms)
+
+© 2026 Sol of War inc. Upstream OpenFront and contributor notices and applicable open-source licenses remain in effect.
