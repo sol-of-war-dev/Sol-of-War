@@ -1,3 +1,4 @@
+import { publicTransfer, type PublicPaymentFlow } from "./PublicPaymentFlow";
 import { getSignatureFromTransaction } from "@solana/kit";
 import canonicalize from "canonicalize";
 import { createHash, randomUUID } from "node:crypto";
@@ -452,6 +453,25 @@ export class DevnetPayments {
       refundSignature: e
         ? this.transactions.get(`refund:${e.id}`)?.signature
         : undefined,
+    };
+  }
+  publicMoneyFlow(pool: Pool): PublicPaymentFlow | null {
+    const match = this.match(pool.matchID);
+    if (!match || pool.network !== this.network || pool.stakeLamports <= 0) return null;
+    const settlement = this.outbox.get(pool.matchID);
+    return {
+      poolAddress: match.wallet?.address ?? pool.address,
+      treasury: settlement?.plan.treasury ?? match.treasury,
+      entries: this.entries(pool.matchID).flatMap(entry => {
+        const deposit = publicTransfer(this.transactions.get(`deposit:${entry.id}`));
+        if (!deposit) return [];
+        return [{name: pool.participants.find(p => p.id === entry.playerID)?.name ?? "Other entry",
+          source: entry.paymentWallet ?? entry.wallet, lamports: entry.lamports, deposit,
+          refund: publicTransfer(this.transactions.get(`refund:${entry.id}`))}];
+      }),
+      settlement: settlement ? {poolLamports: settlement.plan.poolLamports,
+        feeLamports: settlement.plan.feeLamports, prizes: settlement.plan.prizes.map(p => ({to: p.to, lamports: p.lamports})),
+        transaction: publicTransfer(this.transactions.get(`settlement:${settlement.key}`))} : null,
     };
   }
   history(playerID: string) {

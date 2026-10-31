@@ -1,6 +1,10 @@
 import { html } from "lit";
 import { ref } from "lit/directives/ref.js";
-import { transactionLink } from "./payments/PaymentView";
+import { solscanLink } from "./payments/Network";
+import type {
+  PublicPaymentFlow,
+  PublicTransfer,
+} from "./payments/PublicPaymentFlow";
 type Receipt = {
   matchID: string;
   name: string;
@@ -22,6 +26,7 @@ type Receipt = {
     gameMapSize: string;
   };
   sourceCommit?: string;
+  moneyFlow?: PublicPaymentFlow | null;
   signature?: string;
   verificationHash?: string;
   replayAvailable: boolean;
@@ -138,12 +143,34 @@ export class MatchReceiptView {
       signature && p.network !== "simulation"
         ? html`<a
             class="fp-text-button"
-            href=${transactionLink(signature, p.network === "mainnet" ? "mainnet" : "devnet")}
+            href=${solscanLink("tx", signature, p.network === "mainnet" ? "mainnet" : "devnet")}
             target="_blank"
             rel="noopener"
-            >${label}</a
+            >${label} on Solscan</a
           >`
         : "";
+    const account = (value: string | null | undefined) =>
+      value && p.network !== "simulation"
+        ? html`<a
+            class="sow-flow-address"
+            href=${solscanLink("account", value, p.network === "mainnet" ? "mainnet" : "devnet")}
+            target="_blank"
+            rel="noopener"
+            title=${value}
+            >${value}</a
+          >`
+        : html`<span>Not recorded</span>`;
+    const transfer = (t: PublicTransfer | null, label: string) =>
+      t
+        ? html`<div class="sow-flow-transfer">
+            <span class="sow-flow-status"
+              >${t.state === "finalized" ? "Finalized" : t.state === "review" ? "Needs review" : "Pending confirmation"}</span
+            >
+            ${tx(t.signature, label)}
+            ${t.finalizedAt ? html`<small>Finalized ${new Date(t.finalizedAt).toLocaleString()}</small>` : ""}
+          </div>`
+        : html`<p>No transaction recorded.</p>`;
+    const flow = p.moneyFlow;
     return html`<main class="fp-setup-page sow-receipt">
       <a class="fp-text-button" href="/">Back to games</a>
       <p class="fp-eyebrow">Public match receipt · ${p.network}</p>
@@ -175,7 +202,7 @@ export class MatchReceiptView {
                         (x) =>
                           html`<p><strong>${sol(x.lamports)}</strong></p>
                             <p class="sow-receipt-address">
-                              ${x.wallet ?? "Simulation destination"}
+                              ${account(x.wallet)}
                             </p>`,
                       )
                     : html`<p>
@@ -185,7 +212,7 @@ export class MatchReceiptView {
               </div>
             </article>`,
         )}
-        ${tx(p.signature, p.state === "settled" ? "View finalized payout" : "View payout transaction")}
+        ${tx(p.signature, p.state === "settled" ? "View finalized payout" : p.state === "refunded" ? "View refund transaction" : "View payment transaction")}
         <button
           class="fp-primary"
           ?disabled=${busy}
@@ -337,6 +364,176 @@ export class MatchReceiptView {
                 </button>
               </form>
             </dialog>`
+          : ""
+      }
+      ${
+        p.stakeLamports > 0
+          ? html`<section class="sow-receipt-card sow-money-flow">
+              <h2>Follow the SOL</h2>
+              <p>
+                Entry payments fund the match pool. Settlement pays the winners
+                and the platform fee. Returned entries are listed separately.
+              </p>
+              ${
+                flow
+                  ? html`
+                      <div class="sow-flow-summary">
+                        <div>
+                          <small>Finalized entry transfers</small
+                          ><strong
+                            >${sol(flow.entries.filter((e) => e.deposit.state === "finalized").reduce((sum, e) => sum + e.lamports, 0))}</strong
+                          >
+                        </div>
+                        <div>
+                          <small
+                            >${flow.settlement?.transaction?.state === "finalized" ? "Finalized winner payouts" : "Planned winner payouts"}</small
+                          ><strong
+                            >${sol(flow.settlement?.prizes.reduce((sum, prize) => sum + prize.lamports, 0) ?? 0)}</strong
+                          >
+                        </div>
+                        <div>
+                          <small>Finalized refunds</small
+                          ><strong
+                            >${sol(flow.entries.filter((e) => e.refund?.state === "finalized").reduce((sum, e) => sum + e.lamports, 0))}</strong
+                          >
+                        </div>
+                      </div>
+                      <h3>1. Entries into the pool</h3>
+                      ${
+                        flow.entries.length
+                          ? flow.entries.map(
+                              (e) =>
+                                html`<article class="sow-flow-row">
+                                  <div>
+                                    <strong>${e.name}</strong>
+                                    <p>${sol(e.lamports)}</p>
+                                    <small>From wallet</small
+                                    >${account(e.source)}
+                                  </div>
+                                  <div>
+                                    <small>To match pool</small
+                                    >${account(flow.poolAddress)}${transfer(e.deposit, "Entry")}
+                                  </div>
+                                </article>`,
+                            )
+                          : html`<p>No signed entry receipts recorded.</p>`
+                      }
+                      <h3>2. Winner payouts and platform fee</h3>
+                      ${
+                        flow.settlement
+                          ? html`<p>
+                                Settlement accounts for
+                                ${sol(flow.settlement.poolLamports)} of the
+                                funded pool. Prizes and the platform fee share
+                                one transaction.
+                              </p>
+                              ${flow.settlement.prizes.map(
+                                (prize) =>
+                                  html`<article class="sow-flow-row">
+                                    <div>
+                                      <strong>Winner payout</strong>
+                                      <p>${sol(prize.lamports)}</p>
+                                      <small>From match pool</small
+                                      >${account(flow.poolAddress)}
+                                    </div>
+                                    <div>
+                                      <small>To winner wallet</small
+                                      >${account(prize.to)}
+                                    </div>
+                                  </article>`,
+                              )}
+                              <article class="sow-flow-row">
+                                <div>
+                                  <strong
+                                    >Platform fee · ${p.feeBps / 100}%</strong
+                                  >
+                                  <p>${sol(flow.settlement.feeLamports)}</p>
+                                </div>
+                                <div>
+                                  <small>To platform treasury</small
+                                  >${account(flow.treasury)}
+                                </div>
+                              </article>
+                              ${transfer(flow.settlement.transaction, "Settlement")}`
+                          : html`<p>
+                              No payout transaction is planned or recorded for
+                              this receipt. Refunds do not charge a platform
+                              fee.
+                            </p>`
+                      }
+                      <h3>3. Refunds</h3>
+                      ${
+                        flow.entries.some((e) => e.refund)
+                          ? flow.entries
+                              .filter((e) => e.refund)
+                              .map(
+                                (e) =>
+                                  html`<article class="sow-flow-row">
+                                    <div>
+                                      <strong
+                                        >${e.name} · ${sol(e.lamports)}</strong
+                                      ><small>From match pool</small
+                                      >${account(flow.poolAddress)}
+                                    </div>
+                                    <div>
+                                      <small>Returned to entry wallet</small
+                                      >${account(e.source)}${transfer(e.refund, "Refund")}
+                                    </div>
+                                  </article>`,
+                              )
+                          : html`<p>No refund transactions recorded.</p>`
+                      }
+                      <details class="sow-flow-details">
+                        <summary>Transaction details and network fees</summary>
+                        <p>
+                          These are stored transaction receipts, not a live pool
+                          balance. Extra transfers or unrelated pool activity
+                          may exist; inspect the pool on Solscan. Actual network
+                          fee amounts are shown on each transaction’s Solscan
+                          page.
+                        </p>
+                        ${flow.entries
+                          .flatMap((e) => [
+                            { label: `${e.name} entry`, tx: e.deposit },
+                            ...(e.refund
+                              ? [{ label: `${e.name} refund`, tx: e.refund }]
+                              : []),
+                          ])
+                          .concat(
+                            flow.settlement?.transaction
+                              ? [
+                                  {
+                                    label: "Settlement",
+                                    tx: flow.settlement.transaction,
+                                  },
+                                ]
+                              : [],
+                          )
+                          .map(
+                            (row) =>
+                              html`<article>
+                                <h4>${row.label}</h4>
+                                <small>Network fee payer</small
+                                >${account(row.tx.feePayer)}
+                                <p>
+                                  Finalized slot:
+                                  ${row.tx.finalizedSlot ?? "Not recorded"}
+                                </p>
+                                <p class="sow-receipt-address">
+                                  Signature: ${row.tx.signature}
+                                </p>
+                                ${tx(row.tx.signature, "Transaction")}
+                              </article>`,
+                          )}
+                      </details>
+                    `
+                  : html`<p>
+                      Detailed payment receipts are not available for this
+                      match${p.network === "simulation" ? " because it used simulated funds" : ""}.
+                      Available transaction links remain above.
+                    </p>`
+              }
+            </section>`
           : ""
       }
       <section class="sow-receipt-card">

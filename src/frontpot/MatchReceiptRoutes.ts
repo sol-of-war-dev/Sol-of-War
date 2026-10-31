@@ -52,6 +52,7 @@ export function registerMatchReceiptRoutes(
       feeBps: p.feeBps,
       poolLamports: p.poolLamports,
       address: p.address,
+      moneyFlow: payments?.publicMoneyFlow(p) ?? null,
       signature: p.signature,
       rules: p.rules,
       sourceCommit: p.sourceCommit,

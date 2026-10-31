@@ -601,6 +601,14 @@ describe("integrated devnet payments (local RPC fixture, no network funds)", () 
       const wire = f.sent.get(settled.submission!.signature!)!;
       const t = transfers(wire);
       expect(t.payer).toBe(f.addresses[5]);
+      const flow = f.payments.publicMoneyFlow(f.ledger.get(p.matchID)!);
+      expect(flow?.entries).toHaveLength(f.players.length);
+      expect(flow?.entries.every((entry) => entry.deposit.state === "finalized")).toBe(true);
+      expect(flow?.settlement?.transaction?.feePayer).toBe(t.payer);
+      expect(flow?.settlement?.transaction?.state).toBe("finalized");
+      expect(flow?.settlement?.feeLamports).toBe(p.poolLamports / 100);
+      expect(flow?.settlement?.prizes).toEqual(t.transfers.slice(0, -1));
+
       expect(t.transfers[t.transfers.length - 1]).toEqual({
         to: DEVNET_TREASURY,
         lamports: p.poolLamports / 100,

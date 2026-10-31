@@ -13,3 +13,6 @@ export const explorerTransaction = (
   network: PaymentNetwork,
 ) =>
   `https://explorer.solana.com/tx/${encodeURIComponent(signature)}${network === "devnet" ? "?cluster=devnet" : ""}`;
+
+export const solscanLink = (kind: "tx" | "account", value: string, network: PaymentNetwork) =>
+  `https://solscan.io/${kind}/${encodeURIComponent(value)}${network === "devnet" ? "?cluster=devnet" : ""}`;

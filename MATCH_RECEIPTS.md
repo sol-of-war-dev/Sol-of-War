@@ -113,3 +113,14 @@ redaction and append-only review events. Browser checks use explicitly synthetic
 receipt data to verify submission and mobile layout; they are not mainnet evidence.
 An actual production recording and a real participant dispute should be rehearsed
 after deployment before announcing the feature as verified live.
+
+## Following the money
+
+Paid-match receipts include a “Follow the SOL” section showing recorded entry
+wallets, the match pool, winner destinations, the platform fee destination, and
+refunds. Transactions and addresses link to Solscan on the receipt’s network.
+Pending, finalized, and review states are distinguished; planned payouts are not
+presented as completed payments. Expand transaction details to inspect the saved
+fee payer, finalization slot, and signature. Actual network fees and current wallet
+balances should be checked on Solscan; the receipt does not invent these values.
+Older matches may lack some stored transaction details, which are shown as missing.
