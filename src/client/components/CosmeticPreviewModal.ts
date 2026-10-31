@@ -47,6 +47,7 @@ interface PaletteOption {
  */
 @customElement("cosmetic-preview-modal")
 export class CosmeticPreviewModal extends LitElement {
+  @property({ type: Boolean }) showStoreLabels = true;
   @property({ attribute: false })
   resolved: ResolvedCosmetic | null = null;
 
@@ -316,7 +317,7 @@ export class CosmeticPreviewModal extends LitElement {
               // Same rule as <cosmetic-info> for the AI line itself: only a declaration that was
               // actually made shows, so a cosmetic can't say it used AI on the card and stay
               // silent here.
-              artist || credits?.aiDisclosed === true
+              artist || (this.showStoreLabels && credits?.aiDisclosed === true)
                 ? html`<div class="flex min-w-0 flex-col items-start gap-y-0.5">
                     ${
                       artist
@@ -331,7 +332,7 @@ export class CosmeticPreviewModal extends LitElement {
                         : nothing
                     }
                     ${
-                      credits?.aiDisclosed === true
+                      this.showStoreLabels && credits?.aiDisclosed === true
                         ? html`<span
                             class="truncate text-xs text-white/60 max-w-full"
                           >

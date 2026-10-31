@@ -37,6 +37,7 @@ export class ShopView {
       : item.category === category;
   }
   private ownedOnly = false;
+  private uploadOpen = false;
   private effectSlot = "effect:transportShipTrail";
   private gamePreview: string | null = null;
   private loading = false;
@@ -114,6 +115,7 @@ export class ShopView {
     if (identity.id !== this.c.identity()?.id) return;
     this.category = viewCategory;
     await this.refresh();
+    this.uploadOpen = false;
     this.preview(result.id);
   }
   private async buy() {
@@ -210,6 +212,16 @@ export class ShopView {
         ?.scrollIntoView({ block: "start", behavior: "smooth" }),
     );
   }
+  private openUpload() {
+    this.selected = null;
+    this.uploadOpen = true;
+    this.c.paint();
+    requestAnimationFrame(() =>
+      document
+        .querySelector("#sow-shop-upload")
+        ?.scrollIntoView({ block: "start", behavior: "smooth" }),
+    );
+  }
   render() {
     const catalog = this.catalog
         ? {
@@ -283,7 +295,7 @@ export class ShopView {
       ${this.notice ? html`<p role="status" class="fp-message">${this.notice}</p>` : ""}
       ${
         identity && !identity.guest
-          ? html`<section class="sow-shop-receive">
+          ? html`<section class="sow-shop-receive" id="sow-shop-upload">
               <button
                 @click=${() => {
                   this.receiving = !this.receiving;
@@ -331,6 +343,7 @@ export class ShopView {
               aria-pressed=${this.category === key}
               @click=${() => {
                 this.category = key as ShopCategory;
+                this.uploadOpen = false;
                 this.selected = null;
                 this.c.paint();
               }}
@@ -343,8 +356,17 @@ export class ShopView {
         )}
       </nav>
       ${
+        this.uploadOpen &&
         ["flag", "territory", "crown"].includes(this.category)
-          ? html`<section class="sow-shop-receive">
+          ? html`<section class="sow-shop-receive" id="sow-shop-upload">
+              <button
+                @click=${() => {
+                  this.uploadOpen = false;
+                  this.c.paint();
+                }}
+              >
+                Close upload
+              </button>
               <h2>
                 Upload your own
                 ${this.category === "territory" ? "territory pattern" : this.category}
@@ -553,6 +575,36 @@ export class ShopView {
           : ""
       }
       <div class="sow-shop-grid">
+        ${
+          !this.ownedOnly &&
+          ["flag", "territory", "crown"].includes(this.category)
+            ? html`<article class="sow-shop-custom-card">
+                <h2>Upload your own</h2>
+                <button
+                  class="sow-shop-custom-art"
+                  aria-label=${`Preview your custom ${this.category}`}
+                  @click=${() => this.openUpload()}
+                >
+                  <svg viewBox="0 0 64 64" aria-hidden="true">
+                    <rect x="8" y="8" width="48" height="48" rx="8" />
+                    <circle cx="23" cy="24" r="5" />
+                    <path d="M10 47l14-13 10 9 9-10 12 14" />
+                  </svg>
+                  <span
+                    >Your
+                    ${this.category === "territory" ? "territory pattern" : this.category}</span
+                  >
+                </button>
+                <div class="sow-shop-card-action">
+                  <strong>500,000 $SOLOFWAR</strong
+                  ><span>100% burned on purchase</span
+                  ><button class="fp-primary" @click=${() => this.openUpload()}>
+                    Upload and preview
+                  </button>
+                </div>
+              </article>`
+            : ""
+        }
         ${catalog?.items
           .filter(
             (i) =>
@@ -565,6 +617,7 @@ export class ShopView {
               equipped =
                 item.slot && inventory?.equipped[item.slot] === item.id;
             return html`<cosmetic-card
+              .showStoreLabels=${false}
               .resolved=${this.resolve(item, inventory)}
               .state=${equipped ? "equipped" : this.selected === item.id ? "focused" : "idle"}
               .interactive=${true}
@@ -583,6 +636,7 @@ export class ShopView {
         this.gamePreview &&
         catalog?.items.some((i) => i.id === this.gamePreview)
           ? html`<cosmetic-preview-modal
+              .showStoreLabels=${false}
               .resolved=${this.resolve(
                 catalog.items.find((i) => i.id === this.gamePreview)!,
                 inventory,

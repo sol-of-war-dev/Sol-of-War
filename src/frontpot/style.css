@@ -5396,3 +5396,9 @@ body:has(.sow-home):has(.fp-content > .fp-message) {
   object-fit: contain;
   border-radius: 0;
 }
+
+.sow-shop-custom-card { min-width: 0; padding: 12px; border: 1px solid #51355d; border-radius: 12px; background: #1d142b; display: flex; flex-direction: column; gap: 14px; }
+.sow-shop-custom-card h2 { text-align: center; font-size: 16px; font-weight: 700; }
+.sow-shop-custom-art { width: 100%; aspect-ratio: 1; border: 1px dashed #b17c46; border-radius: 10px; background: #271a35; color: #ffad3d; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; cursor: pointer; }
+.sow-shop-custom-art svg { width: 76px; height: 76px; fill: none; stroke: currentColor; stroke-width: 2; }
+.sow-shop-custom-card .sow-shop-card-action { margin-top: auto; }

@@ -187,6 +187,7 @@ export type CosmeticCardState = "idle" | "focused" | "equipped";
 
 @customElement("cosmetic-card")
 export class CosmeticCard extends LitElement {
+  @property({ type: Boolean }) showStoreLabels = true;
   @property({ attribute: false })
   resolved!: ResolvedCosmetic;
 
@@ -502,11 +503,13 @@ export class CosmeticCard extends LitElement {
           this.interactive && active.cosmetic !== null
             ? html`<cosmetic-info
                   .artist=${priced?.artist}
-                  .aiDisclosed=${priced?.aiDisclosed}
+                  .aiDisclosed=${this.showStoreLabels && priced?.aiDisclosed}
                   .rarity=${rarity}
                   .colorPalette=${active.colorPalette?.name}
                   .showAdFree=${
-                    active.relationship === "purchasable" && !isDesktopShell()
+                    this.showStoreLabels &&
+                    active.relationship === "purchasable" &&
+                    !isDesktopShell()
                   }
                   .usdValue=${usdValue}
                   .perks=${this.subscriptionPerks()}
