@@ -1,0 +1,117 @@
+{
+  "network": "devnet",
+  "testOnly": true,
+  "mint": "62TWXXq8hbPppf7vpB9Z4N4sLHGtmu5pbamTaNemnH1G",
+  "tokenProgram": "Token-2022",
+  "userWallet": "4ufWpc8JJjK11cPs2EZhGxfrBdQ1RMefz3QHnUJmyzLk",
+  "providerUserSignature": true,
+  "additionalSignersAdded": false,
+  "platformFeePayer": "GVWAbuhH2sb2snCHppXDWPJXTDxR6c82h9Y3RNToJU2h",
+  "purchases": [
+    {
+      "itemID": "ember-standard",
+      "signature": "SsimxZCfyg5XDq66kYRwWRLVBdYfxBC7EqqN6s12ewwraeinwi1qGKqHuuYDwKoqjTc4FjhBorQrLAh7bmLtCnX",
+      "slot": 517005317,
+      "burnAmount": "1000000000",
+      "decimals": 6,
+      "feeLamports": 10000,
+      "userSOLChange": 0,
+      "feePayer": "GVWAbuhH2sb2snCHppXDWPJXTDxR6c82h9Y3RNToJU2h",
+      "before": {
+        "userSOL": 38970000,
+        "payerSOL": 1000000,
+        "supply": "100000000000",
+        "tokens": "100000000000"
+      },
+      "after": {
+        "userSOL": 38970000,
+        "payerSOL": 990000,
+        "supply": "99000000000",
+        "tokens": "99000000000"
+      },
+      "duplicateSubmissionChargedOnce": true
+    },
+    {
+      "itemID": "violet-collection",
+      "signature": "2nAgTt5umntn2pTxBuTaQpHRFNmoXrGUDWtyJa6e16sEucmzGyvFfUHShURVwtNgDBVdAMgrmJLGmy6mftT9oULy",
+      "slot": 517005768,
+      "burnAmount": "20000000000",
+      "decimals": 6,
+      "feeLamports": 10000,
+      "userSOLChange": 0,
+      "feePayer": "GVWAbuhH2sb2snCHppXDWPJXTDxR6c82h9Y3RNToJU2h",
+      "before": {
+        "userSOL": 38970000,
+        "payerSOL": 990000,
+        "supply": "99000000000",
+        "tokens": "99000000000"
+      },
+      "after": {
+        "userSOL": 38970000,
+        "payerSOL": 980000,
+        "supply": "79000000000",
+        "tokens": "79000000000"
+      },
+      "duplicateSubmissionChargedOnce": true
+    }
+  ],
+  "owned": [
+    "ember-standard",
+    "violet-atom-burst",
+    "violet-city-lights",
+    "violet-collection",
+    "violet-crown",
+    "violet-fleet",
+    "violet-hydro-burst",
+    "violet-mirv-burst",
+    "violet-missile-trail",
+    "violet-pattern",
+    "violet-rail-convoy",
+    "violet-rail-lines",
+    "violet-ship-wake",
+    "violet-skin",
+    "violet-vanguard"
+  ],
+  "equipped": {
+    "crown": "violet-crown",
+    "effect:transportShipTrail": "violet-ship-wake",
+    "flag": "ember-standard",
+    "territory": "violet-pattern"
+  },
+  "appearance": {
+    "crown": {
+      "name": "violet_sovereign",
+      "url": "/frontpot/api/shop/art/violet-crown.svg?v=2"
+    },
+    "effects": {
+      "transportShipTrail": {
+        "name": "violet_ship_wake",
+        "effectType": "transportShipTrail"
+      }
+    },
+    "flag": "/frontpot/api/shop/art/ember-standard.svg?v=2",
+    "pattern": {
+      "name": "violet_lattice",
+      "patternData": "ADIYAYJEKBAoRII",
+      "colorPalette": {
+        "name": "violet_palette",
+        "primaryColor": "#1b1032",
+        "secondaryColor": "#c29aff"
+      }
+    }
+  },
+  "restartRecovered": true,
+  "cancelledUnsignedPurchase": true,
+  "unauthorizedEquipRejected": true,
+  "productionCheckoutEnabled": false,
+  "temporarySponsorRetired": true,
+  "retiredSponsorSigningRejected": {
+    "status": 400,
+    "policyDenied": true
+  },
+  "sponsorRemainderLamports": 980000,
+  "databaseReopened": true,
+  "testedAt": "2026-10-31 UTC (October 30 Pacific)",
+  "sourceCommit": "2842714",
+  "scope": "Isolated test mint and existing development user; no mainnet checkout or production signer policy change."
+}

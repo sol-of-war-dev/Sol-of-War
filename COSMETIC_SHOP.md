@@ -1,8 +1,9 @@
 # Sol of War cosmetic shop
 
-Implementation status: local preview and automated checkout tests. Purchases are
-**disabled by default**. Draft prices require approval before activation. No live
-shop burn or provider-sponsored Token-2022 rehearsal is claimed by this document.
+Implementation status: local preview, automated checkout tests, and a completed
+[isolated devnet burn and sponsorship rehearsal](SHOP_DEVNET_EVIDENCE.md). Purchases
+are **disabled by default**. Draft prices require approval before activation.
+The rehearsal used a separate test mint; it was not a mainnet purchase.
 
 ## Collection and ownership
 
