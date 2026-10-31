@@ -5402,3 +5402,6 @@ body:has(.sow-home):has(.fp-content > .fp-message) {
 .sow-shop-custom-art { width: 100%; aspect-ratio: 1; border: 1px dashed #b17c46; border-radius: 10px; background: #271a35; color: #ffad3d; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; cursor: pointer; }
 .sow-shop-custom-art svg { width: 76px; height: 76px; fill: none; stroke: currentColor; stroke-width: 2; }
 .sow-shop-custom-card .sow-shop-card-action { margin-top: auto; }
+
+.sow-shop-wallet-choice { display: grid; gap: 8px; margin: 16px 0; }
+.sow-shop-wallet-choice select { background: #160c22; color: #fff; border: 1px solid #51355d; padding: 12px; border-radius: 8px; max-width: 100%; }
