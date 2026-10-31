@@ -1247,6 +1247,9 @@ async function enter(nextRoom: PublicRoom, background = false) {
   window.scrollTo({ top: 0 });
   if (!background) history.replaceState(null, "", `/room/${room.id}`);
   sessionStorage.setItem("frontpot-room", room.id);
+  // Restoring membership on a wallet/profile tab must not take over the
+  // active game socket in another tab. Connect only on an explicit return.
+  if (background) return;
   const requestGeneration = ++generation;
   const client = await loadGameClient();
   if (requestGeneration !== generation) return;
@@ -1504,6 +1507,11 @@ async function leave() {
 }
 function returnToMatch() {
   if (!room) return;
+  if (!handle) {
+    const active = room;
+    void act(() => enter(active));
+    return;
+  }
   hideProfile();
   showTerms = showAdmin = showHistory = showLobbies = setupOpen = false;
   previewRoom = null;
@@ -3547,7 +3555,7 @@ async function refresh() {
             const active = await api<PublicRoom | null>("/active-room");
             if (active) {
               showMatchmaking = false;
-              await enter(active);
+              await enter(active, !previous?.offer);
               return;
             }
             if (previous?.offer)

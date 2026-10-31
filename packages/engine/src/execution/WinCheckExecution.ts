@@ -33,7 +33,10 @@ export class WinCheckExecution implements Execution {
     }
     if (this.mg === null) throw new Error("Not initialized");
 
-    if (this.checkRankedTeamCancelled()) {
+    if (
+      this.checkHumanEliminationVictory() ||
+      this.checkRankedTeamCancelled()
+    ) {
       return;
     }
 
@@ -42,6 +45,32 @@ export class WinCheckExecution implements Execution {
     } else {
       this.checkWinnerTeam();
     }
+  }
+
+  // Sol of War opts in explicitly; never reinterpret archived match rules.
+  // A lost connection is not elimination. Count spawned humans with land even
+  // while disconnected, and never declare a winner during incomplete spawning.
+  private checkHumanEliminationVictory(): boolean {
+    if (this.mg === null) throw new Error("Not initialized");
+    const config = this.mg.config().gameConfig();
+    if (!config.humanEliminationVictory || this.mg.inSpawnPhase()) return false;
+    const humans = this.mg
+      .allPlayers()
+      .filter((p) => p.type() === PlayerType.Human);
+    if (humans.length < 2 || humans.some((p) => !p.hasSpawned())) return false;
+    const alive = humans.filter((p) => p.isAlive());
+    if (config.gameMode === GameMode.Team) {
+      const originalTeams = new Set(humans.map((p) => p.team()));
+      if (originalTeams.has(null) || originalTeams.size < 2) return false;
+      const remainingTeams = new Set(alive.map((p) => p.team()));
+      if (remainingTeams.size > 1) return false;
+      this.mg.setWinner(alive[0]?.team() ?? null, this.mg.stats().stats());
+    } else {
+      if (alive.length > 1) return false;
+      this.mg.setWinner(alive[0] ?? null, this.mg.stats().stats());
+    }
+    this.active = false;
+    return true;
   }
 
   // A ranked 2v2 or clan wars match is void unless every matched player
@@ -108,7 +137,8 @@ export class WinCheckExecution implements Execution {
     // match, so the largest human takes the threshold or the timer. Ranked 1v1
     // keeps the old rule so archived 1v1 replays still resolve the same way.
     const contenders =
-      rankedType === RankedType.FreeForAll
+      rankedType === RankedType.FreeForAll ||
+      this.mg.config().gameConfig().humanEliminationVictory
         ? sorted.filter((p) => p.type() === PlayerType.Human)
         : sorted;
     const max = contenders[0];

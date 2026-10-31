@@ -78,7 +78,9 @@ export class Roster {
     if (client.ws !== ws) {
       this.sockets.delete(client.ws);
       client.ws.removeAllListeners();
-      client.ws.close();
+      // A replaced session must stop retrying, or two tabs can continually
+      // evict one another and make a running match appear frozen.
+      client.ws.close(CloseCode.Normal, "kick_reason.duplicate_session");
     }
     client.ws = ws;
     this.connected = this.connected.filter(

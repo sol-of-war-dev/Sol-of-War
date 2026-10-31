@@ -75,6 +75,13 @@ These payouts include the winner's original entry; they are not net profit.
 Both registered winning teammates are paid in 2v2, including a teammate eliminated
 or disconnected after the roster locked.
 
+New multiplayer matches also end when only one human player remains alive (1v1
+and FFA), or only one human team remains alive (2v2). A single surviving teammate
+wins for the registered team. Losing a connection alone is not elimination.
+Practice does not end simply because it has one human player. Existing territory
+and time-limit rules remain available. The elimination rule is saved in the match
+configuration; recordings created before this change retain their original rules.
+
 Calculations use whole lamports (1 SOL = 1,000,000,000 lamports). The fee is rounded
 down to a whole lamport. An indivisible prize remainder follows frozen winning
 roster order and does not become an extra platform fee.
@@ -82,7 +89,8 @@ roster order and does not become an extra platform fee.
 | Transfer | Network fee |
 | --- | --- |
 | External top-up or direct match deposit | Paid by the sending external wallet. Not returned with an entry refund. |
-| Account-wallet entry, payout, refund or withdrawal | Paid by the platform's separate fee payer in this implementation. No extra withdrawal commission is implemented. |
+| New in-app user-owned wallet entry or withdrawal | Paid by the platform after the user signs, subject to sponsorship availability and limits. Previously prepared requests retain their original fee payer; prepare a new request for sponsorship. |
+| Managed account-wallet entry, payout, refund or withdrawal | Paid by the platform's separate fee payer. No extra withdrawal commission is implemented. |
 
 ## Refunds and disconnects
 

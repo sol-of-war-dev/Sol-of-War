@@ -40,6 +40,9 @@ vi.mock("../../src/client/Utils", () => ({
   translateText: (key: string, params?: Record<string, unknown>) =>
     params === undefined ? key : `${key} ${JSON.stringify(params)}`,
   homeHref: () => "/",
+  exitToHome: () => {
+    window.location.href = "/";
+  },
 }));
 
 import type { LobbyConfig } from "../../src/client/ClientGameRunner";
@@ -501,6 +504,23 @@ describe("Transport reconnect policy", () => {
   });
 
   describe("terminal state", () => {
+    it("stops a replaced session from evicting its replacement", () => {
+      FakeWebSocket.script = rejectAfter(
+        50,
+        1000,
+        "kick_reason.duplicate_session",
+      );
+      connect();
+      vi.advanceTimersByTime(60_000);
+      transport.reconnect();
+      vi.advanceTimersByTime(60_000);
+      expect(FakeWebSocket.instances).toHaveLength(1);
+      expect(showInGameConfirm).toHaveBeenCalledOnce();
+      expect(showInGameConfirm.mock.calls[0][0]).toBe(
+        "kick_reason.duplicate_session",
+      );
+    });
+
     it("tells the player once, only after the budget is spent, and stays shut", () => {
       FakeWebSocket.script = rejectAfter(50, 1006);
       connect();

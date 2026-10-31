@@ -122,6 +122,7 @@ export function gameConfig(rules: Rules, mode: string, practice: boolean) {
   return GameConfigSchema.parse({
     ...rules,
     gameType: GameType.Private,
+    humanEliminationVictory: !practice,
     gameMode: mode === "2v2" ? GameMode.Team : GameMode.FFA,
     playerTeams: mode === "2v2" ? 2 : undefined,
     maxPlayers: practice

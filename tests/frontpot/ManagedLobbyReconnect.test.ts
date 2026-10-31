@@ -24,7 +24,10 @@ it("keeps one seat per account across repeated managed-lobby joins", () => {
   const originalSocket = mockWsOf(host);
   expect(game.joinClient(repeat)).toBe("joined");
   expect(game.numPlayers()).toBe(1);
-  expect(originalSocket.close).toHaveBeenCalled();
+  expect(originalSocket.close).toHaveBeenCalledWith(
+    1000,
+    "kick_reason.duplicate_session",
+  );
   expect(game.joinClient(opponent)).toBe("joined");
   expect(game.numPlayers()).toBe(2);
   const refreshed = makeClient({

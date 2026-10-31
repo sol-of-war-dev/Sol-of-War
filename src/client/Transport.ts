@@ -563,6 +563,9 @@ export class Transport {
           // a fresh socket 5s later only to be refused with "game not found".
           this.connectionRefused = true;
           this.stopPing();
+          if (event.reason === "kick_reason.duplicate_session") {
+            this.showTerminalDialog(translateText(event.reason));
+          }
         } else {
           this.handleConnectionRefused(event.reason);
         }
