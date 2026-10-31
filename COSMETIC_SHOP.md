@@ -10,6 +10,14 @@ A [custom PNG purchase and match rehearsal](CUSTOM_PNG_DEVNET_EVIDENCE.md) also
 verified upload, preview, a 500,000-token burn, equipment, and visible territory
 rendering through the actual local shop and a running practice match.
 
+## Shop categories
+
+The **Territory** category includes both repeating patterns and texture skins.
+They share one equipment slot: only one territory design can be equipped at once.
+Existing item IDs, prices, and ownership are preserved. New custom Territory PNGs
+use the repeating-pattern upload flow, preserving their colors, transparency,
+and tile dimensions. Flags, crowns, effects, and bundles remain separate categories.
+
 ## Collection and ownership
 
 The shop adapts OpenFront's existing `CosmeticCard`, `CosmeticPreview`, rarity

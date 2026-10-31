@@ -9,11 +9,19 @@ import {
 import type { WalletLogin } from "../PrivyLogin";
 import type { Identity } from "../Store";
 import { assertBurn } from "./BurnPolicy";
-import { SHOP_MINT, CATEGORIES, type Category, type ShopItem } from "./Catalog";
+import { SHOP_MINT, type Category, type ShopItem } from "./Catalog";
 import "../../client/components/CosmeticPreviewModal";
 import type { Purchase, CosmeticShop } from "./Shop";
 type Catalog = ReturnType<CosmeticShop["catalog"]>;
 type Inventory = ReturnType<CosmeticShop["inventory"]>;
+type ShopCategory = Exclude<Category, "skin" | "pattern"> | "territory";
+const SHOP_CATEGORIES: Record<ShopCategory, string> = {
+  flag: "Flags",
+  territory: "Territory",
+  crown: "Crowns",
+  effect: "Effects",
+  bundle: "Bundles",
+};
 export class ShopView {
   private catalog: Catalog | null = null;
   private activity: ReturnType<CosmeticShop["activity"]> | null = null;
@@ -21,7 +29,12 @@ export class ShopView {
   private owner: string | null = null;
   private selected: string | null = null;
   private notice = "";
-  private category: Category = "flag";
+  private category: ShopCategory = "flag";
+  private inCategory(item: ShopItem, category = this.category) {
+    return category === "territory"
+      ? item.category === "pattern" || item.category === "skin"
+      : item.category === category;
+  }
   private ownedOnly = false;
   private effectSlot = "effect:transportShipTrail";
   private gamePreview: string | null = null;
@@ -70,7 +83,8 @@ export class ShopView {
   private async upload(form: HTMLFormElement) {
     const identity = this.c.identity();
     if (!identity || identity.guest) return;
-    const category = this.category;
+    const viewCategory = this.category;
+    const category = viewCategory === "territory" ? "pattern" : viewCategory;
     const data = new FormData(form),
       file = data.get("image");
     if (
@@ -97,7 +111,7 @@ export class ShopView {
     this.notice =
       "Draft saved. Review the artwork before burning 500,000 $SOLOFWAR to unlock it.";
     if (identity.id !== this.c.identity()?.id) return;
-    this.category = category;
+    this.category = viewCategory;
     await this.refresh();
     this.preview(result.id);
   }
@@ -192,7 +206,7 @@ export class ShopView {
     requestAnimationFrame(() =>
       document
         .querySelector(".sow-shop-review")
-        ?.scrollIntoView({ block: "nearest", behavior: "smooth" }),
+        ?.scrollIntoView({ block: "start", behavior: "smooth" }),
     );
   }
   render() {
@@ -213,8 +227,8 @@ export class ShopView {
         <p class="sow-shop-eyebrow">SOL OF WAR COLLECTION</p>
         <h1>Make your mark.</h1>
         <p>
-          Original flags, territory patterns, skins, crowns, and effects. Build
-          your own commander’s look. Cosmetic only; no gameplay advantages.
+          Original flags, territory designs, crowns, and effects. Build your own
+          commander’s look. Cosmetic only; no gameplay advantages.
         </p>
       </header>
       <div class="sow-shop-info">
@@ -310,29 +324,29 @@ export class ShopView {
           : ""
       }
       <nav class="sow-shop-categories" aria-label="Cosmetic categories">
-        ${Object.entries(CATEGORIES).map(
+        ${Object.entries(SHOP_CATEGORIES).map(
           ([key, label]) =>
             html`<button
               aria-pressed=${this.category === key}
               @click=${() => {
-                this.category = key as Category;
+                this.category = key as ShopCategory;
                 this.selected = null;
                 this.c.paint();
               }}
             >
               ${label}
               <span
-                >${catalog?.items.filter((i) => i.category === key).length ?? 0}</span
+                >${catalog?.items.filter((i) => this.inCategory(i, key as ShopCategory)).length ?? 0}</span
               >
             </button>`,
         )}
       </nav>
       ${
-        ["flag", "pattern", "skin", "crown"].includes(this.category)
+        ["flag", "territory", "crown"].includes(this.category)
           ? html`<section class="sow-shop-receive">
               <h2>
                 Upload your own
-                ${this.category === "pattern" ? "territory pattern" : this.category}
+                ${this.category === "territory" ? "territory pattern" : this.category}
               </h2>
               <p>
                 500,000 $SOLOFWAR per custom item, burned on purchase. Sol of
@@ -341,7 +355,7 @@ export class ShopView {
               </p>
               <p>
                 Static PNG, up to 128 KB and 512 × 512 pixels.
-                ${this.category === "pattern" ? "Pattern tiles keep their uploaded size. Your PNG repeats with its original colors and transparency. Transparent areas show the territory underneath. Preview the tile and the in-game result before buying." : "Artwork is resized to fit. Use transparency for flags and crowns if desired."}
+                ${this.category === "territory" ? "Pattern tiles keep their uploaded size. Your PNG repeats with its original colors and transparency. Transparent areas show the territory underneath. Preview the tile and the in-game result before buying." : "Artwork is resized to fit. Use transparency for flags and crowns if desired."}
               </p>
               ${
                 identity && !identity.guest
@@ -431,8 +445,8 @@ export class ShopView {
                 ${Object.entries(inventory.equipped).map(([slot, id]) => html`<button ?disabled=${this.c.busy()} @click=${() => this.c.act(() => this.equip(null, slot))}>Unequip ${catalog?.items.find((i) => i.id === id)?.name ?? id}</button>`)}
               </div>
               <p>
-                One territory pattern or skin at a time. Other slots can be
-                combined. Changes apply on your next match join.
+                One territory design at a time. Other slots can be combined.
+                Changes apply on your next match join.
               </p>
             </section>`
           : ""
@@ -464,8 +478,8 @@ export class ShopView {
                             ${item.members.map((id) => html`<li>${catalog.items.find((i) => i.id === id)?.name}${inventory?.owned.includes(id) ? " (owned)" : ""}</li>`)}
                           </ul>
                           <p>
-                            The pattern and skin are alternatives for the same
-                            territory slot. All other items can be equipped
+                            The two territory designs are alternatives for the
+                            same equipment slot. All other items can be equipped
                             together.
                           </p>`
                       : ["pattern", "skin", "effect"].includes(item.category)
@@ -537,7 +551,7 @@ export class ShopView {
         ${catalog?.items
           .filter(
             (i) =>
-              i.category === this.category &&
+              this.inCategory(i) &&
               (this.category !== "effect" || i.slot === this.effectSlot) &&
               (!this.ownedOnly || inventory?.owned.includes(i.id)),
           )
@@ -559,7 +573,7 @@ export class ShopView {
             ></cosmetic-card>`;
           })}
       </div>
-      ${this.ownedOnly && !catalog?.items.some((i) => i.category === this.category && (this.category !== "effect" || i.slot === this.effectSlot) && inventory?.owned.includes(i.id)) ? html`<p class="fp-muted">No owned items in this category yet.</p>` : ""}
+      ${this.ownedOnly && !catalog?.items.some((i) => this.inCategory(i) && (this.category !== "effect" || i.slot === this.effectSlot) && inventory?.owned.includes(i.id)) ? html`<p class="fp-muted">No owned items in this category yet.</p>` : ""}
       ${
         this.gamePreview &&
         catalog?.items.some((i) => i.id === this.gamePreview)

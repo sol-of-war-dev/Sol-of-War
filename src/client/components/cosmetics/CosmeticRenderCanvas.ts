@@ -145,7 +145,9 @@ export class CosmeticRenderCanvas extends LitElement {
       if (isSmall) {
         this.targetZoom = 2.2;
         this.autoZoomStartTime = performance.now();
-        this.isAutoZooming = true;
+        this.isAutoZooming = !import.meta.env.VITE_FRONTPOT;
+        if (import.meta.env.VITE_FRONTPOT)
+          this.renderer.zoomTo(this.targetZoom);
       } else {
         this.targetZoom = 1.0;
         this.isAutoZooming = false;
@@ -176,7 +178,10 @@ export class CosmeticRenderCanvas extends LitElement {
       }
       return true;
     }
-    // Big PNG skins show full island
+    // Sol of War presents PNG skins and patterns in one Territory category.
+    // Frame both on the owned area so the texture is visible at the same scale.
+    if (import.meta.env.VITE_FRONTPOT && resolved.type === "skin") return true;
+    // Big PNG skins show the full island in the upstream store.
     return false;
   }
 
