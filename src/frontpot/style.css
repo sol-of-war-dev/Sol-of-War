@@ -5223,3 +5223,133 @@ body:has(.sow-home):has(.fp-content > .fp-message) {
 }
 
 .sow-spectator-loading { position: fixed; inset: 0; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; background: var(--fp-bg); color: var(--fp-text); }
+
+
+/* Sol of War catalog, built with the upstream cosmetic-card and preview. */
+.sow-shop {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 48px 24px 80px;
+}
+.sow-shop h1 {
+  font-size: clamp(36px, 5vw, 64px);
+  line-height: 1.05;
+  margin: 10px 0 20px;
+}
+.sow-shop-eyebrow {
+  color: #ffac39;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  font-size: 13px;
+}
+.sow-shop header > p:last-child,
+.sow-shop-footnote {
+  color: #bcafca;
+}
+.sow-shop-info {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  padding: 24px;
+  margin: 32px 0 16px;
+  background: #20132c;
+  border: 1px solid #46314f;
+  border-radius: 18px;
+}
+.sow-shop-info p {
+  margin: 8px 0 0;
+  color: #bcafca;
+}
+.sow-shop-mint {
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  color: #bcafca;
+}
+.sow-shop-mint code {
+  font-family: inherit;
+}
+.sow-shop-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+  margin: 28px 0;
+}
+.sow-shop-grid cosmetic-card {
+  display: block;
+  min-width: 0;
+}
+.sow-shop-card-action {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+.sow-shop-card-action span {
+  color: #c0b2cb;
+  font-size: 14px;
+}
+.sow-shop-card-action small {
+  font-size: 12px;
+  color: #ffbf6b;
+  margin-left: 8px;
+}
+.sow-shop-toolbar {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 24px;
+}
+.sow-shop-review {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  align-items: center;
+  gap: 32px;
+  padding: 28px;
+  background: #21142f;
+  border: 1px solid #664273;
+  border-radius: 20px;
+  margin: 24px 0;
+}
+.sow-shop-review img {
+  width: 100%;
+  border-radius: 8px;
+}
+.sow-shop-review button {
+  margin: 10px 12px 0 0;
+}
+.sow-shop-receipts article {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 20px 0;
+  border-bottom: 1px solid #46314f;
+}
+.sow-shop-receipts a {
+  color: #ffb44f;
+}
+.sow-shop-footnote {
+  margin-top: 36px;
+  font-size: 14px;
+}
+@media (max-width: 700px) {
+  .sow-shop-grid,
+  .sow-shop-info,
+  .sow-shop-review {
+    grid-template-columns: 1fr;
+  }
+  .sow-shop-review img {
+    max-width: 240px;
+  }
+}
+.sow-shop-receive {
+  margin: 20px 0;
+}
+.sow-shop-receive code {
+  display: block;
+  overflow-wrap: anywhere;
+  font-family: inherit;
+  color: #ffbf6b;
+  margin: 16px 0;
+}

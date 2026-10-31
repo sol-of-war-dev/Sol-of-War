@@ -47,6 +47,7 @@ export type WalletLogin = {
     transaction: string,
     network: PaymentNetwork,
     feeSponsored?: boolean,
+    purpose?: "transfer" | "burn",
   ): Promise<string>;
 };
 
@@ -241,6 +242,7 @@ export function initializePrivy(
         transaction,
         network,
         feeSponsored = false,
+        purpose = "transfer",
       ) {
         const { wallet, sign } = signingWallet(walletAddress);
         const { signedTransaction } = await sign({
@@ -249,12 +251,17 @@ export function initializePrivy(
           options: {
             uiOptions: {
               showWalletUIs: true,
-              description: feeSponsored
-                ? "Sol of War pays the network fee. Review your transfer, approve, then close the confirmation promptly to submit."
-                : "Review the transfer. After approving, close the signed confirmation promptly to submit before it expires.",
+              description:
+                purpose === "burn"
+                  ? "Burn tokens to unlock your Sol of War cosmetic. Burning is permanent. Sol of War pays the network fee. Approve, then close the confirmation to submit."
+                  : feeSponsored
+                    ? "Sol of War pays the network fee. Review your transfer, approve, then close the confirmation promptly to submit."
+                    : "Review the transfer. After approving, close the signed confirmation promptly to submit before it expires.",
               successHeader: "Signature ready",
               successDescription:
-                "Close this dialog now to submit the signed transaction. The transfer is not complete until Solana finalizes it.",
+                purpose === "burn"
+                  ? "Close this dialog to submit your token burn. Your cosmetic unlocks after Solana finalizes it."
+                  : "Close this dialog now to submit the signed transaction. The transfer is not complete until Solana finalizes it.",
             },
           },
           transaction: Uint8Array.from(atob(transaction), (c) =>

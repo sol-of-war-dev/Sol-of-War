@@ -1,5 +1,6 @@
 import { getTransactionDecoder } from "@solana/kit";
 import type { DatabaseSync } from "node:sqlite";
+import { assertBurn, type BurnTerms } from "../shop/BurnPolicy";
 import { InputError } from "../Store";
 import {
   acceptSignature,
@@ -38,11 +39,36 @@ export class FeeSponsor {
       ...terms,
       payer: this.payer.address,
     });
+    return this.cosign(id, playerID, issued, returned, terms.source);
+  }
+  async signBurn(
+    id: string,
+    playerID: string,
+    issued: Wire,
+    returned: string,
+    terms: BurnTerms,
+  ): Promise<Wire> {
+    if (
+      !id.startsWith("shop:") ||
+      terms.payer !== this.payer.address ||
+      terms.source === this.payer.address
+    )
+      throw new InputError("Invalid burn sponsor");
+    assertBurn(issued.transaction, terms);
+    return this.cosign(id, playerID, issued, returned, terms.source);
+  }
+  private async cosign(
+    id: string,
+    playerID: string,
+    issued: Wire,
+    returned: string,
+    source: string,
+  ): Promise<Wire> {
     // Verify the user's signature before spending sponsor budget or calling its signer.
     const userSigned = await acceptSignature(
       issued.transaction,
       returned,
-      terms.source,
+      source,
     );
     await this.rpc.check();
     const height = await this.rpc.call<number>("getBlockHeight", [

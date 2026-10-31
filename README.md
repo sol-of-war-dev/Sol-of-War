@@ -13,6 +13,7 @@
   <a href="https://solofwar.fun"><strong>Play Sol of War</strong></a> ·
   <a href="GAME_RULES.md"><strong>Game rules</strong></a> ·
   <a href="PAYOUTS.md"><strong>Funds & payouts</strong></a> ·
+  <a href="COSMETIC_SHOP.md"><strong>Cosmetic shop development</strong></a> ·
   <a href="PAYMENTS.md#code-and-test-map"><strong>Inspect the payment code</strong></a> ·
   <a href="#run-it-yourself"><strong>Run locally</strong></a>
 </p>

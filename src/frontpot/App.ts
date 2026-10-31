@@ -9,11 +9,11 @@ import { loadModal } from "../client/LazyModals";
 import { UserSettings } from "../client/UserSettings";
 import { translateText } from "../client/Utils";
 import { adminView, clearAdmin, refreshAdmin } from "./AdminView";
-import "./GameSetup";
 import { parseSolAmount } from "./Amounts";
+import "./GameSetup";
+import { requestApi } from "./ApiResponse";
 import "../client/components/LevelBadge";
 import "./PrizePot";
-import { requestApi } from "./ApiResponse";
 import brandSymbol from "./assets/sol-of-war-symbol.png";
 import brandWordmark from "./assets/sol-of-war-wordmark.png";
 import { CountdownClock } from "./CountdownClock";
@@ -21,11 +21,11 @@ import { gameRulesContent } from "./GameRulesView";
 import type { Pool } from "./MatchLedger";
 import type { PaymentStatus } from "./payments/DevnetPayments";
 import { assertNativeTransfer } from "./payments/NativeTransferPolicy";
+import { currencyLabel, type PaymentMode } from "./payments/Network";
 import "../client/LangSelector";
 import "../client/GameStartingModal";
 import "../client/styles.css";
 import "./style.css";
-import { currencyLabel, type PaymentMode } from "./payments/Network";
 import {
   paymentView,
   paymentLabel,
@@ -41,6 +41,7 @@ import { rankedResultView } from "./RankedResultPanel";
 import { RANK_TIERS, rankRange, rankTier, type VisibleRank } from "./RankTiers";
 import { defaultRules, type Rules } from "./Rules";
 import type { SharedMatchmaking as Matchmaking } from "./SharedMatchmaking";
+import { ShopView } from "./shop/ShopView";
 import type { Identity, Mode, Room } from "./Store";
 import { tutorialLobby } from "./TutorialGame";
 import { UserWalletView } from "./UserWalletView";
@@ -408,6 +409,18 @@ let showHistory = false;
 let showLobbies = location.pathname === "/lobbies";
 let liveOnly = new URLSearchParams(location.search).get("view") === "live";
 let showTerms = location.pathname === "/terms";
+const shopView = new ShopView({
+  api,
+  identity: () => identity,
+  walletLogin: getWalletLogin,
+  busy: () => busy,
+  act,
+  paint,
+  signIn: () =>
+    requireIdentity(async () => {
+      await shopView.refresh();
+    }),
+});
 let showHowToPlay = location.pathname === "/how-to-play";
 let showAdmin = location.pathname === "/admin";
 let queueFilter: Mode | "all" = "all";
@@ -2000,9 +2013,9 @@ function paint() {
             </a>
             <nav class="fp-site-nav" aria-label="Game navigation">
               <button
-                class=${!showLobbies && !showHistory && !showTerms && !showAdmin && !showProfile && !showWallet ? "active" : ""}
+                class=${location.pathname !== "/shop" && !showLobbies && !showHistory && !showTerms && !showAdmin && !showProfile && !showWallet ? "active" : ""}
                 ?disabled=${inGame}
-                aria-current=${!showLobbies && !showHistory && !showProfile && !showWallet ? "page" : "false"}
+                aria-current=${location.pathname !== "/shop" && !showLobbies && !showHistory && !showProfile && !showWallet ? "page" : "false"}
                 @click=${goPlay}
               >
                 Play
@@ -2022,6 +2035,13 @@ function paint() {
               >
                 Watch
                 live${liveGames.length ? html` (${liveGames.length})` : ""}
+              </button>
+              <button
+                ?disabled=${inGame || busy}
+                class=${location.pathname === "/shop" ? "active" : ""}
+                @click=${() => location.assign("/shop")}
+              >
+                Shop
               </button>
             </nav>
             <div class="fp-nav-right">
@@ -2177,37 +2197,39 @@ function paint() {
                   ? playerWalletView.render()
                   : showProfile
                     ? profiles.render()
-                    : showHowToPlay
-                      ? howToPlayView()
-                      : showTerms
-                        ? termsView()
-                        : loadingLobby
-                          ? html`<div
-                              class="sow-queue-loading"
-                              aria-busy="true"
-                            >
-                              <div inert>
-                                ${showLobbies ? lobbiesView() : homeView()}
-                              </div>
-                              <span
-                                class="sow-queue-loading-label"
-                                role="status"
-                                >Loading lobby…</span
+                    : location.pathname === "/shop"
+                      ? shopView.render()
+                      : showHowToPlay
+                        ? howToPlayView()
+                        : showTerms
+                          ? termsView()
+                          : loadingLobby
+                            ? html`<div
+                                class="sow-queue-loading"
+                                aria-busy="true"
                               >
-                            </div>`
-                          : (room && viewingRoom) || previewRoom
-                            ? roomView()
-                            : showHistory
-                              ? historyView()
-                              : setupOpen
-                                ? setupView()
-                                : showLobbies
-                                  ? lobbiesView()
-                                  : showMatchmaking
-                                    ? html`<main class="sow-matchmaking-page">
-                                        ${matchmakingPanel()}
-                                      </main>`
-                                    : homeView()
+                                <div inert>
+                                  ${showLobbies ? lobbiesView() : homeView()}
+                                </div>
+                                <span
+                                  class="sow-queue-loading-label"
+                                  role="status"
+                                  >Loading lobby…</span
+                                >
+                              </div>`
+                            : (room && viewingRoom) || previewRoom
+                              ? roomView()
+                              : showHistory
+                                ? historyView()
+                                : setupOpen
+                                  ? setupView()
+                                  : showLobbies
+                                    ? lobbiesView()
+                                    : showMatchmaking
+                                      ? html`<main class="sow-matchmaking-page">
+                                          ${matchmakingPanel()}
+                                        </main>`
+                                      : homeView()
           }
         </div>
         <footer class="fp-footer">
@@ -3799,6 +3821,11 @@ setInterval(() => {
 }, 5 * 60_000);
 paint();
 if (showProfile) await profiles.load(initialProfile);
+if (location.pathname === "/shop") await act(() => shopView.refresh());
+setInterval(() => {
+  if (location.pathname === "/shop" && !document.hidden && !busy)
+    void shopView.refresh().catch(() => {});
+}, 10_000);
 await refresh();
 if (invite) await act(() => viewLobby(invite));
 setInterval(() => void refresh(), 2000);

@@ -47,6 +47,8 @@ import { releaseIntegrity } from "./ReleaseIntegrity";
 import { verifyRecordedGame } from "./ResultVerification";
 import { gameConfig as makeGameConfig, PLATFORM_FEE_BPS } from "./Rules";
 import { SharedMatchmaking } from "./SharedMatchmaking";
+import { registerShopRoutes } from "./shop/Routes";
+import { CosmeticShop, shopConfig } from "./shop/Shop";
 import { canSpectate, spectatorIdentity } from "./Spectating";
 import {
   isRanked,
@@ -166,6 +168,11 @@ const userOwnedWallets =
         payments.feeSponsor,
       )
     : null;
+const cosmeticShop = new CosmeticShop(
+  ledger.db,
+  shopConfig(process.env, payments?.transactions.rpc.network),
+  userOwnedWallets,
+);
 const reconciliation = payments
   ? new PoolReconciliation(ledger.db, payments.transactions.rpc, (id, wire) =>
       payments.importExternalDeposit(id, wire),
@@ -839,6 +846,7 @@ if (userOwnedWallets)
   registerUserWalletRoutes(app, userOwnedWallets, (req) =>
     auth.auth(bearerToken(req)),
   );
+registerShopRoutes(app, cosmeticShop, (req) => auth.auth(bearerToken(req)));
 registerPaymentRoutes(app, {
   payments,
   accounts: playerWallets,
@@ -919,6 +927,7 @@ app.get(
     "/admin",
     "/terms",
     "/how-to-play",
+    "/shop",
     "/lobbies",
     "/matchmaking",
     "/tutorial",
@@ -1066,7 +1075,7 @@ wss.on("connection", (ws, req) => {
         identity.name,
         null,
         ws,
-        undefined,
+        watching ? undefined : cosmeticShop.cosmetics(identity.id),
         identity.id,
         [],
         watching,
@@ -1186,3 +1195,17 @@ server.listen(
       `SolSiege ready on port ${process.env.PORT ?? 3000}; payments: ${payments?.network ?? "simulation"}.`,
     ),
 );
+
+let shopReconciling = false;
+const shopTimer = setInterval(async () => {
+  if (!userOwnedWallets || shopReconciling) return;
+  shopReconciling = true;
+  try {
+    await cosmeticShop.reconcilePending();
+  } catch {
+    console.error("Cosmetic purchase reconciliation deferred");
+  } finally {
+    shopReconciling = false;
+  }
+}, 10_000).unref();
+server.once("close", () => clearInterval(shopTimer));
