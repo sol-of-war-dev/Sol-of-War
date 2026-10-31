@@ -75,14 +75,7 @@ export function registerShopRoutes(
     res.json(shop.equip(player(req).id, req.body?.itemID, req.body?.slot)),
   );
   app.post("/frontpot/api/shop/prepare", async (req, res) =>
-    res.json(
-      await shop.prepare(
-        player(req),
-        req.body?.id,
-        req.body?.itemID,
-        req.body?.paymentWallet,
-      ),
-    ),
+    res.json(await shop.prepare(player(req), req.body?.id, req.body?.itemID)),
   );
   app.post("/frontpot/api/shop/submit", async (req, res) =>
     res.json(

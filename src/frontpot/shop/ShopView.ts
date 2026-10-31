@@ -38,7 +38,6 @@ export class ShopView {
   }
   private ownedOnly = false;
   private uploadOpen = false;
-  private paymentWallet: "platform" | "connected" = "platform";
   private effectSlot = "effect:transportShipTrail";
   private gamePreview: string | null = null;
   private loading = false;
@@ -127,27 +126,17 @@ export class ShopView {
     const existing = this.inventory?.purchases.find(
       (p) => p.itemID === item.id,
     );
-    const paymentWallet = existing
-      ? (existing.paymentWallet ?? "platform")
-      : this.paymentWallet;
-    const wallet =
-      paymentWallet === "connected"
-        ? { address: identity.wallet }
-        : await this.c.api<{ address: string }>("/wallet/account/recovery");
-    if (!wallet.address)
-      throw new Error("Sign in with your payment wallet first.");
-    const login = await this.c.walletLogin();
-    login.assertSigningReady(wallet.address);
     const id = existing?.id ?? crypto.randomUUID();
     const p = await this.c.api<Purchase>("/shop/prepare", {
       id,
       itemID: item.id,
-      paymentWallet,
     });
+    const wallet = await this.c.api<{ address: string }>(
+      "/wallet/account/recovery",
+    );
     if (
       identity.id !== this.c.identity()?.id ||
       p.playerID !== identity.id ||
-      (p.paymentWallet ?? "platform") !== paymentWallet ||
       p.id !== id ||
       p.itemID !== item.id ||
       JSON.stringify(p.grants ?? [p.itemID]) !==
@@ -166,6 +155,8 @@ export class ShopView {
     assertBurn(p.wire.transaction, p.terms);
     if (catalog.network !== "mainnet" && catalog.network !== "devnet")
       throw new Error("Invalid shop network");
+    const login = await this.c.walletLogin();
+    login.assertSigningReady(wallet.address);
     const signed = await login.signDeposit(
       wallet.address,
       p.wire.transaction,
@@ -488,12 +479,6 @@ export class ShopView {
           ? (() => {
               const item = catalog.items.find((i) => i.id === this.selected)!;
               const owned = inventory?.owned.includes(item.id),
-                pending = inventory?.purchases.find(
-                  (p) => p.itemID === item.id,
-                ),
-                paymentWallet = pending
-                  ? (pending.paymentWallet ?? "platform")
-                  : this.paymentWallet,
                 overlap = item.members?.some((id) =>
                   inventory?.owned.includes(id),
                 );
@@ -547,28 +532,6 @@ export class ShopView {
                             Sol of War pays the network fee. Ownership unlocks
                             after finalization and cannot be traded or refunded.
                           </p>
-                          <label class="sow-shop-wallet-choice"
-                            >Pay from
-                            <select
-                              .value=${paymentWallet}
-                              ?disabled=${this.c.busy() || !!pending}
-                              @change=${(e: Event) => {
-                                this.paymentWallet = (
-                                  e.target as HTMLSelectElement
-                                ).value as "platform" | "connected";
-                                this.c.paint();
-                              }}
-                            >
-                              <option value="platform">
-                                Sol of War wallet
-                              </option>
-                              <option value="connected">
-                                Connected wallet (Phantom or other)
-                              </option>
-                            </select>
-                          </label>
-                          ${paymentWallet === "connected" ? html`<p class="fp-muted">Approve in the wallet you used to sign in${identity?.wallet ? ` (${identity.wallet.slice(0, 6)}…${identity.wallet.slice(-4)})` : ""}. Your cosmetic belongs to this Sol of War account. No SOL is needed for the network fee.</p>` : ""}
-                          ${pending ? html`<p class="fp-muted">This saved purchase keeps its original payment wallet. Cancel it in your receipts before changing wallets.</p>` : ""}
                           ${overlap ? html`<p>You own an item in this bundle. Choose remaining items individually to avoid paying twice.</p>` : ""}<button
                             class="fp-primary sow-shop-purchase"
                             aria-label=${`Purchase for ${Number(item.tokens).toLocaleString()} $SOLOFWAR`}
@@ -737,9 +700,9 @@ export class ShopView {
           : ""
       }
       <p class="sow-shop-footnote">
-        Choose your Sol of War wallet or connected sign-in wallet. No spending
-        delegation is granted. Cosmetic purchases are separate from SOL wagers
-        and custodial match pools.
+        The shop uses your user-owned wallet. No spending delegation is granted.
+        Cosmetic purchases are separate from SOL wagers and custodial match
+        pools.
       </p>
     </main>`;
   }

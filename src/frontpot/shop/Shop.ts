@@ -32,7 +32,6 @@ export type Purchase = {
   playerID: string;
   itemID: string;
   grants?: string[];
-  paymentWallet?: "platform" | "connected";
   terms: BurnTerms;
   wire: Wire;
   createdAt: number;
@@ -254,7 +253,6 @@ export class CosmeticShop {
           return {
             id: p.id,
             itemID: p.itemID,
-            paymentWallet: p.paymentWallet ?? "platform",
             amount: p.terms.amount,
             decimals: p.terms.decimals,
             state: job?.state ?? "awaiting_approval",
@@ -320,15 +318,8 @@ export class CosmeticShop {
     if (!this.config.enabled || !this.wallets?.feeSponsor)
       throw new InputError("Shop preview only. Purchases are not enabled yet.");
   }
-  async prepare(
-    identity: PlayerSession,
-    id: unknown,
-    itemID: unknown,
-    paymentWallet: unknown = "platform",
-  ) {
+  async prepare(identity: PlayerSession, id: unknown, itemID: unknown) {
     this.assertCheckout();
-    if (paymentWallet !== "platform" && paymentWallet !== "connected")
-      throw new InputError("Invalid payment wallet");
     if (
       typeof id !== "string" ||
       !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(
@@ -341,13 +332,7 @@ export class CosmeticShop {
     return this.exclusive(identity.id, async () => {
       const old = this.get(id);
       if (old) {
-        if (
-          old.playerID !== identity.id ||
-          old.itemID !== itemID ||
-          (old.paymentWallet ?? "platform") !== paymentWallet ||
-          (paymentWallet === "connected" &&
-            old.terms.source !== identity.wallet)
-        )
+        if (old.playerID !== identity.id || old.itemID !== itemID)
           throw new InputError("Purchase request mismatch");
         return old;
       }
@@ -379,10 +364,7 @@ export class CosmeticShop {
         throw new InputError(
           "This cosmetic has an existing purchase. Check its receipt before retrying.",
         );
-      const wallet =
-          paymentWallet === "connected"
-            ? { address: identity.wallet }
-            : await this.wallets!.verified(identity),
+      const wallet = await this.wallets!.verified(identity),
         rpc = this.wallets!.transactions.rpc;
       await rpc.check();
       const mint = await rpc.call<{
@@ -466,7 +448,7 @@ export class CosmeticShop {
       });
       if (!account)
         throw new InputError(
-          "Your selected wallet needs enough $SOLOFWAR in one token account. No SOL payment is required.",
+          "Your in-platform wallet needs enough $SOLOFWAR in one token account. No SOL payment is required.",
         );
       const terms: BurnTerms = {
         program: mint.value!.owner,
@@ -486,7 +468,6 @@ export class CosmeticShop {
         playerID: identity.id,
         itemID,
         grants,
-        paymentWallet,
         terms,
         wire: {
           transaction: burnWire(
@@ -519,10 +500,7 @@ export class CosmeticShop {
       const txs = this.wallets!.transactions,
         jobID = `shop:${id}`;
       if (!txs.get(jobID)) {
-        const wallet =
-          p.paymentWallet === "connected"
-            ? { address: identity.wallet }
-            : await this.wallets!.verified(identity);
+        const wallet = await this.wallets!.verified(identity);
         if (
           wallet.address !== p.terms.source ||
           p.terms.mint !== this.config.mint

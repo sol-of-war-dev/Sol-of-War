@@ -69,19 +69,12 @@ it("protects purchases and inventory, derives the owner from auth, and serves on
           id: "purchase",
           itemID: "ember-standard",
           playerID: "victim",
-          wallet: "attacker-address",
-          paymentWallet: "connected",
           transaction: "signed",
         }),
       });
       expect(r.status).toBe(200);
     }
-    expect(shop.prepare).toHaveBeenCalledWith(
-      identity,
-      "purchase",
-      "ember-standard",
-      "connected",
-    );
+    expect(shop.prepare.mock.calls[0][0]).toEqual(identity);
     expect(shop.submit.mock.calls[0][0]).toEqual(identity);
     expect(shop.equip.mock.calls[0][0]).toBe("alice");
     expect(shop.cancel.mock.calls[0][0]).toBe("alice");

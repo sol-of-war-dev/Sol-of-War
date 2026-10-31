@@ -89,7 +89,7 @@ and transparency.
 
 **100% of each purchase price is burned on-chain** using Solana's token burn
 instruction, reducing the mint's supply. Tokens are not paid to the operator.
-The checkout implementation supports approval from the player’s Sol of War wallet or connected sign-in wallet (including Phantom); **Sol of War pays the
+The player approves the burn from their user-owned wallet; **Sol of War pays the
 purchase transaction's network fee**. Ownership unlocks only after finalization.
 Cosmetics do not change combat statistics, win conditions, matchmaking, or payouts.
 SOL wagers and their custodial match pools remain separate from the cosmetic shop.

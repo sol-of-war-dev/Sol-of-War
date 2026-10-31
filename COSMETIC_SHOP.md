@@ -66,16 +66,11 @@ Checkout rereads and validates the mint; unfamiliar mint extensions fail closed.
 Devnet uses a separate configured test mint. Classic SPL Token is supported for
 devnet fixtures; mainnet is pinned to the Sol of War Token-2022 mint.
 
-1. A signed-in player selects a cosmetic, reviews its token price, and chooses
-   their Sol of War wallet or connected sign-in wallet (including Phantom). The
-   selected wallet must hold sufficient tokens in one token account. External
-   checkout does not require creating or funding an on-platform wallet.
-2. For a Sol of War wallet, the backend verifies ownership and absence of server
-   delegation. For a connected wallet, it derives the source address from the
-   authenticated sign-in session, never a browser-supplied address. It checks the
-   network and finalized token account and persists an immutable purchase quote
-   with a unique reference and payment-wallet choice. Existing quotes retain
-   their original choice; cancel an unsubmitted quote before switching wallets.
+1. A signed-in player selects a cosmetic and reviews its token price. Their
+   registered user-owned wallet must hold sufficient tokens in one token account.
+2. The backend verifies the wallet owner and absence of server delegation using
+   the existing wallet verifier, checks the network and finalized token account,
+   and persists an immutable purchase quote with a unique reference.
 3. The transaction contains exactly one `BurnChecked` instruction and one purchase
    memo. It destroys the quoted tokens, reducing mint supply. It does not send
    tokens to the platform or a so-called burn address.
@@ -232,5 +227,3 @@ ownership, draft caps, and invalid-image cases have automated tests. The [predef
 [custom-PNG rehearsal](CUSTOM_PNG_DEVNET_EVIDENCE.md) include finalized devnet
 burns with platform-paid fees. The custom PNG was also equipped and verified in
 a running practice match. These are devnet receipts, not mainnet shop purchases.
-
-Connected-wallet checkout implementation is covered by automated tests, including real cryptographic signatures with mocked devnet RPC responses. A real Phantom devnet purchase and production rollout of this option remain unverified. Existing published devnet receipts tested the Sol of War wallet route.
