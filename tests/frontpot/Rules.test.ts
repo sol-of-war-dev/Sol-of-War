@@ -4,6 +4,7 @@ import {
   GameMapSize,
 } from "@openfront/engine-api/game/GameTypes";
 import { describe, expect, it } from "vitest";
+import { GlobalQueue } from "../../src/frontpot/GlobalQueue";
 import { defaultRules, gameConfig, parseRules } from "../../src/frontpot/Rules";
 import { LobbyStore } from "../../src/frontpot/Store";
 describe("complete game settings", () => {
@@ -50,6 +51,62 @@ describe("complete game settings", () => {
           maxPlayers: mode === "1v1" ? 2 : 4,
         });
       }
+    },
+  );
+  it.each([GameMapSize.Compact, GameMapSize.Normal])(
+    "separates paid and casual FFA populations on %s maps",
+    (gameMapSize) => {
+      const store = new LobbyStore();
+      const rules = {
+        gameMap: GameMapType.Europe,
+        gameMapSize,
+        nations: "default",
+        bots: 0,
+      };
+      const host = store.identity("Paid");
+      const paid = store.create(host, {
+        mode: "ffa",
+        stake: "0.01",
+        ranked: false,
+        rules,
+      });
+      expect(paid.ranked).toBe(false);
+      expect(paid.rules).toMatchObject({
+        bots: gameMapSize === GameMapSize.Compact ? 100 : 400,
+        nations: "disabled",
+      });
+      store.updateSettings(host, paid.id, {
+        mode: "ffa",
+        stake: "0.01",
+        ranked: false,
+        rules,
+      });
+      expect(paid.rules.nations).toBe("disabled");
+      const casual = store.create(store.identity("Casual"), {
+        mode: "ffa",
+        stake: "0",
+        ranked: false,
+        rules: { gameMap: rules.gameMap, gameMapSize },
+      });
+      expect(casual.rules).toMatchObject(
+        parseRules({ gameMap: rules.gameMap, gameMapSize }, "ffa", false),
+      );
+      expect(casual.rules.nations).not.toBe("disabled");
+      const queue = new GlobalQueue(new LobbyStore());
+      const template = {
+        mode: "ffa",
+        ranked: true,
+        stake: "0.01",
+        minPlayers: 2,
+        maxPlayers: 10,
+        map: GameMapType.Europe,
+        size: gameMapSize,
+        minutes: 15,
+      };
+      const queued = queue.enqueue(template, "test");
+      expect(queued.rules.nations).toBe("disabled");
+      queue.edit(queued.id, template, "test");
+      expect(queued.rules.nations).toBe("disabled");
     },
   );
   it("passes map and gameplay options to the actual engine", () => {

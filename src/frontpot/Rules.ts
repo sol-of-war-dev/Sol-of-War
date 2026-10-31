@@ -109,7 +109,7 @@ export function parseRules(
   }
   return rules;
 }
-/** Fixed ranked gameplay; only map, map size and spawn placement are host choices. */
+/** Fixed wager gameplay; only map, map size and spawn placement are host choices. */
 export function rankedRules(rules: Rules, mode: string, queue = false): Rules {
   return RulesSchema.parse({
     ...defaultRules(mode),
@@ -117,6 +117,7 @@ export function rankedRules(rules: Rules, mode: string, queue = false): Rules {
     gameMapSize: rules.gameMapSize,
     randomSpawn: rules.randomSpawn,
     ...mapPopulation(rules.gameMap, rules.gameMapSize, mode),
+    nations: "disabled",
     ...(queue
       ? { maxPlayers: rules.maxPlayers, maxTimerValue: rules.maxTimerValue }
       : {}),

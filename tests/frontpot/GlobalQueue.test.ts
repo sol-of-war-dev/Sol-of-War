@@ -437,9 +437,10 @@ it("generates FFA matches with map populations while keeping fixed human teams",
   const store = new LobbyStore();
   new GlobalQueue(store).replenish();
   for (const room of store.rooms.values()) {
-    expect(room.rules).toMatchObject(
-      mapPopulation(room.rules.gameMap, room.rules.gameMapSize, room.mode),
-    );
+    expect(room.rules).toMatchObject({
+      ...mapPopulation(room.rules.gameMap, room.rules.gameMapSize, room.mode),
+      ...(room.lamports > 0 ? { nations: "disabled" } : {}),
+    });
   }
   expect(
     [...store.rooms.values()].some((r) => r.mode === "ffa" && r.rules.bots > 0),
