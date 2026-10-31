@@ -11,6 +11,7 @@
 
 <p align="center">
   <a href="https://solofwar.fun"><strong>Play Sol of War</strong></a> ·
+  <a href="GAME_RULES.md"><strong>Game rules</strong></a> ·
   <a href="PAYOUTS.md"><strong>Funds & payouts</strong></a> ·
   <a href="PAYMENTS.md#code-and-test-map"><strong>Inspect the payment code</strong></a> ·
   <a href="#run-it-yourself"><strong>Run locally</strong></a>
@@ -29,6 +30,8 @@
 | FFA, 1v1, 2v2, Solo and tutorial      | Competitive 1v1 and 2v2            | Unranked free-for-all with SOL entries |
 | Guest play without a wallet           | Ten placement matches per mode     | Funded entries form the prize pool     |
 | Signed-in players keep their progress | Solo queue or bring a 2v2 teammate | 1% fee on completed prize pools        |
+
+[Read the complete mode rules](GAME_RULES.md): tribes, nations, elimination and timer wins, and payouts for each mode.
 
 - **Bring your duo.** Queue together with no rank-gap restriction; premade matching uses the stronger player's Elo.
 - **Accept, then play.** Timed acceptance, server-owned countdowns and funded-entry checks control match starts.

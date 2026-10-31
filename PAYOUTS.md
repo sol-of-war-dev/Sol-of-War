@@ -15,6 +15,8 @@ This guide describes the repository's implementation, updated October 30, 2026.
 It does not establish the live service's current network, balances or audit status.
 See [Payment architecture](PAYMENTS.md) for implementation evidence and known limits.
 
+For the mode-by-mode population, victory and prize rules, see [Sol of War game rules](GAME_RULES.md).
+
 ## Check the network
 
 | Mode | Funds |
