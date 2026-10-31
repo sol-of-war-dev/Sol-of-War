@@ -3,7 +3,10 @@
 Implementation status: local preview, automated checkout tests, and a completed
 [isolated devnet burn and sponsorship rehearsal](SHOP_DEVNET_EVIDENCE.md). Purchases
 are **disabled by default**. Draft prices require approval before activation.
-The rehearsal used a separate test mint; it was not a mainnet purchase.
+The rehearsals used separate test mints; they were not mainnet purchases.
+A [custom PNG purchase and match rehearsal](CUSTOM_PNG_DEVNET_EVIDENCE.md) also
+verified upload, preview, a 500,000-token burn, equipment, and visible territory
+rendering through the actual local shop and a running practice match.
 
 ## Collection and ownership
 

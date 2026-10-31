@@ -66,18 +66,38 @@ documented custody model until migrated. **Match pools remain operator-controlle
 in either mode. This is not trustless smart-contract escrow. Check the
 [deployment evidence](SECURITY_EVIDENCE.md) and live metadata for later changes.
 
-| Start here                                               | What you can inspect                                                             |
-| -------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| [Mainnet match evidence](MAINNET_MATCH_EVIDENCE.md) | Completed paid 1v1: both entries, winner payout, treasury fee and reproducible checks |
-| [Funds & payouts](PAYOUTS.md)                            | Deposits, fees, winnings, refunds, withdrawals and receipt checks                |
-| [Payment architecture](PAYMENTS.md)                      | Source paths, signing boundaries, durable transfers and recovery                 |
-| [Payment code & test map](PAYMENTS.md#code-and-test-map) | The implementation and regression tests for each safeguard                       |
-| [Verification record](VERIFICATION.md)                   | Checks performed, test scope and remaining evidence limits                       |
-| [Deployment and payment evidence](SECURITY_EVIDENCE.md)  | Running-release checks, mainnet payout evidence and real devnet receipts |
-| [Account wallets](PLAYER_WALLETS.md)                     | Key storage, reservations and withdrawal authorization                           |
+| Start here                                               | What you can inspect                                                                  |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| [Mainnet match evidence](MAINNET_MATCH_EVIDENCE.md)      | Completed paid 1v1: both entries, winner payout, treasury fee and reproducible checks |
+| [Funds & payouts](PAYOUTS.md)                            | Deposits, fees, winnings, refunds, withdrawals and receipt checks                     |
+| [Payment architecture](PAYMENTS.md)                      | Source paths, signing boundaries, durable transfers and recovery                      |
+| [Payment code & test map](PAYMENTS.md#code-and-test-map) | The implementation and regression tests for each safeguard                            |
+| [Verification record](VERIFICATION.md)                   | Checks performed, test scope and remaining evidence limits                            |
+| [Deployment and payment evidence](SECURITY_EVIDENCE.md)  | Running-release checks, mainnet payout evidence and real devnet receipts              |
+| [Account wallets](PLAYER_WALLETS.md)                     | Key storage, reservations and withdrawal authorization                                |
 
 These are source documentation and developer-run checks, not an independent
 security audit or a guarantee of the live service's configuration.
+
+## $SOLOFWAR cosmetic utility
+
+The cosmetic shop uses **$SOLOFWAR to purchase and equip cosmetic items**: flags,
+territory patterns, skins, crowns, effects, and bundles. Players can also upload
+original PNG artwork for **500,000 $SOLOFWAR per custom item**, with a free preview
+before purchase. Uploaded territory patterns repeat with their original colors
+and transparency.
+
+**100% of each purchase price is burned on-chain** using Solana's token burn
+instruction, reducing the mint's supply. Tokens are not paid to the operator.
+The player approves the burn from their user-owned wallet; **Sol of War pays the
+purchase transaction's network fee**. Ownership unlocks only after finalization.
+Cosmetics do not change combat statistics, win conditions, matchmaking, or payouts.
+SOL wagers and their custodial match pools remain separate from the cosmetic shop.
+
+The shop is in development, with checkout disabled by default. The
+[devnet evidence](SHOP_DEVNET_EVIDENCE.md) uses a separate test mint and is not a
+mainnet purchase. See [shop mechanics and trust](COSMETIC_SHOP.md) and the
+[catalog and draft prices](COSMETIC_CATALOG.md) for activation status and details.
 
 ## Run it yourself
 

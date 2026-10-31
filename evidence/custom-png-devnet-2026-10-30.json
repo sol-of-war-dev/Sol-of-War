@@ -1,0 +1,67 @@
+{
+  "network": "devnet",
+  "testOnly": true,
+  "sourceCommit": "13276887168776d58e7f0eb838712e48f549fead",
+  "mint": "7jVWYJaDywUtgqtGCdyanrBVxnyDQdebXnxtdN26fHoC",
+  "mintSetupSignature": "2kvTKJmqQGJCJxZRTJdqc2FcovwPpoxBZk2XvFg7JQkTxgZgorQNhKUEZNGNm3BozXiyt2WLmifopyvoAVmuHRXR",
+  "mintAuthorityRevoked": true,
+  "decimals": 6,
+  "signature": "27ePsYvYfKaurGvg8z28MLBbywWYZdLcos5EE7rjaF2g7VTJwQLYZ66YdAma8FmtKdK8swBChRLaXUuUBhpA5FVk",
+  "finalizedSlot": 517019321,
+  "blockTime": 1793422022,
+  "feeLamports": 10000,
+  "burnRawAmount": "500000000000",
+  "burnWholeTokens": "500000",
+  "before": {
+    "network": "devnet",
+    "mint": "7jVWYJaDywUtgqtGCdyanrBVxnyDQdebXnxtdN26fHoC",
+    "user": "4ufWpc8JJjK11cPs2EZhGxfrBdQ1RMefz3QHnUJmyzLk",
+    "sponsor": "6K86bzh1sWpW1bVnZgnec5fQUa9qPyjrRpArS11g3ee6",
+    "supply": "1000000000000",
+    "tokens": "1000000000000",
+    "userLamports": 38970000,
+    "sponsorLamports": 11000000
+  },
+  "after": {
+    "network": "devnet",
+    "mint": "7jVWYJaDywUtgqtGCdyanrBVxnyDQdebXnxtdN26fHoC",
+    "user": "4ufWpc8JJjK11cPs2EZhGxfrBdQ1RMefz3QHnUJmyzLk",
+    "sponsor": "6K86bzh1sWpW1bVnZgnec5fQUa9qPyjrRpArS11g3ee6",
+    "supply": "500000000000",
+    "tokens": "500000000000",
+    "userLamports": 38970000,
+    "sponsorLamports": 10990000
+  },
+  "item": {
+    "id": "custom-94eb24af2959a7a3abacfdfd",
+    "name": "Devnet Solar Halo",
+    "width": 32,
+    "height": 32,
+    "pngSHA256": "774249150b08fb6070b6d5ec6fbcaf84a6e2734038d7210036c8b706f1072812"
+  },
+  "verification": {
+    "actualShopUpload": true,
+    "privatePreviewBeforePurchase": true,
+    "gamePreviewBeforePurchase": true,
+    "burnChecked": true,
+    "oneOwnershipGrant": true,
+    "purchasedAssetPublic": true,
+    "equippedInFreshDatabaseRead": true,
+    "userSOLUnchanged": true,
+    "platformPaidFee": true,
+    "originalPNGColorsAndAlpha": true,
+    "matchID": "ee5d5860",
+    "matchType": "local free practice",
+    "inMatchAppearanceObserved": true,
+    "userConfirmedInMatch": true,
+    "temporarySponsorRetired": true,
+    "retiredSponsorSigningRejected": true,
+    "uploadedPixelsMatchStored": true
+  },
+  "receipt": {
+    "itemID": "custom-94eb24af2959a7a3abacfdfd",
+    "signature": "27ePsYvYfKaurGvg8z28MLBbywWYZdLcos5EE7rjaF2g7VTJwQLYZ66YdAma8FmtKdK8swBChRLaXUuUBhpA5FVk",
+    "amount": "500000000000",
+    "decimals": 6
+  }
+}

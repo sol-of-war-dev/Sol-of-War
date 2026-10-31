@@ -8,7 +8,15 @@ temporary sponsor. The user's SOL balance did not change.
 This is a development rehearsal, not a mainnet purchase. Production checkout
 remains disabled and the [draft prices](COSMETIC_CATALOG.md) still require approval.
 
-## Finalized receipts
+## Custom PNG purchase and match rehearsal
+
+A subsequent [end-to-end custom PNG rehearsal](CUSTOM_PNG_DEVNET_EVIDENCE.md) used
+the actual shop page to upload and preview a pattern, burn **500,000 test
+$SOLOFWAR**, equip it, and display it in a running local practice match. Its
+separate test mint, receipt, fee checks, screenshots, and cleanup are documented
+there. The initial catalog-item rehearsal below remains a separate test.
+
+## Initial catalog-item receipts
 
 | Purchase                                                                                                                                                                  | Test $SOLOFWAR burned | Platform network fee | Finalized slot |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------: | -------------------: | -------------: |
@@ -54,7 +62,7 @@ created and funded the separate test supply. It is not the production token mint
   subsequent signing request was rejected by the provider's policy. No production
   policy changed; the remaining 0.00098 devnet SOL was left in that test wallet.
 
-The rehearsal used a local signing fixture with the actual shop, ownership,
+The initial catalog-item rehearsal used a local signing fixture with the actual shop, ownership,
 transaction validation, persistence, and fee-sponsorship services. It does not
 establish a production checkout deployment or an equipped cosmetic's appearance
 in a live multiplayer match. Those release checks, price approval, and a review
