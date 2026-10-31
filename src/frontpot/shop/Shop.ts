@@ -218,6 +218,62 @@ export class CosmeticShop {
       })),
     };
   }
+  async balance(player: string) {
+    const wallet = this.wallets?.get(player);
+    if (!wallet || !this.wallets || !this.config.mint) return null;
+    const rpc = this.wallets.transactions.rpc;
+    await rpc.check();
+    const result = await rpc.call<{
+      value: Array<{
+        account: {
+          owner: string;
+          data: {
+            parsed: {
+              type: string;
+              info: {
+                owner: string;
+                mint: string;
+                tokenAmount: { amount: string; decimals: number };
+              };
+            };
+          };
+        };
+      }>;
+    }>("getTokenAccountsByOwner", [
+      wallet.address,
+      { mint: this.config.mint },
+      { encoding: "jsonParsed", commitment: "finalized" },
+    ]);
+    let amount = 0n;
+    let decimals: number | null = null;
+    for (const { account } of result.value) {
+      const data = account.data?.parsed;
+      const tokens = data?.info?.tokenAmount;
+      if (
+        ![TOKEN_PROGRAM, TOKEN_2022_PROGRAM].includes(account.owner) ||
+        (rpc.network === "mainnet" && account.owner !== TOKEN_2022_PROGRAM) ||
+        data?.type !== "account" ||
+        data.info.owner !== wallet.address ||
+        data.info.mint !== this.config.mint ||
+        !tokens ||
+        !/^[0-9]+$/.test(tokens.amount) ||
+        !Number.isInteger(tokens.decimals) ||
+        tokens.decimals < 0 ||
+        tokens.decimals > 9 ||
+        (rpc.network === "mainnet" && tokens.decimals !== 6) ||
+        (decimals !== null && decimals !== tokens.decimals)
+      )
+        throw new Error("Token balance could not be verified");
+      decimals = tokens.decimals;
+      amount += BigInt(tokens.amount);
+    }
+    return {
+      address: wallet.address,
+      mint: this.config.mint,
+      amount: amount.toString(),
+      decimals: decimals ?? 6,
+    };
+  }
   inventory(player: string) {
     return {
       customItems: this.db

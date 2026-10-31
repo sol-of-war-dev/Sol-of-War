@@ -83,7 +83,12 @@ export class CosmeticRenderCanvas extends LitElement {
 
   updated(changedProps: PropertyValues) {
     super.updated(changedProps);
-    if (changedProps.has("resolved") && this.renderer) {
+    if (
+      changedProps.has("resolved") &&
+      this.renderer &&
+      (changedProps.get("resolved") as ResolvedCosmetic | undefined)?.key !==
+        this.resolved?.key
+    ) {
       this.applyCosmetic();
     } else if (changedProps.has("customColors") && this.renderer) {
       if (this.customColors && this.customColors.length > 0) {
@@ -269,7 +274,7 @@ export class CosmeticRenderCanvas extends LitElement {
   ): CosmeticPreviewConfig {
     if (resolved.type === "skin") {
       const skin = resolved.cosmetic as Skin;
-      return { mode: "SKIN", skinUrl: skin?.url };
+      return { mode: "SKIN", skinUrl: skin?.url, repeat: skin?.repeat };
     }
     if (resolved.type === "pattern") {
       const pattern = resolved.cosmetic as Pattern;

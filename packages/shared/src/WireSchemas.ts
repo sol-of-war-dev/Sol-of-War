@@ -435,6 +435,7 @@ export const PlayerSkinSchema = z.object({
     .object({
       width: zb.uint({ min: 1, max: 512 }),
       height: zb.uint({ min: 1, max: 512 }),
+      teamTint: z.boolean().optional(),
     })
     .optional(),
   name: CosmeticNameSchema,

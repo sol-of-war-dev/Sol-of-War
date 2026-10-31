@@ -35,7 +35,8 @@ export type ShopItem = {
   cosmetic: Flag | Pattern | Skin | Crown | Effect | CosmeticPack;
   colorPalette?: ColorPalette;
 };
-export const flagURL = (id: string) => `/frontpot/api/shop/art/${id}.svg?v=2`;
+export const flagURL = (id: string) =>
+  `/frontpot/api/shop/art/${id}.svg?v=${id.endsWith("-skin") ? 3 : 2}`;
 const themes = [
   {
     id: "ember",
@@ -227,7 +228,11 @@ export const SHOP_ITEMS: ShopItem[] = themes.flatMap((t, index) => {
     "skin",
     3000 + index * 1500,
     "An original territory texture. Replaces an equipped pattern.",
-    { ...base(skinID), url: flagURL(skinID) },
+    {
+      ...base(skinID),
+      url: flagURL(skinID),
+      repeat: { width: 64, height: 64, teamTint: true },
+    },
     "territory",
   );
   const crown = make(
@@ -339,7 +344,8 @@ export function resolvedAppearance(items: ShopItem[]): PlayerCosmetics {
     else if (item.category === "skin")
       out.skin = {
         name: item.cosmetic.name,
-        url: (item.cosmetic as Crown | Skin).url,
+        url: (item.cosmetic as Skin).url,
+        repeat: (item.cosmetic as Skin).repeat,
       };
     else if (item.category === "pattern" && (item.cosmetic as Pattern).image) {
       const image = (item.cosmetic as Pattern).image!;
@@ -384,7 +390,7 @@ export function flagSVG(id: string) {
         : theme === 1
           ? `<circle cx="16" cy="16" r="14" fill="${fg}" opacity=".16"/><circle cx="48" cy="48" r="20" fill="${fg}" opacity=".23"/><path d="m0 64 64-64M0 32 32-32M32 96 64-64" stroke="${fg}" opacity=".18"/>`
           : `<path d="m0 0 32 16L64 0v32L32 48 0 32Zm0 32 32 16 32-16v32H0Z" fill="${fg}" opacity=".16"/><path d="m0 0 32 16L64 0M0 32l32 16 32-16M32 16v32" fill="none" stroke="${fg}" opacity=".35"/>`;
-    return `<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256"><defs><pattern id="tile" width="64" height="64" patternUnits="userSpaceOnUse"><rect width="64" height="64" fill="${bg}"/>${texture}</pattern></defs><rect width="256" height="256" fill="url(#tile)"/></svg>`;
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 256 256"><defs><pattern id="tile" width="64" height="64" patternUnits="userSpaceOnUse"><rect width="64" height="64" fill="${bg}"/>${texture}</pattern></defs><rect width="256" height="256" fill="url(#tile)"/></svg>`;
   }
   const motif =
     theme === 0

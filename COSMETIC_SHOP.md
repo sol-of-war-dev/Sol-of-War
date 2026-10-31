@@ -233,3 +233,7 @@ a running practice match. These are devnet receipts, not mainnet shop purchases.
 The wallet page and shop link to the official mainnet mint on pump.fun through **Buy $SOLOFWAR**. This opens an external page; it does not execute a swap inside Sol of War. After buying, send the tokens to the user-owned Sol of War wallet address shown in the wallet or shop receive panel. Native SOL and the official $SOLOFWAR token use that same address. SOL funds matches; $SOLOFWAR funds cosmetics and does not count toward the displayed SOL balance. The withdrawal form sends SOL only. Do not send tokens to a legacy custodial wallet.
 
 External purchases and transfers may require SOL for fees. Sol of War sponsors the cosmetic burn transaction only. Checkout remains restricted to the registered user-owned Sol of War wallet; direct connected-wallet checkout is deferred. The mainnet purchase link is hidden in devnet mode.
+
+The user-owned wallet card shows a separate finalized $SOLOFWAR balance, summed exactly across token accounts for the configured mint. Failed RPC reads show Unavailable rather than zero. This display never authorizes spending; checkout still validates a sufficient token account independently. The balance visibility toggle hides both currencies.
+
+Preset territory skins repeat at a consistent tile scale across owned territory and adopt team colors in team matches. Custom PNG patterns retain original colors and alpha in every mode. Preview color and zoom selections persist across background page refreshes.

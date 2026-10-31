@@ -151,14 +151,14 @@ export class PreviewTerritoryPass {
   setDecoration(
     skinUrl?: string,
     patternData?: string,
-    repeat?: { width: number; height: number },
+    repeat?: { width: number; height: number; teamTint?: boolean },
   ): void {
     if (this.isDisposed) return;
     if (skinUrl) {
       this.clearPattern();
       if (repeat) {
         const off = PREVIEW_OWNER_ID * 4;
-        this.patternMeta[off] = -1;
+        this.patternMeta[off] = repeat.teamTint ? -2 : -1;
         this.patternMeta[off + 1] = repeat.width;
         this.patternMeta[off + 2] = repeat.height;
         this.uploadPattern();

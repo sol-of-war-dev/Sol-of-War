@@ -132,6 +132,13 @@ export const CrownSchema = CosmeticSchema.extend({
 });
 
 export const SkinSchema = CosmeticSchema.extend({
+  repeat: z
+    .object({
+      width: z.number().int().min(1).max(512),
+      height: z.number().int().min(1).max(512),
+      teamTint: z.boolean().optional(),
+    })
+    .optional(),
   url: z.string(),
 });
 

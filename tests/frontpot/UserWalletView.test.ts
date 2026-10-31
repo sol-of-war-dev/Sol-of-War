@@ -404,3 +404,42 @@ it.each([
     }
   },
 );
+
+it("shows an exact separate token balance, respects Hide, and keeps SOL visible if token RPC fails", async () => {
+  const f = fixture();
+  f.snapshot.network = "mainnet";
+  const original = f.api.getMockImplementation()!;
+  let fail = false;
+  f.api.mockImplementation(async (path, body) => {
+    if (path === "/shop/balance") {
+      if (fail) throw new Error("RPC unavailable");
+      return {
+        address: wallet.address,
+        amount: "9007199254740993123",
+        decimals: 6,
+      };
+    }
+    return original(path, body);
+  });
+  await f.view.refresh();
+  f.paint();
+  expect(f.host.querySelector(".sc-token-badge")?.textContent).toContain(
+    "9,007,199,254,740.993123",
+  );
+  expect(f.host.querySelector(".sc-total")?.textContent).toContain("0.01");
+  expect(f.host.querySelector(".sc-wallet-card a")?.textContent).toContain(
+    "Buy $SOLOFWAR",
+  );
+  (f.host.querySelector(".sc-quiet") as HTMLButtonElement).click();
+  expect(f.host.querySelector(".sc-token-badge")?.textContent).toContain(
+    "••••",
+  );
+  (f.host.querySelector(".sc-quiet") as HTMLButtonElement).click();
+  fail = true;
+  await f.view.refresh();
+  f.paint();
+  expect(f.host.querySelector(".sc-token-badge")?.textContent).toContain(
+    "Unavailable",
+  );
+  expect(f.host.querySelector(".sc-total")?.textContent).toContain("0.01");
+});

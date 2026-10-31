@@ -77,7 +77,7 @@ export interface CosmeticPreviewConfig {
   cosmeticUnitType?: string;
   structureLevel?: number;
   skinUrl?: string;
-  repeat?: { width: number; height: number };
+  repeat?: { width: number; height: number; teamTint?: boolean };
   patternData?: string;
   /** Skin/pattern palette: [fill, border] (a single team color tints a PNG skin). */
   effectColors?: readonly string[];
@@ -390,10 +390,12 @@ export class CosmeticPreviewRenderer {
     if (this.canvas.width !== displayW || this.canvas.height !== displayH) {
       this.canvas.width = displayW;
       this.canvas.height = displayH;
+      const zoomBeforeResize = this.camera.zoom;
       this.camera.resize(cssW, cssH);
       if (!this.initialized) {
         this.initialized = true;
         this.applyCameraPreset(this.currentMode);
+        this.camera.zoomTo(zoomBeforeResize);
       }
     }
 

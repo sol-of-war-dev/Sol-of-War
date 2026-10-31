@@ -98,7 +98,15 @@ void main() {
     float skinAlpha = (repeatImage || inBounds) ? skin.a : 0.0;
     // Transparent (or out-of-bounds) pixels fall through to the player color;
     // image patterns retain their RGB; ordinary skins get the team tint.
-    vec3 skinColor = (uIsTeamMode == 1 && !repeatImage) ? color.rgb * skin.rgb : skin.rgb;
+    vec3 skinColor = skin.rgb;
+    if (uIsTeamMode == 1) {
+      if (patternMeta.r < -1.5) {
+        float detail = dot(skin.rgb, vec3(0.2126, 0.7152, 0.0722));
+        skinColor = color.rgb * (0.65 + detail);
+      } else if (!repeatImage) {
+        skinColor = color.rgb * skin.rgb;
+      }
+    }
     color.rgb = mix(color.rgb, skinColor, skinAlpha);
   } else if (uShowPatterns == 1) {
     vec4 meta = texelFetch(uPatternMeta, ivec2(int(owner), 0), 0);

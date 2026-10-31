@@ -68,6 +68,9 @@ export function registerShopRoutes(
       .set("Cache-Control", "public, max-age=31536000, immutable")
       .send(png);
   });
+  app.get("/frontpot/api/shop/balance", async (req, res) =>
+    res.json(await shop.balance(player(req).id)),
+  );
   app.get("/frontpot/api/shop/inventory", (req, res) =>
     res.json(shop.inventory(player(req).id)),
   );

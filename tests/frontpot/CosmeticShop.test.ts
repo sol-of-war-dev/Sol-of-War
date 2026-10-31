@@ -727,3 +727,46 @@ it("upgrades only free legacy pattern drafts while keeping quoted artwork immuta
   );
   expect(quoted.cosmetic.image).toBeUndefined();
 });
+
+it("reads finalized token balance exactly without changing sponsorship or spending", async () => {
+  const f = await fixture();
+  f.state.balance = "9007199254740993123";
+  expect(await f.shop.balance(f.identity.id)).toMatchObject({
+    amount: "9007199254740993123",
+    decimals: 6,
+    address: f.identity.wallet,
+  });
+  expect(f.signer.sign).not.toHaveBeenCalled();
+  expect(await f.shop.balance("unregistered")).toBeNull();
+  f.state.accountOwner = "wrong-owner";
+  await expect(f.shop.balance(f.identity.id)).rejects.toThrow(/verified/);
+});
+it("sums all finalized token accounts without floating point rounding", async () => {
+  const f = await fixture();
+  const original = f.request.getMockImplementation()!;
+  f.request.mockImplementation(async (url, init) => {
+    const response = await original(url, init);
+    const data = await response.json();
+    if (JSON.parse(String(init?.body)).method === "getTokenAccountsByOwner") {
+      const copy = structuredClone(data.result.value[0]);
+      copy.account.data.parsed.info.tokenAmount.amount = "1234567";
+      data.result.value.push(copy);
+    }
+    return new Response(JSON.stringify(data));
+  });
+  expect((await f.shop.balance(f.identity.id))?.amount).toBe("100001234567");
+});
+it("repeats preset skins with team tint while custom image patterns remain untinted", () => {
+  for (const item of SHOP_ITEMS.filter((i) => i.category === "skin")) {
+    const appearance = resolvedAppearance([item]);
+    expect(appearance.skin?.repeat).toEqual({
+      width: 64,
+      height: 64,
+      teamTint: true,
+    });
+    expect(PlayerCosmeticsSchema.parse(appearance).skin?.repeat?.teamTint).toBe(
+      true,
+    );
+    expect(flagSVG(item.id)).toContain('width="64" height="64"');
+  }
+});

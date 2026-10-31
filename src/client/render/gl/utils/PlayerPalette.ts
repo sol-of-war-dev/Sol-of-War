@@ -102,7 +102,7 @@ export function writePatternEntry(
   const metaOff = smallID * 4;
   meta.fill(0, metaOff, metaOff + 4);
   if (skin?.repeat) {
-    meta[metaOff] = -1;
+    meta[metaOff] = skin.repeat.teamTint ? -2 : -1;
     meta[metaOff + 1] = skin.repeat.width;
     meta[metaOff + 2] = skin.repeat.height;
     return;

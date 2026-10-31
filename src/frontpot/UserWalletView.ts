@@ -1,5 +1,6 @@
 import { html } from "lit";
 import { parseSolAmount } from "./Amounts";
+import brandSymbol from "./assets/sol-of-war-symbol.png";
 import { depositQR } from "./DepositQR";
 import type { Wire, ChainJob } from "./payments/DevnetTransactions";
 import { assertNativeTransfer } from "./payments/NativeTransferPolicy";
@@ -13,10 +14,22 @@ import type {
 } from "./payments/UserOwnedWallets";
 import type { WalletLogin } from "./PrivyLogin";
 import { SHOP_MINT } from "./shop/Catalog";
+import type { CosmeticShop } from "./shop/Shop";
 import type { Identity } from "./Store";
 import { tokenPurchaseLink } from "./TokenPurchaseLink";
 import "./AccountCards.css";
 
+export function formatTokenBalance(amount: string, decimals: number): string {
+  const scale = 10n ** BigInt(decimals);
+  const value = BigInt(amount);
+  const fraction = (value % scale)
+    .toString()
+    .padStart(decimals, "0")
+    .replace(/0+$/, "");
+  return (
+    (value / scale).toLocaleString("en-US") + (fraction ? `.${fraction}` : "")
+  );
+}
 const sol = (n: number) => (n / 1e9).toFixed(9).replace(/\.?0+$/, "") || "0";
 function withdrawalNotice(receipt: ChainJob) {
   if (receipt.state === "finalized") return "Withdrawal finalized.";
@@ -40,6 +53,8 @@ function migrationNotice(receipt: WalletTransfer) {
 type Pending = { id: string; amount: string; destination: string };
 export class UserWalletView {
   data: UserWalletSnapshot | null = null;
+  private tokenBalance: Awaited<ReturnType<CosmeticShop["balance"]>> = null;
+  private tokenBalanceUnavailable = false;
   private recovery: UserWallet | null = null;
   private panel: "deposit" | "withdraw" = "deposit";
   private hidden = false;
@@ -67,6 +82,8 @@ export class UserWalletView {
   ) {}
   clear() {
     this.data = null;
+    this.tokenBalance = null;
+    this.tokenBalanceUnavailable = false;
     this.recovery = null;
     this.amount = this.destination = this.notice = "";
     this.acknowledged = false;
@@ -79,6 +96,12 @@ export class UserWalletView {
   async refresh() {
     const owner = this.c.identity()?.id;
     if (!owner) return;
+    const tokenBalance = await this.c
+      .api<Awaited<ReturnType<CosmeticShop["balance"]>>>("/shop/balance")
+      .catch(() => undefined);
+    if (owner !== this.c.identity()?.id) return;
+    this.tokenBalance = tokenBalance ?? null;
+    this.tokenBalanceUnavailable = tokenBalance === undefined;
     const history = await this.c
       .api<UserWithdrawal[]>("/wallet/account/withdrawals")
       .catch(() => null);
@@ -405,7 +428,6 @@ export class UserWalletView {
       </nav>
       <h1>Sol of War wallet</h1>
       <p class="sc-subtitle">Your balance and transfers, in one place.</p>
-      ${tokenPurchaseLink(d?.network)}
       ${
         !c.identity()?.name
           ? html`<button class="fp-primary" @click=${c.signIn}>Sign in</button>`
@@ -450,6 +472,18 @@ export class UserWalletView {
                           <small>SOL</small></strong
                         >
                       </div>
+                      <div
+                        class="sc-token-badge"
+                        aria-label="$SOLOFWAR balance"
+                      >
+                        <img src=${brandSymbol} alt="" aria-hidden="true" />
+                        <div>
+                          <span>$SOLOFWAR</span
+                          ><strong
+                            >${this.hidden ? "••••" : this.tokenBalanceUnavailable || !this.tokenBalance || this.tokenBalance.address !== wallet.address ? "Unavailable" : formatTokenBalance(this.tokenBalance.amount, this.tokenBalance.decimals)}</strong
+                          ><small>For cosmetics</small>
+                        </div>
+                      </div>
                       <div class="sc-actions">
                         <button
                           class=${this.panel === "deposit" ? "selected" : ""}
@@ -471,6 +505,7 @@ export class UserWalletView {
                           Withdraw
                         </button>
                       </div>
+                      ${tokenPurchaseLink(d.network, true)}
                       <button
                         class="sc-refresh"
                         ?disabled=${c.busy()}

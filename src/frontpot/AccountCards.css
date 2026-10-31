@@ -526,3 +526,11 @@
 .sw-destination-field input[readonly] {
   color: #bdb0c8;
 }
+
+.sc-token-badge { display: flex; gap: 14px; align-items: center; padding: 18px; margin: 16px 0 22px; border: 1px solid #725026; background: #2c201d; border-radius: 18px; }
+.sc-token-badge img { width: 34px; height: 34px; object-fit: contain; }
+.sc-token-badge div { min-width: 0; display: grid; gap: 4px; }
+.sc-token-badge strong { font-size: 26px; overflow-wrap: anywhere; }
+.sc-token-badge small { color: #baa9c8; }
+.sc-wallet-card .sow-token-buy a { box-sizing: border-box; display: flex; justify-content: center; width: 100%; border-radius: 14px; }
+.sc-wallet-card .sow-token-buy p { font-size: 13px; }

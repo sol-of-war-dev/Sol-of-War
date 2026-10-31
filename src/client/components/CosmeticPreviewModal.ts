@@ -130,6 +130,11 @@ export class CosmeticPreviewModal extends LitElement {
 
   private teamPalettes(): PaletteOption[] {
     if (!this.resolved) return [];
+    if (
+      this.resolved.type === "pattern" &&
+      (this.resolved.cosmetic as Pattern)?.image
+    )
+      return [];
     const isPattern = this.resolved.type === "pattern";
     if (!isPattern && this.resolved.type !== "skin") return [];
     return TEAM_COLORS.map((tc) => ({
@@ -144,7 +149,12 @@ export class CosmeticPreviewModal extends LitElement {
 
   updated(changedProps: PropertyValues) {
     super.updated(changedProps);
-    if (changedProps.has("resolved") && this.resolved) {
+    if (
+      changedProps.has("resolved") &&
+      this.resolved &&
+      (changedProps.get("resolved") as ResolvedCosmetic | null)?.key !==
+        this.resolved.key
+    ) {
       const first = this.skinPalettes()[0];
       this.selectedPrimary = first?.primaryColor ?? DEFAULT;
       this.selectedSecondary = first?.secondaryColor ?? DEFAULT;
