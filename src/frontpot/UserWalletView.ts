@@ -368,7 +368,12 @@ export class UserWalletView {
     });
     const transaction = await (
       await this.c.walletLogin()
-    ).signDeposit(d.wallet.address, prepared.transaction, d.network);
+    ).signDeposit(
+      d.wallet.address,
+      prepared.transaction,
+      d.network,
+      !!prepared.feePayer,
+    );
     this.sameOwner(owner.id);
     const receipt = await this.c.api<ChainJob>(
       "/wallet/account/withdraw/submit",

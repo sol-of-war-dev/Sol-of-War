@@ -46,6 +46,7 @@ export type WalletLogin = {
     wallet: string,
     transaction: string,
     network: PaymentNetwork,
+    feeSponsored?: boolean,
   ): Promise<string>;
 };
 
@@ -235,7 +236,12 @@ export function initializePrivy(
           ),
         });
       },
-      async signDeposit(walletAddress, transaction, network) {
+      async signDeposit(
+        walletAddress,
+        transaction,
+        network,
+        feeSponsored = false,
+      ) {
         const { wallet, sign } = signingWallet(walletAddress);
         const { signedTransaction } = await sign({
           wallet,
@@ -243,8 +249,9 @@ export function initializePrivy(
           options: {
             uiOptions: {
               showWalletUIs: true,
-              description:
-                "Review the transfer. After approving, close the signed confirmation promptly to submit before it expires.",
+              description: feeSponsored
+                ? "Sol of War pays the network fee. Review your transfer, approve, then close the confirmation promptly to submit."
+                : "Review the transfer. After approving, close the signed confirmation promptly to submit before it expires.",
               successHeader: "Signature ready",
               successDescription:
                 "Close this dialog now to submit the signed transaction. The transfer is not complete until Solana finalizes it.",

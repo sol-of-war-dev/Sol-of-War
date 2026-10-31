@@ -250,7 +250,12 @@ async function fundEntry() {
     throw new Error("Your account or match changed.");
   const signed = await (
     await getWalletLogin()
-  ).signDeposit(signingAddress, prepared.transaction, prepared.network);
+  ).signDeposit(
+    signingAddress,
+    prepared.transaction,
+    prepared.network,
+    !!prepared.feePayer,
+  );
   if (identity?.id !== player.id || room?.id !== target.id)
     throw new Error("Your account or match changed. No entry was submitted.");
   const result = await api<PaymentStatus>(`/payments/${target.id}/submit`, {
