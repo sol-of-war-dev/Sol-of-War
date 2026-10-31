@@ -148,10 +148,21 @@ export class PreviewTerritoryPass {
    * Show a PNG skin, a pattern, or neither (plain territory color). A skin
    * wins over a pattern, as in the in-game shader.
    */
-  setDecoration(skinUrl?: string, patternData?: string): void {
+  setDecoration(
+    skinUrl?: string,
+    patternData?: string,
+    repeat?: { width: number; height: number },
+  ): void {
     if (this.isDisposed) return;
     if (skinUrl) {
       this.clearPattern();
+      if (repeat) {
+        const off = PREVIEW_OWNER_ID * 4;
+        this.patternMeta[off] = -1;
+        this.patternMeta[off + 1] = repeat.width;
+        this.patternMeta[off + 2] = repeat.height;
+        this.uploadPattern();
+      }
       this.loadSkin(skinUrl);
       return;
     }

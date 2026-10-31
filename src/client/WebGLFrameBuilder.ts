@@ -550,6 +550,7 @@ export class WebGLFrameBuilder {
       this.patternData,
       smallID,
       p.cosmetics.pattern,
+      p.cosmetics.skin,
     );
 
     return {

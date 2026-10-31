@@ -77,6 +77,7 @@ export interface CosmeticPreviewConfig {
   cosmeticUnitType?: string;
   structureLevel?: number;
   skinUrl?: string;
+  repeat?: { width: number; height: number };
   patternData?: string;
   /** Skin/pattern palette: [fill, border] (a single team color tints a PNG skin). */
   effectColors?: readonly string[];
@@ -284,7 +285,11 @@ export class CosmeticPreviewRenderer {
 
     if (config.mode === "SKIN") {
       const isPngSkin = config.skinUrl !== undefined;
-      this.territoryPass.setDecoration(config.skinUrl, config.patternData);
+      this.territoryPass.setDecoration(
+        config.skinUrl,
+        config.patternData,
+        config.repeat,
+      );
       // A team color on a PNG skin tints it like a team game; a pattern's
       // palette becomes the player's fill + border colors.
       this.territoryPass.setTeamMode(isPngSkin && rgbColors.length > 0);

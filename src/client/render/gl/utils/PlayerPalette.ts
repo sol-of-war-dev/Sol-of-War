@@ -97,9 +97,16 @@ export function writePatternEntry(
   data: Uint8Array,
   smallID: number,
   pattern: PlayerCosmetics["pattern"],
+  skin?: PlayerCosmetics["skin"],
 ): void {
   const metaOff = smallID * 4;
   meta.fill(0, metaOff, metaOff + 4);
+  if (skin?.repeat) {
+    meta[metaOff] = -1;
+    meta[metaOff + 1] = skin.repeat.width;
+    meta[metaOff + 2] = skin.repeat.height;
+    return;
+  }
   if (!pattern?.patternData) return;
   try {
     const decoded = decodePatternData(pattern.patternData, base64url.decode);

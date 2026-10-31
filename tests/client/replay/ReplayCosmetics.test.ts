@@ -339,3 +339,23 @@ describe("trail effects", () => {
     expect(countAt(1)).toBe(0);
   });
 });
+
+test("PNG tile period survives replay palettes and is shared with live rendering", () => {
+  const built = buildReplayPalette(
+    [player(1, "c1")],
+    new Map([
+      [
+        "c1",
+        {
+          skin: {
+            name: "custom_tile",
+            url: "/tile.png",
+            repeat: { width: 7, height: 5 },
+          },
+        },
+      ],
+    ]),
+  );
+  expect(Array.from(built.patternMeta.slice(4, 8))).toEqual([-1, 7, 5, 0]);
+  expect(built.skins.get(1)).toContain("/tile.png");
+});

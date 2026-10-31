@@ -159,6 +159,8 @@ export class CosmeticRenderCanvas extends LitElement {
   private checkIsSmallSkin(resolved: ResolvedCosmetic): boolean {
     if (resolved.type === "pattern") {
       const pattern = resolved.cosmetic as Pattern;
+      if (pattern?.image)
+        return Math.max(pattern.image.width, pattern.image.height) <= 64;
       if (pattern?.pattern) {
         try {
           const { width, height, scale } = decodePatternData(
@@ -266,6 +268,12 @@ export class CosmeticRenderCanvas extends LitElement {
     }
     if (resolved.type === "pattern") {
       const pattern = resolved.cosmetic as Pattern;
+      if (pattern?.image)
+        return {
+          mode: "SKIN",
+          skinUrl: pattern.image.url,
+          repeat: { width: pattern.image.width, height: pattern.image.height },
+        };
       const colors = resolved.colorPalette
         ? [
             resolved.colorPalette.primaryColor,

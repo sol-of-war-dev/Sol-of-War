@@ -73,22 +73,32 @@ void main() {
       ? texelFetch(uSkinLayer, ivec2(int(owner), 0), 0).r
       : 0u;
   if (skinLayerPlus1 > 0u) {
-    // Skin overrides pattern entirely (mutually exclusive). The image is a
-    // single stamp centered at the player's spawn tile — UVs outside [0,1]
+    vec4 patternMeta = texelFetch(uPatternMeta, ivec2(int(owner), 0), 0);
+    bool repeatImage = patternMeta.r < 0.0;
+    // Image patterns repeat at native size; ordinary skins are a single stamp
+    // centered at the player's spawn tile. Stamp UVs outside [0,1]
     // are treated as transparent so tiles beyond the image bounds fall back
     // to the regular palette color. (0,0) anchor sentinel = world origin.
     uvec2 anchor = texelFetch(uSkinAnchor, ivec2(int(owner), 0), 0).rg;
     vec2 anchorOffset = (anchor == uvec2(0u)) ? vec2(0.0) : vec2(anchor);
 
     vec2 skinUV = (vec2(tc) - anchorOffset) / vec2(SKIN_DIM) + vec2(0.5);
-    vec4 skin = texture(uSkinAtlas, vec3(skinUV, float(skinLayerPlus1) - 1.0));
+    if (repeatImage) {
+      vec2 tileSize = max(patternMeta.gb, vec2(1.0));
+      vec2 imageOrigin = floor((vec2(SKIN_DIM) - tileSize) * 0.5);
+      skinUV = (imageOrigin + mod(vec2(tc), tileSize) + vec2(0.5)) / SKIN_DIM;
+    }
+    // Sample exact texel centers for tiles, avoiding transparent atlas padding and mip bleed.
+    vec4 skin = repeatImage
+      ? textureLod(uSkinAtlas, vec3(skinUV, float(skinLayerPlus1) - 1.0), 0.0)
+      : texture(uSkinAtlas, vec3(skinUV, float(skinLayerPlus1) - 1.0));
     bool inBounds =
       skinUV.x >= 0.0 && skinUV.x <= 1.0 &&
       skinUV.y >= 0.0 && skinUV.y <= 1.0;
-    float skinAlpha = inBounds ? skin.a : 0.0;
+    float skinAlpha = (repeatImage || inBounds) ? skin.a : 0.0;
     // Transparent (or out-of-bounds) pixels fall through to the player color;
-    // opaque pixels show the skin (tinted by team color in team games).
-    vec3 skinColor = (uIsTeamMode == 1) ? color.rgb * skin.rgb : skin.rgb;
+    // image patterns retain their RGB; ordinary skins get the team tint.
+    vec3 skinColor = (uIsTeamMode == 1 && !repeatImage) ? color.rgb * skin.rgb : skin.rgb;
     color.rgb = mix(color.rgb, skinColor, skinAlpha);
   } else if (uShowPatterns == 1) {
     vec4 meta = texelFetch(uPatternMeta, ivec2(int(owner), 0), 0);

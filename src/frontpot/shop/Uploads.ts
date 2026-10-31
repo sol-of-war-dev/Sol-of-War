@@ -86,7 +86,8 @@ export async function normalizeUpload(input: unknown) {
     throw new InputError("The PNG could not be decoded.");
   }
   const category = b.category as (typeof CUSTOM_CATEGORIES)[number];
-  const scale = Math.min(1, 256 / width, 256 / height);
+  const scale =
+    category === "pattern" ? 1 : Math.min(1, 256 / width, 256 / height);
   const normalized = resize(
     image,
     Math.max(1, Math.round(width * scale)),
@@ -111,28 +112,17 @@ export async function normalizeUpload(input: unknown) {
     cosmetic: { ...base, url: customURL(id) },
   };
   if (category === "pattern") {
-    const pixels = resize(normalized, 32, 32).data,
-      bytes = Buffer.alloc(131);
-    bytes[1] = (30 << 3) | 2;
-    bytes[2] = 30 << 2;
-    for (let i = 0; i < 1024; i++)
-      if (
-        pixels[i * 4 + 3] >= 128 &&
-        (pixels[i * 4] + pixels[i * 4 + 1] + pixels[i * 4 + 2]) / 3 >= 128
-      )
-        bytes[3 + (i >> 3)] |= 1 << (i & 7);
-    item.colorPalette = {
-      name: `${name}_palette`,
-      primaryColor: item.colors[0],
-      secondaryColor: item.colors[1],
-    };
     item.cosmetic = {
       ...base,
-      pattern: bytes.toString("base64url"),
-      colorPalettes: [{ name: item.colorPalette.name, isArchived: false }],
+      pattern: "AAAAAA",
+      image: {
+        url: customURL(id),
+        width: normalized.width,
+        height: normalized.height,
+      },
     };
     item.description =
-      "Your artwork converted to a 32 × 32 two-color repeating territory pattern. Preview the conversion before buying.";
+      "Your PNG repeats across your territory, preserving its colors and transparency. Transparent areas show the territory color underneath.";
   }
   rendererCatalog([item]);
   return { item, png, digest: createHash("sha256").update(png).digest("hex") };

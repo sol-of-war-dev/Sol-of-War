@@ -20,7 +20,7 @@ import {
   resolvedAppearance,
 } from "./Catalog";
 
-import { normalizeUpload, CUSTOM_PRICE } from "./Uploads";
+import { normalizeUpload, CUSTOM_PRICE, customURL } from "./Uploads";
 
 export type ShopConfig = {
   enabled: boolean;
@@ -94,6 +94,35 @@ export class CosmeticShop {
       INSERT OR IGNORE INTO shop_entitlements SELECT player_id,item_id,purchase_id FROM shop_inventory;
       INSERT OR IGNORE INTO shop_loadout SELECT player_id,'flag',item_id FROM shop_equipped;
       DELETE FROM shop_equipped;`);
+    // Upgrade only free, unquoted drafts from the initial two-color prototype.
+    // Purchased and pending artwork stays immutable.
+    for (const row of db
+      .prepare(
+        "SELECT u.id,u.item,u.png FROM shop_uploads u WHERE u.category='pattern' AND NOT EXISTS(SELECT 1 FROM shop_purchases p WHERE p.item_id=u.id) AND NOT EXISTS(SELECT 1 FROM shop_entitlements e WHERE e.item_id=u.id)",
+      )
+      .all()) {
+      const item = JSON.parse(String(row.item)) as ShopItem;
+      if ("image" in item.cosmetic && item.cosmetic.image) continue;
+      const png = Buffer.from(row.png as Uint8Array);
+      item.cosmetic = {
+        name: item.cosmetic.name,
+        product: null,
+        rarity: item.rarity,
+        pattern: "AAAAAA",
+        image: {
+          url: customURL(item.id),
+          width: png.readUInt32BE(16),
+          height: png.readUInt32BE(20),
+        },
+      };
+      delete item.colorPalette;
+      item.description =
+        "Your PNG repeats across your territory with its original colors and transparency.";
+      db.prepare("UPDATE shop_uploads SET item=? WHERE id=?").run(
+        JSON.stringify(item),
+        item.id,
+      );
+    }
   }
   private customItem(id: string, player?: string): ShopItem | undefined {
     const row = this.db
@@ -196,14 +225,13 @@ export class CosmeticShop {
         .all(player)
         .map((r) => {
           const item = JSON.parse(String(r.item)) as ShopItem;
-          if (
-            !this.owned(player).includes(item.id) &&
-            item.category !== "pattern"
-          )
-            item.cosmetic = {
-              ...item.cosmetic,
-              url: `data:image/png;base64,${Buffer.from(r.png as Uint8Array).toString("base64")}`,
-            };
+          if (!this.owned(player).includes(item.id)) {
+            const url = `data:image/png;base64,${Buffer.from(r.png as Uint8Array).toString("base64")}`;
+            if ("image" in item.cosmetic && item.cosmetic.image)
+              item.cosmetic.image = { ...item.cosmetic.image, url };
+            else if (item.category !== "pattern")
+              item.cosmetic = { ...item.cosmetic, url };
+          }
           return item;
         }),
       walletAddress: this.wallets?.get(player)?.address ?? null,

@@ -541,7 +541,7 @@ it("binds custom artwork to its owner and fixed 500,000 price, publishing and eq
     f.shop.cosmetics(f.identity.id),
   );
 });
-it("normalizes four raster categories, converts patterns, rejects active/oversized/invalid uploads and caps private drafts", async () => {
+it("normalizes four raster categories, preserves PNG patterns, rejects active/oversized/invalid uploads and caps private drafts", async () => {
   for (const category of ["flag", "pattern", "skin", "crown"]) {
     const n = await normalizeUpload({
       category,
@@ -551,11 +551,19 @@ it("normalizes four raster categories, converts patterns, rejects active/oversiz
     });
     expect(n.item.tokens).toBe("500000");
     expect(n.png.subarray(0, 8).toString("hex")).toBe("89504e470d0a1a0a");
-    if (category === "pattern")
-      expect(
-        "pattern" in n.item.cosmetic &&
-          Buffer.from(n.item.cosmetic.pattern, "base64url").length,
-      ).toBe(131);
+    if (category === "pattern") {
+      expect("image" in n.item.cosmetic && n.item.cosmetic.image).toMatchObject(
+        { width: 2, height: 2 },
+      );
+      const PNG = createRequire(import.meta.url)("pngjs").PNG;
+      expect(PNG.sync.read(n.png).data).toEqual(
+        PNG.sync.read(Buffer.from(uploadImage().split(",")[1], "base64")).data,
+      );
+      expect(resolvedAppearance([n.item]).skin).toMatchObject({
+        url: `/frontpot/api/shop/custom-art/${n.item.id}.png`,
+        repeat: { width: 2, height: 2 },
+      });
+    }
   }
   for (const change of [
     { rights: false },
@@ -642,4 +650,80 @@ it("normalizes four raster categories, converts patterns, rejects active/oversiz
       rights: true,
     }),
   ).resolves.toHaveProperty("id");
+});
+
+it("previews the private repeating PNG before a custom-pattern burn and preserves large tile pixels", async () => {
+  const f = await fixture(),
+    PNG = createRequire(import.meta.url)("pngjs").PNG;
+  const data = Buffer.alloc(300 * 3 * 4);
+  for (let i = 0; i < data.length; i += 4) {
+    data[i] = 240;
+    data[i + 1] = 20;
+    data[i + 2] = 100;
+    data[i + 3] = (i / 4) % 3 === 0 ? 0 : 128;
+  }
+  const image =
+    "data:image/png;base64," +
+    PNG.sync.write({ width: 300, height: 3, data }).toString("base64");
+  const { id } = await f.shop.upload(f.identity.id, {
+    name: "Repeat",
+    category: "pattern",
+    image,
+    rights: true,
+  });
+  const item = f.shop.inventory(f.identity.id).customItems[0];
+  expect("image" in item.cosmetic && item.cosmetic.image).toMatchObject({
+    width: 300,
+    height: 3,
+    url: expect.stringMatching(/^data:image\/png;base64,/),
+  });
+  if (!("image" in item.cosmetic) || !item.cosmetic.image)
+    throw Error("Missing preview");
+  expect(
+    PNG.sync.read(Buffer.from(item.cosmetic.image.url.split(",")[1], "base64"))
+      .data,
+  ).toEqual(data);
+  expect(f.shop.customArt(id)).toBeNull();
+  expect(f.shop.inventory("other").customItems).toEqual([]);
+});
+it("upgrades only free legacy pattern drafts while keeping quoted artwork immutable", async () => {
+  const f = await fixture();
+  f.state.balance = "1000000000000";
+  const a = await f.shop.upload(f.identity.id, {
+    category: "pattern",
+    name: "Free",
+    image: uploadImage(),
+    rights: true,
+  });
+  const b = await f.shop.upload("other", {
+    category: "pattern",
+    name: "Quoted",
+    image: uploadImage(),
+    rights: true,
+  });
+  for (const id of [a.id, b.id]) {
+    const row = f.db
+      .prepare("SELECT item FROM shop_uploads WHERE id=?")
+      .get(id)!;
+    const item = JSON.parse(String(row.item));
+    delete item.cosmetic.image;
+    item.cosmetic.pattern = "AAAAAA";
+    f.db
+      .prepare("UPDATE shop_uploads SET item=? WHERE id=?")
+      .run(JSON.stringify(item), id);
+  }
+  // Existing quotes are immutable, regardless of whether their transfer is pending yet.
+  f.db
+    .prepare("INSERT INTO shop_purchases VALUES(?,?,?,?)")
+    .run(randomUUID(), "other", b.id, "{}");
+  const next = new CosmeticShop(f.db, f.config, f.wallets);
+  expect("image" in next.inventory(f.identity.id).customItems[0].cosmetic).toBe(
+    true,
+  );
+  const quoted = JSON.parse(
+    String(
+      f.db.prepare("SELECT item FROM shop_uploads WHERE id=?").get(b.id)!.item,
+    ),
+  );
+  expect(quoted.cosmetic.image).toBeUndefined();
 });

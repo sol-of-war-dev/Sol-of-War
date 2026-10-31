@@ -151,11 +151,19 @@ exactly the existing user-signed checkout route. Uploading a draft is free.
   permission to use it publicly. Preview the result before approving a burn.
 - Inputs are limited to 128 KB and 512 by 512 pixels. The server validates the
   PNG structure, bounds decompression, decodes pixels, and re-encodes the result
-  at up to 256 by 256 pixels. Metadata is discarded. SVGs, remote URLs,
+  without changing pattern pixels (up to 512 by 512); other categories are resized
+  to at most 256 by 256. Metadata is discarded. SVGs, remote URLs,
   animations, duplicate headers, and malformed files are rejected.
-- Territory patterns are converted to a 32 by 32 two-color repeating tile in
-  the renderer's existing pattern format. Flags, skins, and crowns retain their
-  raster colors and transparency. The preview shows the converted artwork.
+- Uploaded territory patterns repeat the full PNG across owned territory at its
+  native pixel dimensions, including non-square images. Original RGB and alpha
+  are retained; transparent and translucent pixels blend over the territory
+  underneath. They are not reduced to two colors or tinted by team color.
+  Normal game visibility, hover, defense and accessibility overlays still apply.
+  The shop shows a repeating swatch and offers an in-game preview before purchase.
+  Live games and replays share the same tile metadata and territory shader.
+  Existing predefined two-color patterns and single-stamp skins keep their behavior.
+- Free, unquoted drafts from the initial two-color upload prototype are upgraded
+  using their saved PNG. Purchased or pending artwork is never rewritten.
 - Draft artwork is private to its uploader. Other accounts cannot purchase,
   delete, or equip it. Public image and renderer-catalog routes include it only
   after a finalized burn grants ownership. Custom items are not resold to other

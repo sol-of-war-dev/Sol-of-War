@@ -106,6 +106,13 @@ const CosmeticSchema = z.object({
 });
 
 export const PatternSchema = CosmeticSchema.extend({
+  image: z
+    .object({
+      url: z.string(),
+      width: z.number().int().min(1).max(512),
+      height: z.number().int().min(1).max(512),
+    })
+    .optional(),
   pattern: PatternDataSchema,
   colorPalettes: z
     .object({

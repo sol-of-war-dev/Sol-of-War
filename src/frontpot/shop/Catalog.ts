@@ -341,7 +341,14 @@ export function resolvedAppearance(items: ShopItem[]): PlayerCosmetics {
         name: item.cosmetic.name,
         url: (item.cosmetic as Crown | Skin).url,
       };
-    else if (item.category === "pattern")
+    else if (item.category === "pattern" && (item.cosmetic as Pattern).image) {
+      const image = (item.cosmetic as Pattern).image!;
+      out.skin = {
+        name: item.cosmetic.name,
+        url: image.url,
+        repeat: { width: image.width, height: image.height },
+      };
+    } else if (item.category === "pattern")
       out.pattern = {
         name: item.cosmetic.name,
         patternData: (item.cosmetic as Pattern).pattern,

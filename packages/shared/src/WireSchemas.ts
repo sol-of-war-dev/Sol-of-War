@@ -431,6 +431,12 @@ export const PlayerColorSchema = z.object({
 });
 
 export const PlayerSkinSchema = z.object({
+  repeat: z
+    .object({
+      width: zb.uint({ min: 1, max: 512 }),
+      height: zb.uint({ min: 1, max: 512 }),
+    })
+    .optional(),
   name: CosmeticNameSchema,
   url: z.string(),
 });

@@ -1642,7 +1642,13 @@ export async function getPlayerCosmetics(
   } else if (refs.patternName && cosmetics) {
     const pattern = cosmetics.patterns[refs.patternName];
 
-    if (pattern) {
+    if (pattern?.image) {
+      result.skin = {
+        name: refs.patternName,
+        url: pattern.image.url,
+        repeat: { width: pattern.image.width, height: pattern.image.height },
+      };
+    } else if (pattern) {
       result.pattern = {
         name: refs.patternName,
         patternData: pattern.pattern,

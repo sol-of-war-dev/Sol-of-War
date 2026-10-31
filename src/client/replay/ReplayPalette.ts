@@ -87,7 +87,13 @@ export function buildReplayPalette(
       false,
     );
     writePaletteEntry(palette, p.smallID, fill, border);
-    writePatternEntry(patternMeta, patternData, p.smallID, own.pattern);
+    writePatternEntry(
+      patternMeta,
+      patternData,
+      p.smallID,
+      own.pattern,
+      own.skin,
+    );
     if (own.skin?.url !== undefined) {
       skins.set(p.smallID, assetUrl(own.skin.url));
     }

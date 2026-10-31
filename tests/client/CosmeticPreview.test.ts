@@ -199,6 +199,20 @@ describe("CosmeticPreview", () => {
     await preview.updateComplete;
   }
 
+  it("repeats a private PNG tile before purchase without a two-color conversion", async () => {
+    await render({
+      ...resolved.pattern,
+      relationship: "purchasable",
+      cosmetic: {
+        ...resolved.pattern.cosmetic,
+        image: { url: "data:image/png;base64,test", width: 8, height: 4 },
+      },
+    });
+    const tile = preview!.querySelector('[role="img"]') as HTMLElement;
+    expect(tile.style.backgroundRepeat).toBe("repeat");
+    expect(tile.style.backgroundImage).toContain("data:image/png;base64,test");
+    expect(tile.style.backgroundSize).toBe("8px 4px");
+  });
   it("renders the resolved pattern palette", async () => {
     installTranslations();
     await render(resolved.pattern);

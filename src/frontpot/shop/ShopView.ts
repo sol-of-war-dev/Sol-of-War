@@ -342,7 +342,7 @@ export class ShopView {
               <p>
                 Static PNG, up to 128 KB and 512 × 512 pixels. Artwork is
                 resized to fit.
-                ${this.category === "pattern" ? "Patterns become a 32 × 32 two-color repeating tile; preview the conversion before buying." : "Use transparency for flags and crowns if desired."}
+                ${this.category === "pattern" ? "Your PNG repeats with its original colors and transparency. Transparent areas show the territory underneath. Preview the tile and the in-game result before buying." : "Use transparency for flags and crowns if desired."}
               </p>
               ${
                 identity && !identity.guest

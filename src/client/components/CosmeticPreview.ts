@@ -11,6 +11,7 @@ import {
 import { PlayerPattern } from "@openfront/shared/WireSchemas";
 import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
+import { styleMap } from "lit/directives/style-map.js";
 import { ResolvedCosmetic } from "../Cosmetics";
 import { translateText } from "../Utils";
 import "./CapIcon";
@@ -94,6 +95,13 @@ export class CosmeticPreview extends LitElement {
   private renderResolvedPreview(): TemplateResult {
     if (this.resolved.type === "pattern") {
       const cosmetic = this.resolved.cosmetic;
+      const tile = (cosmetic as Pattern | null)?.image;
+      if (tile)
+        return html`<div
+          role="img"
+          aria-label=${`${cosmeticDisplayName(this.resolved)} repeating PNG preview`}
+          style=${styleMap({ width: "100%", height: "100%", minHeight: "150px", backgroundColor: "#3b82f6", backgroundImage: `url("${tile.url}")`, backgroundRepeat: "repeat", backgroundSize: `${Math.min(64, tile.width)}px ${(Math.min(64, tile.width) * tile.height) / tile.width}px`, imageRendering: "pixelated" })}
+        ></div>`;
       const playerPattern: PlayerPattern | null =
         cosmetic === null
           ? null
