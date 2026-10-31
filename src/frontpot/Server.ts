@@ -27,6 +27,7 @@ import { LiveMonitoring } from "./LiveMonitoring";
 import { advanceLobby } from "./LobbyLifecycle";
 import { assertWagerAccess } from "./MatchAccess";
 import { MatchLedger, type Pool } from "./MatchLedger";
+import { registerMatchReceiptRoutes } from "./MatchReceiptRoutes";
 import { MatchReview } from "./MatchReview";
 import { Operations } from "./Operations";
 import { Parties } from "./Parties";
@@ -574,6 +575,12 @@ registerAdminRoutes(
   applyDrain,
   () => live.snapshot(),
 );
+registerMatchReceiptRoutes(app, ledger, payments, identityFor, (req) => {
+  const session = auth.auth(bearerToken(req));
+  const admins = (process.env.SOLSIEGE_ADMIN_WALLETS ?? "").split(",").map(value => value.trim());
+  if (!admins.includes(session.wallet)) throw new AuthError("Administrator access required.", 403);
+  return session.wallet;
+});
 app.get("/frontpot/api/availability", (_req, res) => {
   const control = operations.control();
   res.json({
@@ -948,6 +955,9 @@ app.get(
     "/wallet",
     "/player/:id",
     "/room/:id",
+    "/matches",
+    "/matches/:id",
+    "/matches/:id/watch",
     "/game/:id",
   ],
   (_req, res) => {

@@ -5504,3 +5504,10 @@ html.sow-software-rendering body * {
 .sow-custody-note { margin: 4px 0 8px; }
 .sow-funded-bag { display: inline-flex; vertical-align: middle; margin-left: 8px; }
 .sow-funded-bag svg { width: 22px; height: 25px; flex-shrink: 0; }
+
+.sow-receipt-address { overflow-wrap: anywhere; }
+.sow-receipt .fp-help { margin: 24px 0; }
+.sow-receipt small { display: block; margin-top: 16px; }
+.sow-dispute-form { display: grid; gap: 16px; margin: 24px 0; }
+.sow-dispute-form label { display: grid; gap: 8px; }
+.sow-dispute-form .fp-input { width: 100%; box-sizing: border-box; }

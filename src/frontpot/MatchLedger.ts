@@ -27,6 +27,8 @@ export type Pool = {
   practice?: boolean;
   name: string;
   map: string;
+  rules?: Room["rules"];
+  sourceCommit?: string;
   network: PaymentMode;
   address: string | null;
   signature?: string;
@@ -140,6 +142,8 @@ export class MatchLedger {
       private: room.private,
       name: room.name,
       map: room.rules.gameMap,
+      rules: { ...room.rules },
+      sourceCommit: process.env.RAILWAY_GIT_COMMIT_SHA ?? process.env.GIT_COMMIT,
       network: room.practice ? "simulation" : this.network,
       address: null,
       feeBps: room.lamports === 0 ? 0 : PLATFORM_FEE_BPS,
@@ -164,6 +168,8 @@ export class MatchLedger {
       ranked: room.ranked,
       private: room.private,
       map: room.rules.gameMap,
+      rules: { ...room.rules },
+      sourceCommit: process.env.RAILWAY_GIT_COMMIT_SHA ?? process.env.GIT_COMMIT,
       stakeLamports: room.lamports,
       feeBps: room.lamports === 0 ? 0 : PLATFORM_FEE_BPS,
     });

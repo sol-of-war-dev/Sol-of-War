@@ -175,3 +175,11 @@ independent custody/security audit. A [controlled mainnet 1v1 record](MAINNET_MA
 Fixture tests do not guarantee protection against compromise or loss. Review
 the [code, tests and known recovery limits](PAYMENTS.md) before treating a
 documented safeguard as a verified production assurance.
+
+## Match receipts and disputes
+
+The source now includes public match receipts, a public replay viewer for eligible
+recordings, and participant-only result disputes with administrator review.
+Production deployment and live acceptance testing are pending. See
+[Match receipts and disputes](MATCH_RECEIPTS.md) for access, workflow and limitations.
+Disputes do not reverse finalized transfers or replace the settlement rules.

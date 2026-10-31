@@ -130,3 +130,11 @@ See [wallet ownership](USER_OWNED_WALLETS.md) and [payment architecture](PAYMENT
   [payout tests](tests/frontpot/MatchLedger.test.ts).
 - [Completed mainnet match receipts](MAINNET_MATCH_EVIDENCE.md). That historical
   match used its own recorded rules; it is not a live test of every rule above.
+
+## Match receipts and disputes
+
+The source now includes public match receipts, a public replay viewer for eligible
+recordings, and participant-only result disputes with administrator review.
+Production deployment and live acceptance testing are pending. See
+[Match receipts and disputes](MATCH_RECEIPTS.md) for access, workflow and limitations.
+Disputes do not reverse finalized transfers or replace the settlement rules.

@@ -33,6 +33,7 @@ let failure = "";
 let pendingRefresh: Promise<void> | null = null;
 let clockOffset = 0;
 let message = "";
+let disputes: Array<{id: string; match_id: string; reason: string; description: string; email: string; evidence: string; status: string; resolution: string}> = [];
 let editingID: string | null = null;
 let matchDraft: MatchTemplate = {
   ...defaultQueueSettings().templates[0],
@@ -44,6 +45,7 @@ export function clearAdmin() {
   clearOperationsDraft();
   sessionGeneration++;
   current = null;
+  disputes = [];
   draft = null;
   failure = "";
   message = "";
@@ -269,6 +271,15 @@ export function adminView(ctx: {
       >
     </div>
     ${message ? html`<p class="fp-message" role="status">${message}</p>` : ""}
+    <section class="sa-panel"><h2>Result disputes</h2>
+      <button class="fp-primary" ?disabled=${busy} @click=${() => act(async () => { const generation = sessionGeneration; const result = await api<typeof disputes>("/admin/disputes"); if (generation === sessionGeneration) disputes = result; })}>Load disputes</button>
+      ${disputes.map(d => html`<form class="sow-dispute-form" @submit=${(event: Event) => {
+        event.preventDefault(); const form = new FormData(event.currentTarget as HTMLFormElement);
+        void act(async () => { const generation = sessionGeneration; await api(`/admin/disputes/${d.id}`, Object.fromEntries(form)); const updated = await api<typeof disputes>("/admin/disputes"); if (generation !== sessionGeneration) return; disputes = updated; message = "Review saved. The conclusion is public; funds were not moved."; });
+      }}><h3>${d.reason} · ${d.status}</h3><a href=${`/matches/${d.match_id}`} target="_blank" rel="noopener">Match receipt</a><p>${d.description}</p><p>${d.evidence}</p><p>Private contact: ${d.email || "Not supplied"}</p>
+      <label>Status<select name="status" class="fp-input"><option value="reviewing">Reviewing</option><option value="resolved">Resolved</option><option value="declined">Declined</option></select></label>
+      <label>Public conclusion (no contact details)<textarea class="fp-input" name="resolution" required minlength="10" maxlength="2000" .value=${d.resolution}></textarea></label><button class="fp-primary" ?disabled=${busy}>Save review</button></form>`)}
+    </section>
     ${operationsView(
       current.operations,
       busy,

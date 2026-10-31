@@ -13,6 +13,7 @@ export class RankedResultPanel extends LitElement {
   @property({ type: Boolean }) active = false;
   @state() private result: RankedResult | null = null;
   @state() private message = "Verifying your ranked result…";
+  @state() private publicReceipt = false;
   private timer?: ReturnType<typeof setTimeout>;
   private abort?: AbortController;
   private attempts = 0;
@@ -22,6 +23,7 @@ export class RankedResultPanel extends LitElement {
   protected updated(changed: PropertyValues) {
     if (changed.has("gameID")) {
       this.result = null;
+      this.publicReceipt = false;
       this.xp = null;
       this.attempts = 0;
       this.message = "Verifying your ranked result…";
@@ -63,13 +65,14 @@ export class RankedResultPanel extends LitElement {
       if (response.status === 429) {
         delay = Math.max(
           30000,
-          Number(response.headers.get("Retry-After") || 60) * 1000 || 60000,
+          Number(response.headers.get("Retry-After") ?? 60) * 1000 || 60000,
         );
         this.message =
           "Result checks are temporarily limited. Retrying shortly.";
       } else if (response.ok) {
         const pool = await response.json();
         if (abort.signal.aborted) return;
+        this.publicReceipt = !pool.private && !pool.practice && !["waiting", "playing"].includes(pool.state);
         if (!this.ranked && pool.xpChange) {
           this.xp = pool.xpChange;
           finished = true;
@@ -111,12 +114,14 @@ export class RankedResultPanel extends LitElement {
     if (!finished && this.isConnected && this.active)
       this.timer = setTimeout(() => void this.poll(), delay);
   }
+  private receiptLink() { return this.publicReceipt ? html`<a class="fp-primary" href=${`/matches/${this.gameID}`}>Match receipt and disputes</a>` : ""; }
   render() {
     if (!this.ranked) return html`<section class="sow-ranked-result" aria-live="polite">
       <h3>Unranked XP</h3>
       ${this.xp ? html`<h2>+${this.xp.total} XP</h2><p>Match completed: +${this.xp.played} XP</p><p>Win bonus: +${this.xp.win} XP</p><small>Verified and added to your lifetime XP. View your level and milestones in Profile.</small>` : html`<p>${this.message.includes("ranked") || this.message.includes("Elo") ? "XP is confirmed after the match ends and the result is verified. Guests, practice and cancelled games do not earn XP." : this.message}</p>`}
+      ${this.receiptLink()}
     </section>`;
-    return rankedResultView(this.result, this.message);
+    return html`${rankedResultView(this.result, this.message)}${this.receiptLink()}`;
   }
 }
 export function rankedResultView(

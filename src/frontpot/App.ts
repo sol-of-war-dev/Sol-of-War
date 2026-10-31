@@ -1,3 +1,4 @@
+import { MatchReceiptView } from "./MatchReceiptView";
 import { maps } from "@openfront/engine-api/game/GameTypes";
 import { EventBus } from "@openfront/shared/EventBus";
 import { toWireGameStartInfo } from "@openfront/shared/SharedUtil";
@@ -944,6 +945,9 @@ let handle: ReturnType<
   Awaited<ReturnType<typeof loadGameClient>>["joinLobby"]
 > | null = null;
 let generation = 0;
+const receiptID = location.pathname.match(/^\/matches\/([a-zA-Z0-9]{8,10})(?:\/watch)?$/)?.[1];
+const matchReceipt = receiptID || location.pathname === "/matches" ? new MatchReceiptView(receiptID ?? "", api, paint,
+  (done) => { if (requireIdentity(done)) void act(done); }) : null;
 const invite = location.pathname.match(/^\/room\/([a-zA-Z0-9]{8,10})$/)?.[1];
 let pendingInvite = invite ?? null;
 
@@ -1062,6 +1066,7 @@ async function api<T>(url: string, body?: unknown): Promise<T> {
 }
 function saveIdentity(value: Identity) {
   if (identity?.id !== value.id) {
+    matchReceipt?.clearSession();
     clearAdmin();
     playerWalletView.clear();
     profiles.clear();
@@ -1072,6 +1077,7 @@ function saveIdentity(value: Identity) {
   localStorage.setItem("frontpot-name", value.name);
 }
 function clearIdentity() {
+  matchReceipt?.clearSession();
   party = null;
   partyCode = "";
   matchSearch = null;
@@ -2207,6 +2213,8 @@ function paint() {
                   ? playerWalletView.render()
                   : showProfile
                     ? profiles.render()
+                    : matchReceipt
+                      ? matchReceipt.render(busy, act)
                     : location.pathname === "/shop"
                       ? shopView.render()
                       : showHowToPlay
@@ -2334,6 +2342,7 @@ function paint() {
                 >Terms of Service</a
               ><a href="/license">${t("license")}</a
               ><a href="/privacy">Privacy Policy</a>
+              <a href="/matches">Match receipts</a>
               <a href="mailto:team@solofwar.fun">Contact</a>
               <span>© 2026 Sol of War inc.</span>
               <span>© OpenFront and Contributors</span>
@@ -2384,7 +2393,8 @@ function paint() {
               <footer class="fp-game-credit">
                 <a href="https://openfront.io/" target="_blank" rel="noreferrer"
                   >${t("powered_by")}</a
-                ><a href="mailto:team@solofwar.fun">Contact</a><span>© 2026 Sol of War inc.</span><span>© OpenFront and Contributors</span
+                ><a href="/matches">Match receipts</a>
+              <a href="mailto:team@solofwar.fun">Contact</a><span>© 2026 Sol of War inc.</span><span>© OpenFront and Contributors</span
                 ><a
                   href="https://github.com/openfrontio/OpenFrontIO"
                   target="_blank"
@@ -3561,11 +3571,11 @@ function setupView() {
     </div>
   </main>`;
 }
-async function replayMatch(pool: Pick<Pool, "matchID" | "name">) {
+async function replayMatch(pool: Pick<Pool, "matchID" | "name">, publicReplay = false) {
   if (room || inGame)
     throw new Error("Leave your current match before watching a replay.");
   const record = GameRecordSchema.parse(
-    await api(`/history/${pool.matchID}/replay`),
+    await api(`/${publicReplay ? "matches" : "history"}/${pool.matchID}/replay`),
   );
   await fetchCosmetics();
   const client = await loadGameClient();
@@ -3578,7 +3588,7 @@ async function replayMatch(pool: Pick<Pool, "matchID" | "name">) {
   try {
     handle = client.joinLobby(new EventBus(), {
       gameID: record.info.gameID,
-      playerName: identity!.name,
+      playerName: identity?.name ?? "Spectator",
       playerClanTag: null,
       playerRole: null,
       cosmetics: {},
@@ -3613,6 +3623,7 @@ function historyView() {
     </button>
     <p class="fp-eyebrow">Your matches</p>
     <h1>Match history</h1>
+    <a class="fp-text-button" href="/matches">Public match receipts</a>
     <p class="fp-intro">
       ${isMainnet() ? "Verified match results and Solana payment receipts." : isDevnet() ? "Server-verified results and devnet transaction receipts. Test SOL has no monetary value." : "Server-verified results and simulated payouts. No real SOL is transferred."}
     </p>
@@ -3661,6 +3672,7 @@ function historyView() {
                 </p>
                 ${p.stakeLamports > 0 ? html`<small>Pool ${p.poolID.slice(0, 8)}</small>` : ""}
                 ${p.signature ? html`<a href=${transactionLink(p.signature, p.network === "mainnet" ? "mainnet" : "devnet")} target="_blank" rel="noreferrer">View payout</a>` : ""}
+                ${!p.private && !p.practice ? html`<a class="fp-primary" href=${`/matches/${p.matchID}`}>Match receipt</a>` : ""}
                 ${p.replayAvailable ? html`<button class="fp-create" @click=${() => act(() => replayMatch(p))}>Watch replay</button>` : ""}
               </div>
             </article>`;
@@ -3959,3 +3971,9 @@ document.addEventListener("keydown", (event) => {
       ?.focus();
   }
 });
+
+if (matchReceipt) {
+  await matchReceipt.load();
+  if (location.pathname.endsWith("/watch") && matchReceipt.receipt)
+    await act(() => replayMatch(matchReceipt.receipt!, true));
+}

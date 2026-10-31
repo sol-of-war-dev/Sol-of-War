@@ -165,6 +165,22 @@ not endorsed by OpenFront. OpenFront is a fork/rewrite of
 Upstream proprietary artwork is excluded. The application retains its
 [corresponding-source download](https://solofwar.fun/source).
 
+## Public match receipts and result disputes
+
+Implemented in source; production deployment and live acceptance testing are pending.
+Public match receipts show recorded results, payout amounts and destinations,
+entry/refund/payout links, and payment-state timelines. Public matches offer a
+separate replay viewer where recordings are available. Private matches and practice
+remain excluded.
+
+Participants can use **Dispute Result** beside the payout details to submit a
+short form, receive a reference and check review status. Authorized administrators
+review submissions; dated conclusions appear on the receipt. Disputes do not freeze
+or reverse payments, and this remains operator-reviewed support with custodial pools.
+
+See [Public match receipts, replays and disputes](MATCH_RECEIPTS.md) for routes,
+privacy boundaries, review workflow, testing scope and limitations.
+
 ## Contact and policies
 
 [Contact](mailto:team@solofwar.fun) · [Privacy Policy](https://solofwar.fun/privacy) · [Terms of Service](https://solofwar.fun/terms)

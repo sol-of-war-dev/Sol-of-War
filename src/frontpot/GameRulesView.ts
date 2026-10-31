@@ -90,6 +90,14 @@ export function gameRulesContent() {
       payer. Wagered funds remain in operator-controlled match pools, with
       server-side result verification. Trustless escrow is not implemented.
     </p>
+    <h3>Match receipts and disputes</h3>
+    <p>
+      <a href="/matches">Public match receipts</a> show payment status,
+      transaction links and available replays. Private matches and practice are
+      excluded. Participants can select Dispute Result beside payout details to
+      request a team review and track its status. This does not freeze or reverse
+      a payment, guarantee compensation or provide independent arbitration.
+    </p>
     <p>
       <a
         href="https://github.com/sol-of-war-dev/Sol-of-War/blob/main/GAME_RULES.md"
