@@ -2,7 +2,7 @@ import type { Express, Request } from "express";
 import { rateLimit } from "express-rate-limit";
 import type { PlayerSession } from "../PlayerAuth";
 import { InputError } from "../Store";
-import { flagSVG, shopItem, rendererCatalog } from "./Catalog";
+import { flagSVG, shopItem } from "./Catalog";
 import type { CosmeticShop } from "./Shop";
 export function registerShopRoutes(
   app: Express,
@@ -10,7 +10,7 @@ export function registerShopRoutes(
   identityFor: (req: Request) => PlayerSession,
 ) {
   app.get("/frontpot/api/shop/renderer-catalog", (_req, res) =>
-    res.set("Cache-Control", "public, max-age=60").json(rendererCatalog()),
+    res.set("Cache-Control", "no-store").json(shop.rendererCatalog()),
   );
   app.use(
     "/frontpot/api/shop",
@@ -46,6 +46,28 @@ export function registerShopRoutes(
       throw new InputError("Sign in with a wallet to use your inventory");
     return identity;
   };
+  app.post(
+    "/frontpot/api/shop/upload",
+    rateLimit({ windowMs: 60_000, limit: 4 }),
+    async (req, res) => res.json(await shop.upload(player(req).id, req.body)),
+  );
+  app.post("/frontpot/api/shop/delete-upload", (req, res) =>
+    res.json(shop.deleteUpload(player(req).id, req.body?.id)),
+  );
+  app.get("/frontpot/api/shop/custom-art/:file", (req, res) => {
+    const id = String(req.params.file).replace(/\.png$/, "");
+    const png = /^custom-[a-f0-9]{24}$/.test(id) ? shop.customArt(id) : null;
+    if (!png) {
+      res.sendStatus(404);
+      return;
+    }
+    res
+      .type("image/png")
+      .set("X-Content-Type-Options", "nosniff")
+      .set("Content-Security-Policy", "default-src 'none'; sandbox")
+      .set("Cache-Control", "public, max-age=31536000, immutable")
+      .send(png);
+  });
   app.get("/frontpot/api/shop/inventory", (req, res) =>
     res.json(shop.inventory(player(req).id)),
   );

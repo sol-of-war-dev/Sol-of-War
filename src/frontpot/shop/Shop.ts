@@ -15,9 +15,12 @@ import {
   SHOP_ITEMS,
   SHOP_MINT,
   shopItem,
-  purchaseItems,
+  rendererCatalog,
+  type ShopItem,
   resolvedAppearance,
 } from "./Catalog";
+
+import { normalizeUpload, CUSTOM_PRICE } from "./Uploads";
 
 export type ShopConfig = {
   enabled: boolean;
@@ -82,7 +85,8 @@ export class CosmeticShop {
       throw new Error("Mainnet shop mint must be Sol of War");
     if (config.enabled && !wallets?.feeSponsor)
       throw new Error("Shop requires user-owned wallets and fee sponsorship");
-    db.exec(`CREATE TABLE IF NOT EXISTS shop_purchases(id TEXT PRIMARY KEY, player_id TEXT NOT NULL,item_id TEXT NOT NULL,body TEXT NOT NULL,UNIQUE(player_id,item_id));
+    db.exec(`CREATE TABLE IF NOT EXISTS shop_uploads(id TEXT PRIMARY KEY,player_id TEXT NOT NULL,category TEXT NOT NULL,digest TEXT NOT NULL,item TEXT NOT NULL,png BLOB NOT NULL,UNIQUE(player_id,category,digest));
+      CREATE TABLE IF NOT EXISTS shop_purchases(id TEXT PRIMARY KEY, player_id TEXT NOT NULL,item_id TEXT NOT NULL,body TEXT NOT NULL,UNIQUE(player_id,item_id));
       CREATE TABLE IF NOT EXISTS shop_inventory(player_id TEXT NOT NULL,item_id TEXT NOT NULL,purchase_id TEXT NOT NULL UNIQUE,signature TEXT NOT NULL UNIQUE,PRIMARY KEY(player_id,item_id));
       CREATE TABLE IF NOT EXISTS shop_equipped(player_id TEXT PRIMARY KEY,item_id TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS shop_entitlements(player_id TEXT NOT NULL,item_id TEXT NOT NULL,purchase_id TEXT NOT NULL,PRIMARY KEY(player_id,item_id));
@@ -90,6 +94,76 @@ export class CosmeticShop {
       INSERT OR IGNORE INTO shop_entitlements SELECT player_id,item_id,purchase_id FROM shop_inventory;
       INSERT OR IGNORE INTO shop_loadout SELECT player_id,'flag',item_id FROM shop_equipped;
       DELETE FROM shop_equipped;`);
+  }
+  private customItem(id: string, player?: string): ShopItem | undefined {
+    const row = this.db
+      .prepare("SELECT item,player_id FROM shop_uploads WHERE id=?")
+      .get(id);
+    if (!row || (player !== undefined && row.player_id !== player))
+      return undefined;
+    return JSON.parse(String(row.item));
+  }
+  private item(id: string, player?: string) {
+    return shopItem(id) ?? this.customItem(id, player);
+  }
+  async upload(player: string, input: unknown) {
+    const { item, png, digest } = await normalizeUpload(input);
+    const old = this.db
+      .prepare(
+        "SELECT id FROM shop_uploads WHERE player_id=? AND category=? AND digest=?",
+      )
+      .get(player, item.category, digest);
+    if (old) return { id: String(old.id) };
+    const all = this.db
+      .prepare("SELECT id FROM shop_uploads WHERE player_id=?")
+      .all(player);
+    if (
+      all.length >= 32 ||
+      all.filter((r) => !this.owned(player).includes(String(r.id))).length >=
+        3 ||
+      Number(
+        this.db.prepare("SELECT count(*) AS n FROM shop_uploads").get()!.n,
+      ) >= 1000
+    )
+      throw new InputError(
+        "Upload limit reached. Delete an unused draft before uploading more.",
+      );
+    this.db
+      .prepare("INSERT INTO shop_uploads VALUES(?,?,?,?,?,?)")
+      .run(item.id, player, item.category, digest, JSON.stringify(item), png);
+    return { id: item.id };
+  }
+  deleteUpload(player: string, id: unknown) {
+    if (typeof id !== "string" || !this.customItem(id, player))
+      throw new InputError("Unknown upload");
+    if (
+      this.owned(player).includes(id) ||
+      this.db.prepare("SELECT id FROM shop_purchases WHERE item_id=?").get(id)
+    )
+      throw new InputError(
+        "Purchased artwork is permanent. Cancel any unsigned purchase before deleting its draft.",
+      );
+    this.db
+      .prepare("DELETE FROM shop_uploads WHERE id=? AND player_id=?")
+      .run(id, player);
+    return { ok: true };
+  }
+  customArt(id: string): Buffer | null {
+    const row = this.db
+      .prepare(
+        "SELECT u.png FROM shop_uploads u JOIN shop_entitlements e ON e.item_id=u.id AND e.player_id=u.player_id WHERE u.id=?",
+      )
+      .get(id);
+    return row ? Buffer.from(row.png as Uint8Array) : null;
+  }
+  rendererCatalog() {
+    const items = this.db
+      .prepare(
+        "SELECT u.item FROM shop_uploads u JOIN shop_entitlements e ON e.item_id=u.id AND e.player_id=u.player_id",
+      )
+      .all()
+      .map((r) => JSON.parse(String(r.item)) as ShopItem);
+    return rendererCatalog([...SHOP_ITEMS, ...items]);
   }
   private get(id: string): Purchase | null {
     const row = this.db
@@ -117,6 +191,21 @@ export class CosmeticShop {
   }
   inventory(player: string) {
     return {
+      customItems: this.db
+        .prepare("SELECT item,png FROM shop_uploads WHERE player_id=?")
+        .all(player)
+        .map((r) => {
+          const item = JSON.parse(String(r.item)) as ShopItem;
+          if (
+            !this.owned(player).includes(item.id) &&
+            item.category !== "pattern"
+          )
+            item.cosmetic = {
+              ...item.cosmetic,
+              url: `data:image/png;base64,${Buffer.from(r.png as Uint8Array).toString("base64")}`,
+            };
+          return item;
+        }),
       walletAddress: this.wallets?.get(player)?.address ?? null,
       owned: this.owned(player),
       equipped: Object.fromEntries(
@@ -161,7 +250,8 @@ export class CosmeticShop {
           .run(player, slot);
       }
     } else {
-      const selected = typeof item === "string" ? shopItem(item) : undefined;
+      const selected =
+        typeof item === "string" ? this.item(item, player) : undefined;
       if (!selected?.slot || !this.owned(player).includes(selected.id))
         throw new InputError("You do not own this equippable cosmetic");
       if (slot !== undefined && slot !== selected.slot)
@@ -181,7 +271,7 @@ export class CosmeticShop {
       )
       .all(player);
     const items = rows.flatMap((row) => {
-      const item = shopItem(String(row.item_id));
+      const item = this.item(String(row.item_id), player);
       return item?.slot === row.slot ? [item] : [];
     });
     return items.length ? resolvedAppearance(items) : undefined;
@@ -208,7 +298,7 @@ export class CosmeticShop {
         id,
       ) ||
       typeof itemID !== "string" ||
-      !shopItem(itemID)
+      !this.item(itemID, identity.id)
     )
       throw new InputError("Invalid cosmetic purchase");
     return this.exclusive(identity.id, async () => {
@@ -220,7 +310,8 @@ export class CosmeticShop {
       }
       if (this.owned(identity.id).includes(itemID))
         throw new InputError("You already own this cosmetic");
-      const grants = purchaseItems(itemID);
+      const selected = this.item(itemID, identity.id)!;
+      const grants = [itemID, ...(selected.members ?? [])];
       if (grants.some((item) => this.owned(identity.id).includes(item)))
         throw new InputError(
           "You already own part of this bundle. Choose the remaining items individually.",
@@ -285,7 +376,11 @@ export class CosmeticShop {
       )
         throw new InputError("Shop mint is not a supported SPL token mint");
       const amount = (
-        BigInt(this.config.prices[itemID]) *
+        BigInt(
+          this.customItem(itemID, identity.id)
+            ? CUSTOM_PRICE
+            : this.config.prices[itemID],
+        ) *
         10n ** BigInt(info.info.decimals)
       ).toString();
       const accounts = await rpc.call<{

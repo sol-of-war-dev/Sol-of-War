@@ -3,6 +3,7 @@ import { ResolvedCosmetic, translateCosmetic } from "../Cosmetics";
 import { translateText } from "../Utils";
 
 export function cosmeticDisplayName(resolved: ResolvedCosmetic): string {
+  if (resolved.displayName) return resolved.displayName;
   const cosmetic = resolved.cosmetic;
   if (cosmetic === null) {
     if (resolved.type === "crown" || resolved.type === "flag") {

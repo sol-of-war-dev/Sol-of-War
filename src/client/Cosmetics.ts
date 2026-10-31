@@ -1174,6 +1174,7 @@ export function cosmeticPackRelationship(
 }
 
 export type ResolvedCosmetic = {
+  displayName?: string;
   type:
     | "pattern"
     | "skin"

@@ -300,7 +300,7 @@ export const purchaseItems = (id: string): string[] => {
   return [id, ...(item.members ?? [])];
 };
 /** Authoritative renderer catalog; no OpenFront commerce or asset endpoints. */
-export function rendererCatalog() {
+export function rendererCatalog(items: ShopItem[] = SHOP_ITEMS) {
   const result = {
     patterns: {},
     flags: {},
@@ -310,7 +310,7 @@ export function rendererCatalog() {
     effects: {},
     packs: {},
   } as Record<string, Record<string, unknown>>;
-  for (const item of SHOP_ITEMS) {
+  for (const item of items) {
     if (item.category === "effect") {
       const e = item.cosmetic as Effect;
       const group = (result.effects[e.effectType] ??= {}) as Record<
@@ -330,11 +330,17 @@ export function rendererCatalog() {
 export function resolvedAppearance(items: ShopItem[]): PlayerCosmetics {
   const out: PlayerCosmetics = {};
   for (const item of items) {
-    if (item.category === "flag") out.flag = flagURL(item.id);
+    if (item.category === "flag") out.flag = (item.cosmetic as Flag).url;
     else if (item.category === "crown")
-      out.crown = { name: item.cosmetic.name, url: flagURL(item.id) };
+      out.crown = {
+        name: item.cosmetic.name,
+        url: (item.cosmetic as Crown | Skin).url,
+      };
     else if (item.category === "skin")
-      out.skin = { name: item.cosmetic.name, url: flagURL(item.id) };
+      out.skin = {
+        name: item.cosmetic.name,
+        url: (item.cosmetic as Crown | Skin).url,
+      };
     else if (item.category === "pattern")
       out.pattern = {
         name: item.cosmetic.name,

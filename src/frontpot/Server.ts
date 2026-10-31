@@ -322,6 +322,10 @@ app.disable("x-powered-by");
 app.set("trust proxy", 1);
 app.use(canonicalDomain(process.env.APP_ORIGIN));
 app.use(compression());
+app.use(
+  "/frontpot/api/shop/upload",
+  express.json({ limit: "256kb", inflate: false }),
+);
 app.use(express.json({ limit: "8kb", inflate: false }));
 app.use((_req, res, next) => {
   res.setHeader("X-Content-Type-Options", "nosniff");

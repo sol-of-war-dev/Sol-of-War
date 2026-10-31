@@ -79,3 +79,12 @@ fee; the whole purchase price is burned after the user approves the transaction.
 Each bundle includes all 13 items from its named collection. Patterns and skins
 are alternatives for the same territory slot; the other items can be combined.
 See [checkout and ownership rules](COSMETIC_SHOP.md).
+
+## Custom uploads
+
+In addition to the predefined collections, players can upload a flag, territory
+pattern, skin, or crown for **500,000 $SOLOFWAR per item**. This price is approved
+for custom artwork; the predefined collection prices above remain drafts.
+Uploading and previewing a private draft is free. The price is burned only after
+wallet approval, and ownership unlocks after finalization. Sol of War pays the
+network fee. See [custom artwork requirements](COSMETIC_SHOP.md#custom-artwork).

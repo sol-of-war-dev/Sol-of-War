@@ -1,7 +1,11 @@
 import type { Effect } from "@openfront/shared/CosmeticSchemas";
 import "../../client/components/CosmeticCard";
 import { html } from "lit";
-import { fetchCosmetics, type ResolvedCosmetic } from "../../client/Cosmetics";
+import {
+  fetchCosmetics,
+  invalidateCosmetics,
+  type ResolvedCosmetic,
+} from "../../client/Cosmetics";
 import type { WalletLogin } from "../PrivyLogin";
 import type { Identity } from "../Store";
 import { assertBurn } from "./BurnPolicy";
@@ -41,6 +45,7 @@ export class ShopView {
     try {
       this.catalog = await this.c.api<Catalog>("/shop/catalog");
       this.activity = await this.c.api("/shop/activity");
+      invalidateCosmetics();
       await fetchCosmetics();
       this.inventory = null;
       this.owner = null;
@@ -48,6 +53,12 @@ export class ShopView {
         const inventory = await this.c.api<Inventory>("/shop/inventory");
         if (identity.id === this.c.identity()?.id) {
           this.inventory = inventory;
+          this.catalog.items.push(
+            ...inventory.customItems.map((i) => ({
+              ...i,
+              url: "url" in i.cosmetic ? (i.cosmetic.url ?? "") : "",
+            })),
+          );
           this.owner = identity.id;
         }
       }
@@ -55,6 +66,40 @@ export class ShopView {
       this.loading = false;
       this.c.paint();
     }
+  }
+  private async upload(form: HTMLFormElement) {
+    const identity = this.c.identity();
+    if (!identity || identity.guest) return;
+    const category = this.category;
+    const data = new FormData(form),
+      file = data.get("image");
+    if (
+      !(file instanceof File) ||
+      file.type !== "image/png" ||
+      file.size > 128 * 1024
+    )
+      throw new Error("Choose a PNG no larger than 128 KB.");
+    const image =
+      "data:image/png;base64," +
+      btoa(
+        Array.from(new Uint8Array(await file.arrayBuffer()), (b) =>
+          String.fromCharCode(b),
+        ).join(""),
+      );
+    if (identity.id !== this.c.identity()?.id)
+      throw new Error("Account changed. Upload cancelled.");
+    const result = await this.c.api<{ id: string }>("/shop/upload", {
+      name: data.get("name"),
+      category,
+      image,
+      rights: data.get("rights") === "on",
+    });
+    this.notice =
+      "Draft saved. Review the artwork before burning 500,000 $SOLOFWAR to unlock it.";
+    if (identity.id !== this.c.identity()?.id) return;
+    this.category = category;
+    await this.refresh();
+    this.preview(result.id);
   }
   private async buy() {
     const item = this.catalog?.items.find((i) => i.id === this.selected),
@@ -116,6 +161,7 @@ export class ShopView {
   ): ResolvedCosmetic {
     const owned = inventory?.owned.includes(item.id) ?? false;
     return {
+      displayName: item.name,
       type: item.category === "bundle" ? "cosmeticPack" : item.category,
       key: `${item.category}:${item.id}`,
       cosmetic: item.cosmetic,
@@ -150,7 +196,16 @@ export class ShopView {
     );
   }
   render() {
-    const catalog = this.catalog,
+    const catalog = this.catalog
+        ? {
+            ...this.catalog,
+            items: this.catalog.items.filter(
+              (i) =>
+                !i.id.startsWith("custom-") ||
+                this.owner === this.c.identity()?.id,
+            ),
+          }
+        : null,
       identity = this.c.identity(),
       inventory = this.owner === identity?.id ? this.inventory : null;
     return html`<main class="sow-shop">
@@ -175,7 +230,7 @@ export class ShopView {
             >${catalog?.enabled ? "Token checkout" : "Preview collection"}</strong
           >
           <p>
-            ${catalog?.enabled ? "Purchases are permanent account unlocks. Burns cannot be reversed." : "Prices are drafts. Checkout is disabled while the shop is tested."}
+            ${catalog?.enabled ? "Purchases are permanent account unlocks. Burns cannot be reversed." : "Catalog prices are drafts; custom uploads cost 500,000 $SOLOFWAR. Checkout is disabled while the shop is tested."}
           </p>
         </div>
       </div>
@@ -188,7 +243,7 @@ export class ShopView {
           : html`<div class="sow-shop-toolbar">
               <span
                 >${inventory?.owned.length ?? 0} owned ·
-                ${inventory?.equipped ? "Flag equipped" : "No flag equipped"}</span
+                ${Object.keys(inventory?.equipped ?? {}).length} equipped</span
               ><button
                 ?disabled=${this.c.busy()}
                 @click=${() => this.c.act(() => this.refresh())}
@@ -272,6 +327,73 @@ export class ShopView {
             </button>`,
         )}
       </nav>
+      ${
+        ["flag", "pattern", "skin", "crown"].includes(this.category)
+          ? html`<section class="sow-shop-receive">
+              <h2>
+                Upload your own
+                ${this.category === "pattern" ? "territory pattern" : this.category}
+              </h2>
+              <p>
+                500,000 $SOLOFWAR per custom item, burned on purchase. Sol of
+                War pays the network fee. Your artwork is visible to other
+                players when used in matches.
+              </p>
+              <p>
+                Static PNG, up to 128 KB and 512 × 512 pixels. Artwork is
+                resized to fit.
+                ${this.category === "pattern" ? "Patterns become a 32 × 32 two-color repeating tile; preview the conversion before buying." : "Use transparency for flags and crowns if desired."}
+              </p>
+              ${
+                identity && !identity.guest
+                  ? html`<form
+                      @submit=${(e: Event) => {
+                        e.preventDefault();
+                        const form = e.currentTarget as HTMLFormElement;
+                        void this.c.act(() => this.upload(form));
+                      }}
+                    >
+                      <label
+                        >Artwork name
+                        <input
+                          name="name"
+                          required
+                          maxlength="40"
+                          autocomplete="off"
+                      /></label>
+                      <label
+                        >PNG artwork
+                        <input
+                          name="image"
+                          type="file"
+                          accept="image/png"
+                          required
+                      /></label>
+                      <label
+                        ><input type="checkbox" name="rights" required /> I own
+                        this artwork or have permission to use it
+                        publicly.</label
+                      >
+                      <button
+                        class="fp-primary"
+                        type="submit"
+                        ?disabled=${this.c.busy()}
+                      >
+                        Upload and preview
+                      </button>
+                      <p>
+                        Uploading a draft costs nothing. The artwork cannot be
+                        changed after purchase. Up to 3 unpaid drafts and 32
+                        custom items per account.
+                      </p>
+                    </form>`
+                  : html`<button @click=${this.c.signIn}>
+                      Sign in to upload artwork
+                    </button>`
+              }
+            </section>`
+          : ""
+      }
       <div class="sow-shop-filters">
         <label
           ><input
@@ -317,7 +439,7 @@ export class ShopView {
           : ""
       }
       ${
-        this.selected && catalog
+        this.selected && catalog?.items.some((i) => i.id === this.selected)
           ? (() => {
               const item = catalog.items.find((i) => i.id === this.selected)!;
               const owned = inventory?.owned.includes(item.id),
@@ -369,7 +491,7 @@ export class ShopView {
                             <strong
                               >${Number(item.tokens).toLocaleString()} $SOLOFWAR
                               will be permanently
-                              burned.${!catalog.enabled ? " Draft price." : ""}</strong
+                              burned.${!catalog.enabled && !item.id.startsWith("custom-") ? " Draft price." : ""}</strong
                             >
                             Sol of War pays the network fee. Ownership unlocks
                             after finalization and cannot be traded or refunded.
@@ -381,6 +503,23 @@ export class ShopView {
                           >
                             ${catalog.enabled ? "Review burn in wallet" : "Checkout not enabled"}
                           </button>`
+                  }
+                  ${
+                    item.id.startsWith("custom-") && !owned
+                      ? html`<button
+                          ?disabled=${this.c.busy()}
+                          @click=${() =>
+                            this.c.act(async () => {
+                              await this.c.api("/shop/delete-upload", {
+                                id: item.id,
+                              });
+                              this.selected = null;
+                              await this.refresh();
+                            })}
+                        >
+                          Delete draft
+                        </button>`
+                      : ""
                   }
                   <button
                     @click=${() => {
@@ -417,13 +556,14 @@ export class ShopView {
                 this.gamePreview = item.id;
                 this.c.paint();
               }}
-              .actionContent=${html`<div class="sow-shop-card-action"><strong>${Number(item.tokens).toLocaleString()} $SOLOFWAR ${!catalog.enabled ? html`<small>Draft</small>` : ""}</strong><span>${equipped ? "Equipped" : owned ? "Owned permanently" : "100% burned on purchase"}</span><button class="fp-primary" @click=${() => this.preview(item.id)}>${item.category === "bundle" ? "View bundle" : "Preview"}</button>${owned && item.slot ? html`<button ?disabled=${this.c.busy()} @click=${() => this.c.act(() => this.equip(equipped ? null : item.id, item.slot))}>${equipped ? "Unequip" : "Equip"}</button>` : ""}</div>`}
+              .actionContent=${html`<div class="sow-shop-card-action"><strong>${Number(item.tokens).toLocaleString()} $SOLOFWAR ${!catalog.enabled && !item.id.startsWith("custom-") ? html`<small>Draft</small>` : ""}</strong><span>${equipped ? "Equipped" : owned ? "Owned permanently" : "100% burned on purchase"}</span><button class="fp-primary" @click=${() => this.preview(item.id)}>${item.category === "bundle" ? "View bundle" : "Preview"}</button>${owned && item.slot ? html`<button ?disabled=${this.c.busy()} @click=${() => this.c.act(() => this.equip(equipped ? null : item.id, item.slot))}>${equipped ? "Unequip" : "Equip"}</button>` : ""}</div>`}
             ></cosmetic-card>`;
           })}
       </div>
       ${this.ownedOnly && !catalog?.items.some((i) => i.category === this.category && (this.category !== "effect" || i.slot === this.effectSlot) && inventory?.owned.includes(i.id)) ? html`<p class="fp-muted">No owned items in this category yet.</p>` : ""}
       ${
-        this.gamePreview && catalog
+        this.gamePreview &&
+        catalog?.items.some((i) => i.id === this.gamePreview)
           ? html`<cosmetic-preview-modal
               .resolved=${this.resolve(
                 catalog.items.find((i) => i.id === this.gamePreview)!,

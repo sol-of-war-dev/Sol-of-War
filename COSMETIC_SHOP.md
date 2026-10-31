@@ -138,3 +138,51 @@ activate purchases.
 Solana's [burn instruction documentation](https://solana.com/docs/tokens/basics/burn-tokens)
 explains the supply-reduction behavior. Existing code and asset licensing is
 specified in [LICENSING.md](LICENSING.md).
+
+## Custom artwork
+
+Players can upload their own flags, territory patterns, skins, and crowns for
+**500,000 $SOLOFWAR per item**. This custom-item price is fixed on the server and
+was selected by the project owner; ordinary catalog prices remain drafts.
+The complete price is burned, and the platform sponsors the network fee using
+exactly the existing user-signed checkout route. Uploading a draft is free.
+
+- Sign in, choose a category, name the artwork, upload a static PNG, and confirm
+  permission to use it publicly. Preview the result before approving a burn.
+- Inputs are limited to 128 KB and 512 by 512 pixels. The server validates the
+  PNG structure, bounds decompression, decodes pixels, and re-encodes the result
+  at up to 256 by 256 pixels. Metadata is discarded. SVGs, remote URLs,
+  animations, duplicate headers, and malformed files are rejected.
+- Territory patterns are converted to a 32 by 32 two-color repeating tile in
+  the renderer's existing pattern format. Flags, skins, and crowns retain their
+  raster colors and transparency. The preview shows the converted artwork.
+- Draft artwork is private to its uploader. Other accounts cannot purchase,
+  delete, or equip it. Public image and renderer-catalog routes include it only
+  after a finalized burn grants ownership. Custom items are not resold to other
+  players or transferred between accounts.
+- Each upload has an immutable generated identity and server-held image. The
+  purchase binds that identity and its fixed price. Purchased artwork cannot be
+  replaced or deleted through the draft API; different artwork requires a new
+  purchase. Re-uploading identical normalized artwork in the same category
+  returns the existing item instead of creating another charge.
+- An account may hold up to three unpaid drafts and 32 custom items total.
+  There is an initial 1,000-upload service cap and a four-per-minute upload
+  request limit per IP, alongside the existing authenticated API limits.
+  Delete an unused draft to free its slot. Cancel an unsigned purchase before
+  deleting its draft; pending or finalized purchases cannot be deleted.
+- Images and metadata are stored in the backed-up application database.
+  Equipping still requires server-verified ownership. Flags and crowns use
+  their own slots; patterns and skins share the territory slot. Changes apply
+  on the next match join.
+
+Routes: authenticated `POST /frontpot/api/shop/upload` (name, category, PNG data
+URL, rights acknowledgement), `POST /frontpot/api/shop/delete-upload` (id), and
+owner-only draft metadata in the inventory response. Paid PNG assets are served
+from `/frontpot/api/shop/custom-art/:id.png` with PNG content type, `nosniff`, and
+restrictive content-security headers. No user filename becomes a filesystem path.
+
+Custom-upload privacy, fixed-price signed checkout, finality, persistence, equip
+ownership, draft caps, and invalid-image cases have automated tests. The earlier
+[devnet receipts](SHOP_DEVNET_EVIDENCE.md) cover predefined items, not a 500,000
+$SOLOFWAR custom-upload burn. Production checkout remains disabled; a custom-item
+devnet rehearsal and the production release checks remain before activation.

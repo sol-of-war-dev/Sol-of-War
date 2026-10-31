@@ -7,6 +7,7 @@ import {
   partiallySignTransaction,
 } from "@solana/kit";
 import { randomUUID } from "node:crypto";
+import { createRequire } from "node:module";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, expect, it, vi } from "vitest";
 import {
@@ -31,6 +32,7 @@ import {
   resolvedAppearance,
 } from "../../src/frontpot/shop/Catalog";
 import { CosmeticShop, shopConfig } from "../../src/frontpot/shop/Shop";
+import { normalizeUpload } from "../../src/frontpot/shop/Uploads";
 const dbs: DatabaseSync[] = [];
 afterEach(() => dbs.splice(0).forEach((db) => db.close()));
 async function fixture() {
@@ -477,4 +479,167 @@ it("migrates existing flag ownership and equipment without resurrecting a cleare
   expect(
     new CosmeticShop(f.db, f.config, f.wallets).cosmetics(f.identity.id),
   ).toBeUndefined();
+});
+
+function uploadImage() {
+  const PNG = createRequire(import.meta.url)("pngjs").PNG;
+  return (
+    "data:image/png;base64," +
+    PNG.sync
+      .write({
+        width: 2,
+        height: 2,
+        data: Buffer.from([
+          255, 255, 255, 255, 0, 0, 0, 255, 0, 0, 0, 0, 255, 0, 0, 255,
+        ]),
+      })
+      .toString("base64")
+  );
+}
+it("binds custom artwork to its owner and fixed 500,000 price, publishing and equipping only after finality", async () => {
+  const f = await fixture();
+  f.state.balance = "1000000000000";
+  const input = {
+    category: "flag",
+    name: "My flag",
+    image: uploadImage(),
+    rights: true,
+  };
+  const { id } = await f.shop.upload(f.identity.id, input);
+  expect((await f.shop.upload(f.identity.id, input)).id).toBe(id);
+  expect(f.shop.customArt(id)).toBeNull();
+  expect(Object.keys(f.shop.rendererCatalog().flags)).not.toContain(
+    id.replace("-", "_"),
+  );
+  expect(f.shop.inventory("other").customItems).toEqual([]);
+  expect(() => f.shop.deleteUpload("other", id)).toThrow();
+  await expect(
+    f.shop.prepare({ ...f.identity, id: "other" }, randomUUID(), id),
+  ).rejects.toThrow(/Invalid/);
+  expect(() => f.shop.equip(f.identity.id, id)).toThrow(/own/);
+  f.config.prices[id] = "1";
+  const p = await f.shop.prepare(f.identity, randomUUID(), id);
+  expect(p.terms.amount).toBe("500000000000");
+  expect(p.grants).toEqual([id]);
+  expect(() => f.shop.deleteUpload(f.identity.id, id)).toThrow(/Cancel/);
+  await f.shop.submit(f.identity, p.id, await f.sign(p.wire.transaction));
+  expect(f.shop.customArt(id)).toBeNull();
+  f.state.status = { err: null, confirmationStatus: "finalized", slot: 15 };
+  await f.shop.reconcilePending();
+  expect(f.shop.customArt(id)?.subarray(0, 8).toString("hex")).toBe(
+    "89504e470d0a1a0a",
+  );
+  expect(f.shop.rendererCatalog().flags[id.replace("-", "_")]).toBeDefined();
+  f.shop.equip(f.identity.id, id);
+  expect(f.shop.cosmetics(f.identity.id)?.flag).toBe(
+    `/frontpot/api/shop/custom-art/${id}.png`,
+  );
+  expect(() => f.shop.deleteUpload(f.identity.id, id)).toThrow(/permanent/);
+  const restart = new CosmeticShop(f.db, f.config, f.wallets);
+  expect(restart.inventory(f.identity.id).owned).toContain(id);
+  expect(restart.cosmetics(f.identity.id)).toEqual(
+    f.shop.cosmetics(f.identity.id),
+  );
+});
+it("normalizes four raster categories, converts patterns, rejects active/oversized/invalid uploads and caps private drafts", async () => {
+  for (const category of ["flag", "pattern", "skin", "crown"]) {
+    const n = await normalizeUpload({
+      category,
+      name: "Custom",
+      image: uploadImage(),
+      rights: true,
+    });
+    expect(n.item.tokens).toBe("500000");
+    expect(n.png.subarray(0, 8).toString("hex")).toBe("89504e470d0a1a0a");
+    if (category === "pattern")
+      expect(
+        "pattern" in n.item.cosmetic &&
+          Buffer.from(n.item.cosmetic.pattern, "base64url").length,
+      ).toBe(131);
+  }
+  for (const change of [
+    { rights: false },
+    { category: "effect" },
+    { image: "https://example.com/art.png" },
+    {
+      image:
+        "data:image/png;base64," +
+        Buffer.from("<svg onload='alert(1)'/>").toString("base64"),
+    },
+    { name: "<script>" },
+  ])
+    await expect(
+      normalizeUpload({
+        category: "flag",
+        name: "Custom",
+        image: uploadImage(),
+        rights: true,
+        ...change,
+      }),
+    ).rejects.toThrow();
+  const big = Buffer.from(uploadImage().split(",")[1], "base64");
+  big.writeUInt32BE(513, 16);
+  await expect(
+    normalizeUpload({
+      category: "flag",
+      name: "Big",
+      image: "data:image/png;base64," + big.toString("base64"),
+      rights: true,
+    }),
+  ).rejects.toThrow(/dimensions/);
+  const original = Buffer.from(uploadImage().split(",")[1], "base64");
+  const animated = Buffer.concat([
+    original.subarray(0, 33),
+    Buffer.from([0, 0, 0, 0, 97, 99, 84, 76, 0, 0, 0, 0]),
+    original.subarray(33),
+  ]);
+  await expect(
+    normalizeUpload({
+      category: "flag",
+      name: "Animation",
+      image: "data:image/png;base64," + animated.toString("base64"),
+      rights: true,
+    }),
+  ).rejects.toThrow(/static/);
+  const duplicateHeader = Buffer.concat([
+    original.subarray(0, 33),
+    original.subarray(8, 33),
+    original.subarray(33),
+  ]);
+  await expect(
+    normalizeUpload({
+      category: "flag",
+      name: "Duplicate",
+      image: "data:image/png;base64," + duplicateHeader.toString("base64"),
+      rights: true,
+    }),
+  ).rejects.toThrow(/header/);
+  const f = await fixture();
+  let first = "";
+  for (const category of ["flag", "skin", "crown"])
+    first = (
+      await f.shop.upload(f.identity.id, {
+        category,
+        name: "Custom",
+        image: uploadImage(),
+        rights: true,
+      })
+    ).id;
+  await expect(
+    f.shop.upload(f.identity.id, {
+      category: "pattern",
+      name: "Custom",
+      image: uploadImage(),
+      rights: true,
+    }),
+  ).rejects.toThrow(/limit/);
+  f.shop.deleteUpload(f.identity.id, first);
+  await expect(
+    f.shop.upload(f.identity.id, {
+      category: "pattern",
+      name: "Custom",
+      image: uploadImage(),
+      rights: true,
+    }),
+  ).resolves.toHaveProperty("id");
 });
