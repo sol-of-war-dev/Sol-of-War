@@ -7,24 +7,40 @@ shop burn or provider-sponsored Token-2022 rehearsal is claimed by this document
 ## Collection and ownership
 
 The shop adapts OpenFront's existing `CosmeticCard`, `CosmeticPreview`, rarity
-presentation and in-game flag rendering. It uses a Sol of War catalog and our
+presentation, game previews, and in-game appearance rendering. It uses a Sol of War catalog and our
 account/payment backend instead of OpenFront's currency and commerce APIs.
-The initial flags are original vector artwork in `src/frontpot/shop/Catalog.ts`;
-no proprietary OpenFront cosmetics are used. Upstream license and attribution
-requirements remain in place.
+The catalog contains **39 original cosmetics and 3 bundles**, arranged into Ember,
+Violet, and Solar collections. Artwork and effect definitions are authored in
+`src/frontpot/shop/Catalog.ts`; no premium store artwork is copied. The complete
+item and draft-price list is in [COSMETIC_CATALOG.md](COSMETIC_CATALOG.md).
 
-| Flag | Draft price in SOLOFWAR |
-| --- | ---: |
-| Ember Standard | 1,000 |
-| Violet Vanguard | 2,500 |
-| Solar Command | 5,000 |
+| Category           | Choices | Equip behavior                                                |
+| ------------------ | ------: | ------------------------------------------------------------- |
+| Flags              |       3 | One flag beside your commander’s name                         |
+| Territory patterns |       3 | Shares the territory slot with skins                          |
+| Skins              |       3 | Shares the territory slot with patterns                       |
+| Crowns             |       3 | One ornamental crown                                          |
+| Effects            |      27 | Three choices in each of nine effect slots                    |
+| Bundles            |       3 | Thirteen permanent item unlocks; equip the items individually |
 
-Flags are visual only. They do not affect combat, matchmaking, ranking, win
-conditions or payouts. Ownership is a permanent account unlock, not an NFT or
-transferable asset. Players can equip or unequip an owned flag in the shop;
-the game server loads it from the inventory when they next join. The browser
-cannot grant itself a flag by sending cosmetic references in its join message.
-Current matches and recorded replays keep their existing appearance.
+Effect slots cover transport-ship wakes, missile trails, atomic/hydrogen/MIRV
+explosions, structures, warships, trains, and railroads. All supported effect
+types have original options. Effects change appearance only; explosion size and
+color settings do not change damage or gameplay radius. Combat indicators and
+team-color rules remain controlled by the existing game renderer.
+
+Players can preview every category, filter to owned items, and equip or unequip
+individual slots. A flag, territory appearance, crown, and nine effects can be
+combined. Patterns and skins replace one another. Bundles cannot be purchased
+when any member is already owned or covered by an outstanding purchase: buy the
+remaining items individually instead. No partial-ownership discount is implied.
+
+Ownership is a permanent account unlock, not an NFT or transferable asset. It
+does not affect combat, matchmaking, ranking, win conditions, or payouts. The
+game server loads the owned loadout when a player next joins; client-supplied
+cosmetic references cannot grant ownership. Current matches and recorded replays
+keep their existing appearance. The renderer loads Sol of War’s own catalog and
+art endpoints, rather than the upstream store’s commerce backend.
 
 ## Token and checkout
 
@@ -50,7 +66,9 @@ devnet fixtures; mainnet is pinned to the Sol of War Token-2022 mint.
 5. The sponsor verifies the user's signature, transaction contents, expiry,
    simulation and fee budget, then co-signs as fee payer. Fully signed bytes are
    persisted before broadcast. There is no fallback to charging the user's SOL.
-6. A successful **finalized** receipt grants the cosmetic idempotently. Confirmed,
+6. A successful **finalized** receipt grants the cosmetic idempotently. Bundles
+   snapshot their contents in the purchase quote and grant every entitlement in
+   one database transaction. One bundle counts as one burn receipt. Confirmed,
    pending, failed or uncertain transactions do not grant an item. Purchase history
    links to the transaction. The same item cannot have concurrent purchases for
    one account, and a signature cannot grant multiple purchases.

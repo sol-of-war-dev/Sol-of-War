@@ -2,13 +2,16 @@ import type { Express, Request } from "express";
 import { rateLimit } from "express-rate-limit";
 import type { PlayerSession } from "../PlayerAuth";
 import { InputError } from "../Store";
-import { flagSVG, shopItem } from "./Catalog";
+import { flagSVG, shopItem, rendererCatalog } from "./Catalog";
 import type { CosmeticShop } from "./Shop";
 export function registerShopRoutes(
   app: Express,
   shop: CosmeticShop,
   identityFor: (req: Request) => PlayerSession,
 ) {
+  app.get("/frontpot/api/shop/renderer-catalog", (_req, res) =>
+    res.set("Cache-Control", "public, max-age=60").json(rendererCatalog()),
+  );
   app.use(
     "/frontpot/api/shop",
     rateLimit({ windowMs: 60_000, limit: 60 }),
@@ -47,7 +50,7 @@ export function registerShopRoutes(
     res.json(shop.inventory(player(req).id)),
   );
   app.post("/frontpot/api/shop/equip", (req, res) =>
-    res.json(shop.equip(player(req).id, req.body?.itemID)),
+    res.json(shop.equip(player(req).id, req.body?.itemID, req.body?.slot)),
   );
   app.post("/frontpot/api/shop/prepare", async (req, res) =>
     res.json(await shop.prepare(player(req), req.body?.id, req.body?.itemID)),

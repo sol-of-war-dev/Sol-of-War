@@ -873,6 +873,8 @@ export function tierListingRail(): TierListingRail {
 }
 
 export function cosmeticsJsonUrl(): string {
+  if (import.meta.env.VITE_FRONTPOT)
+    return "/frontpot/api/shop/renderer-catalog";
   return `${getApiBase()}/cosmetics.json?rail=${tierListingRail()}`;
 }
 

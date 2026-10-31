@@ -3,17 +3,18 @@ import { EventBus } from "@openfront/shared/EventBus";
 import { toWireGameStartInfo } from "@openfront/shared/SharedUtil";
 import { GameRecordSchema } from "@openfront/shared/WireSchemas";
 import { html, render, svg } from "lit";
+import { fetchCosmetics } from "../client/Cosmetics";
 import { loadGameClient, prefetchGameClient } from "../client/GameClientLoader";
 import type { GameStartingModal } from "../client/GameStartingModal";
 import { loadModal } from "../client/LazyModals";
 import { UserSettings } from "../client/UserSettings";
 import { translateText } from "../client/Utils";
 import { adminView, clearAdmin, refreshAdmin } from "./AdminView";
-import { parseSolAmount } from "./Amounts";
 import "./GameSetup";
-import { requestApi } from "./ApiResponse";
+import { parseSolAmount } from "./Amounts";
 import "../client/components/LevelBadge";
 import "./PrizePot";
+import { requestApi } from "./ApiResponse";
 import brandSymbol from "./assets/sol-of-war-symbol.png";
 import brandWordmark from "./assets/sol-of-war-wordmark.png";
 import { CountdownClock } from "./CountdownClock";
@@ -21,11 +22,11 @@ import { gameRulesContent } from "./GameRulesView";
 import type { Pool } from "./MatchLedger";
 import type { PaymentStatus } from "./payments/DevnetPayments";
 import { assertNativeTransfer } from "./payments/NativeTransferPolicy";
-import { currencyLabel, type PaymentMode } from "./payments/Network";
 import "../client/LangSelector";
 import "../client/GameStartingModal";
 import "../client/styles.css";
 import "./style.css";
+import { currencyLabel, type PaymentMode } from "./payments/Network";
 import {
   paymentView,
   paymentLabel,
@@ -1220,6 +1221,7 @@ async function connectWallet() {
 async function startTutorial() {
   if (room)
     throw new Error("Leave your current match before starting the tutorial.");
+  await fetchCosmetics();
   const client = await loadGameClient();
   previewRoom = null;
   new UserSettings().setTutorialDismissed(false);
@@ -1285,6 +1287,7 @@ async function enter(nextRoom: PublicRoom, background = false) {
   // active game socket in another tab. Connect only on an explicit return.
   if (background) return;
   const requestGeneration = ++generation;
+  await fetchCosmetics();
   const client = await loadGameClient();
   if (requestGeneration !== generation) return;
   const lobby = client.joinLobby(new EventBus(), {
@@ -1420,6 +1423,7 @@ async function watchLive(r: PublicRoom) {
   if (room)
     throw new Error("Leave your current match before watching another game.");
   if (!(await ensureIdentity(() => watchLive(r)))) return;
+  await fetchCosmetics();
   const client = await loadGameClient();
   watchingLive = true;
   spectatorLoading = true;
@@ -3498,6 +3502,7 @@ async function replayMatch(pool: Pick<Pool, "matchID" | "name">) {
   const record = GameRecordSchema.parse(
     await api(`/history/${pool.matchID}/replay`),
   );
+  await fetchCosmetics();
   const client = await loadGameClient();
   // Joining a match while the replay loads must not replace its live connection.
   if (room || inGame)

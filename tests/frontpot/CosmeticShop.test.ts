@@ -1,3 +1,4 @@
+import { PlayerCosmeticsSchema } from "@openfront/shared/WireSchemas";
 import {
   generateKeyPair,
   getAddressFromPublicKey,
@@ -22,7 +23,13 @@ import {
   TOKEN_PROGRAM,
   TOKEN_2022_PROGRAM,
 } from "../../src/frontpot/shop/BurnPolicy";
-import { flagSVG, SHOP_ITEMS } from "../../src/frontpot/shop/Catalog";
+import {
+  flagSVG,
+  SHOP_ITEMS,
+  rendererCatalog,
+  purchaseItems,
+  resolvedAppearance,
+} from "../../src/frontpot/shop/Catalog";
 import { CosmeticShop, shopConfig } from "../../src/frontpot/shop/Shop";
 const dbs: DatabaseSync[] = [];
 afterEach(() => dbs.splice(0).forEach((db) => db.close()));
@@ -211,7 +218,7 @@ it("persists before sending, grants only at finality, survives restart, and equi
   expect(restarted.inventory(f.identity.id).owned).toEqual(["ember-standard"]);
   restarted.equip(f.identity.id, "ember-standard");
   expect(restarted.cosmetics(f.identity.id)).toEqual({
-    flag: "/frontpot/api/shop/art/ember-standard.svg?v=1",
+    flag: "/frontpot/api/shop/art/ember-standard.svg?v=2",
   });
   expect(restarted.cosmetics("stranger")).toBeUndefined();
   expect(restarted.receipts()).toHaveLength(1);
@@ -346,4 +353,128 @@ it("supports the real Token-2022 burn layout and rejects unreviewed mint extensi
   await expect(
     f.shop.prepare(f.identity, randomUUID(), "solar-command"),
   ).rejects.toThrow(/supported/);
+});
+
+it("covers every cosmetic category and effect slot with schema-valid original render data", () => {
+  const catalog = rendererCatalog();
+  expect(SHOP_ITEMS).toHaveLength(42);
+  expect(new Set(SHOP_ITEMS.map((i) => i.category)).size).toBe(6);
+  expect(Object.keys(catalog.patterns)).toHaveLength(3);
+  expect(Object.keys(catalog.flags)).toHaveLength(3);
+  expect(Object.keys(catalog.skins!)).toHaveLength(3);
+  expect(Object.keys(catalog.crowns!)).toHaveLength(3);
+  expect(
+    Object.values(catalog.effects!).flatMap((group) => Object.values(group!)),
+  ).toHaveLength(27);
+  expect(
+    new Set(
+      SHOP_ITEMS.filter((i) => i.category === "effect").map((i) => i.slot),
+    ).size,
+  ).toBe(9);
+  expect(new Set(SHOP_ITEMS.map((i) => i.cosmetic.name)).size).toBe(42);
+  for (const item of SHOP_ITEMS) {
+    expect(item.cosmetic.name).toMatch(/^[a-z0-9_]{1,32}$/);
+    if (item.category === "bundle") expect(item.members).toHaveLength(13);
+    else
+      expect(
+        PlayerCosmeticsSchema.safeParse(resolvedAppearance([item])).success,
+      ).toBe(true);
+  }
+});
+it("grants all bundle members only at finality, counts one burn, and persists independent equipment slots", async () => {
+  const f = await fixture(),
+    id = randomUUID();
+  const p = await f.shop.prepare(f.identity, id, "ember-collection");
+  expect(p.grants).toEqual(purchaseItems("ember-collection"));
+  await f.shop.submit(f.identity, id, await f.sign(p.wire.transaction));
+  expect(f.shop.inventory(f.identity.id).owned).toEqual([]);
+  f.state.status = { err: null, confirmationStatus: "finalized", slot: 12 };
+  await f.shop.reconcilePending();
+  await f.shop.reconcilePending();
+  expect(f.shop.inventory(f.identity.id).owned.sort()).toEqual(
+    p.grants!.slice().sort(),
+  );
+  expect(f.shop.activity()).toMatchObject({
+    purchases: 1,
+    totalTokens: "12000",
+  });
+  expect(f.shop.receipts()).toHaveLength(1);
+  for (const item of SHOP_ITEMS.filter(
+    (i) => i.collection === "Ember" && i.slot,
+  ))
+    f.shop.equip(f.identity.id, item.id);
+  const appearance = f.shop.cosmetics(f.identity.id)!;
+  expect(appearance.flag).toContain("ember-standard");
+  expect(appearance.skin?.name).toBe("ember_forge");
+  expect(appearance.pattern).toBeUndefined();
+  expect(appearance.crown?.name).toBe("ember_diadem");
+  expect(Object.keys(appearance.effects!)).toHaveLength(9);
+  expect(PlayerCosmeticsSchema.safeParse(appearance).success).toBe(true);
+  f.shop.equip(f.identity.id, "ember-pattern");
+  expect(f.shop.cosmetics(f.identity.id)?.skin).toBeUndefined();
+  expect(f.shop.cosmetics(f.identity.id)?.pattern?.name).toBe("ember_ramparts");
+  expect(() => f.shop.equip(f.identity.id, "ember-crown", "flag")).toThrow(
+    /slot/,
+  );
+  expect(() => f.shop.equip(f.identity.id, "ember-collection")).toThrow(
+    /equippable/,
+  );
+  expect(() => f.shop.equip("other", "ember-crown")).toThrow(/own/);
+  const restarted = new CosmeticShop(f.db, f.config, f.wallets);
+  expect(Object.keys(restarted.inventory(f.identity.id).equipped)).toHaveLength(
+    12,
+  );
+  restarted.equip(f.identity.id, null, "crown");
+  expect(restarted.cosmetics(f.identity.id)?.crown).toBeUndefined();
+  expect(restarted.cosmetics(f.identity.id)?.flag).toBeDefined();
+  await expect(
+    restarted.prepare(f.identity, randomUUID(), "ember-crown"),
+  ).rejects.toThrow(/already own/);
+});
+it("prevents overlapping bundle burns and single-item burns, including concurrent requests", async () => {
+  const f = await fixture();
+  const results = await Promise.allSettled([
+    f.shop.prepare(f.identity, randomUUID(), "violet-collection"),
+    f.shop.prepare(f.identity, randomUUID(), "violet-crown"),
+  ]);
+  expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+  const p = (
+    results.find((r) => r.status === "fulfilled") as PromiseFulfilledResult<
+      Awaited<ReturnType<CosmeticShop["prepare"]>>
+    >
+  ).value;
+  await f.shop.cancel(f.identity.id, p.id);
+  const single = await f.shop.prepare(f.identity, randomUUID(), "violet-crown");
+  f.state.status = { err: null, confirmationStatus: "finalized", slot: 12 };
+  await f.shop.submit(
+    f.identity,
+    single.id,
+    await f.sign(single.wire.transaction),
+  );
+  await expect(
+    f.shop.prepare(f.identity, randomUUID(), "violet-collection"),
+  ).rejects.toThrow(/already own/);
+});
+it("migrates existing flag ownership and equipment without resurrecting a cleared flag", async () => {
+  const f = await fixture();
+  f.db
+    .prepare("INSERT INTO shop_inventory VALUES(?,?,?,?)")
+    .run(
+      f.identity.id,
+      "ember-standard",
+      "historic-purchase",
+      "historic-signature",
+    );
+  f.db
+    .prepare("INSERT INTO shop_equipped VALUES(?,?)")
+    .run(f.identity.id, "ember-standard");
+  const migrated = new CosmeticShop(f.db, f.config, f.wallets);
+  expect(migrated.inventory(f.identity.id).owned).toContain("ember-standard");
+  expect(migrated.inventory(f.identity.id).equipped.flag).toBe(
+    "ember-standard",
+  );
+  migrated.equip(f.identity.id, null, "flag");
+  expect(
+    new CosmeticShop(f.db, f.config, f.wallets).cosmetics(f.identity.id),
+  ).toBeUndefined();
 });

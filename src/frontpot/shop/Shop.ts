@@ -10,7 +10,14 @@ import {
   TOKEN_2022_PROGRAM,
   type BurnTerms,
 } from "./BurnPolicy";
-import { flagURL, SHOP_ITEMS, SHOP_MINT, shopItem } from "./Catalog";
+import {
+  flagURL,
+  SHOP_ITEMS,
+  SHOP_MINT,
+  shopItem,
+  purchaseItems,
+  resolvedAppearance,
+} from "./Catalog";
 
 export type ShopConfig = {
   enabled: boolean;
@@ -21,6 +28,7 @@ export type Purchase = {
   id: string;
   playerID: string;
   itemID: string;
+  grants?: string[];
   terms: BurnTerms;
   wire: Wire;
   createdAt: number;
@@ -76,7 +84,12 @@ export class CosmeticShop {
       throw new Error("Shop requires user-owned wallets and fee sponsorship");
     db.exec(`CREATE TABLE IF NOT EXISTS shop_purchases(id TEXT PRIMARY KEY, player_id TEXT NOT NULL,item_id TEXT NOT NULL,body TEXT NOT NULL,UNIQUE(player_id,item_id));
       CREATE TABLE IF NOT EXISTS shop_inventory(player_id TEXT NOT NULL,item_id TEXT NOT NULL,purchase_id TEXT NOT NULL UNIQUE,signature TEXT NOT NULL UNIQUE,PRIMARY KEY(player_id,item_id));
-      CREATE TABLE IF NOT EXISTS shop_equipped(player_id TEXT PRIMARY KEY,item_id TEXT NOT NULL);`);
+      CREATE TABLE IF NOT EXISTS shop_equipped(player_id TEXT PRIMARY KEY,item_id TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS shop_entitlements(player_id TEXT NOT NULL,item_id TEXT NOT NULL,purchase_id TEXT NOT NULL,PRIMARY KEY(player_id,item_id));
+      CREATE TABLE IF NOT EXISTS shop_loadout(player_id TEXT NOT NULL,slot TEXT NOT NULL,item_id TEXT NOT NULL,PRIMARY KEY(player_id,slot));
+      INSERT OR IGNORE INTO shop_entitlements SELECT player_id,item_id,purchase_id FROM shop_inventory;
+      INSERT OR IGNORE INTO shop_loadout SELECT player_id,'flag',item_id FROM shop_equipped;
+      DELETE FROM shop_equipped;`);
   }
   private get(id: string): Purchase | null {
     const row = this.db
@@ -86,7 +99,7 @@ export class CosmeticShop {
   }
   private owned(player: string) {
     return this.db
-      .prepare("SELECT item_id FROM shop_inventory WHERE player_id=?")
+      .prepare("SELECT item_id FROM shop_entitlements WHERE player_id=?")
       .all(player)
       .map((r) => String(r.item_id));
   }
@@ -106,10 +119,12 @@ export class CosmeticShop {
     return {
       walletAddress: this.wallets?.get(player)?.address ?? null,
       owned: this.owned(player),
-      equipped:
+      equipped: Object.fromEntries(
         this.db
-          .prepare("SELECT item_id FROM shop_equipped WHERE player_id=?")
-          .get(player)?.item_id ?? null,
+          .prepare("SELECT slot,item_id FROM shop_loadout WHERE player_id=?")
+          .all(player)
+          .map((r) => [String(r.slot), String(r.item_id)]),
+      ),
       purchases: this.db
         .prepare(
           "SELECT body FROM shop_purchases WHERE player_id=? ORDER BY rowid DESC",
@@ -129,35 +144,47 @@ export class CosmeticShop {
         }),
     };
   }
-  equip(player: string, item: unknown) {
-    if (item === null)
-      this.db
-        .prepare("DELETE FROM shop_equipped WHERE player_id=?")
-        .run(player);
-    else {
-      if (
-        typeof item !== "string" ||
-        !shopItem(item) ||
-        !this.owned(player).includes(item)
-      )
-        throw new InputError("You do not own this cosmetic");
+  equip(player: string, item: unknown, slot?: unknown) {
+    if (item === null) {
+      if (slot === undefined)
+        this.db
+          .prepare("DELETE FROM shop_loadout WHERE player_id=?")
+          .run(player);
+      else {
+        if (
+          typeof slot !== "string" ||
+          !SHOP_ITEMS.some((i) => i.slot === slot)
+        )
+          throw new InputError("Unknown cosmetic slot");
+        this.db
+          .prepare("DELETE FROM shop_loadout WHERE player_id=? AND slot=?")
+          .run(player, slot);
+      }
+    } else {
+      const selected = typeof item === "string" ? shopItem(item) : undefined;
+      if (!selected?.slot || !this.owned(player).includes(selected.id))
+        throw new InputError("You do not own this equippable cosmetic");
+      if (slot !== undefined && slot !== selected.slot)
+        throw new InputError("Cosmetic does not fit this slot");
       this.db
         .prepare(
-          "INSERT INTO shop_equipped VALUES(?,?) ON CONFLICT(player_id) DO UPDATE SET item_id=excluded.item_id",
+          "INSERT INTO shop_loadout VALUES(?,?,?) ON CONFLICT(player_id,slot) DO UPDATE SET item_id=excluded.item_id",
         )
-        .run(player, item);
+        .run(player, selected.slot, selected.id);
     }
     return this.inventory(player);
   }
   cosmetics(player: string) {
-    const item = this.db
+    const rows = this.db
       .prepare(
-        "SELECT e.item_id FROM shop_equipped e JOIN shop_inventory i ON i.player_id=e.player_id AND i.item_id=e.item_id WHERE e.player_id=?",
+        "SELECT e.item_id,e.slot FROM shop_loadout e JOIN shop_entitlements i ON i.player_id=e.player_id AND i.item_id=e.item_id WHERE e.player_id=?",
       )
-      .get(player)?.item_id;
-    return typeof item === "string" && shopItem(item)
-      ? { flag: flagURL(item) }
-      : undefined;
+      .all(player);
+    const items = rows.flatMap((row) => {
+      const item = shopItem(String(row.item_id));
+      return item?.slot === row.slot ? [item] : [];
+    });
+    return items.length ? resolvedAppearance(items) : undefined;
   }
   private async exclusive<T>(player: string, f: () => Promise<T>): Promise<T> {
     if (this.locks.has(player))
@@ -193,6 +220,22 @@ export class CosmeticShop {
       }
       if (this.owned(identity.id).includes(itemID))
         throw new InputError("You already own this cosmetic");
+      const grants = purchaseItems(itemID);
+      if (grants.some((item) => this.owned(identity.id).includes(item)))
+        throw new InputError(
+          "You already own part of this bundle. Choose the remaining items individually.",
+        );
+      for (const row of this.db
+        .prepare("SELECT body FROM shop_purchases WHERE player_id=?")
+        .all(identity.id)) {
+        const other = JSON.parse(String(row.body)) as Purchase;
+        if (
+          (other.grants ?? [other.itemID]).some((item) => grants.includes(item))
+        )
+          throw new InputError(
+            "An existing purchase overlaps this selection. Check its receipt before buying.",
+          );
+      }
       const existing = this.db
         .prepare(
           "SELECT id FROM shop_purchases WHERE player_id=? AND item_id=?",
@@ -301,6 +344,7 @@ export class CosmeticShop {
         id,
         playerID: identity.id,
         itemID,
+        grants,
         terms,
         wire: {
           transaction: burnWire(
@@ -384,11 +428,26 @@ export class CosmeticShop {
       // and bound to this unique purchase. Arbitrary pasted receipts are not accepted.
       assertBurn(job.transaction, p.terms);
       this.activityCache = null;
-      this.db
-        .prepare(
-          "INSERT INTO shop_inventory VALUES(?,?,?,?) ON CONFLICT(player_id,item_id) DO NOTHING",
-        )
-        .run(p.playerID, p.itemID, p.id, job.signature);
+      // Receipt and every bundle entitlement commit together. A restart can
+      // neither partially grant a bundle nor count its single burn many times.
+      this.db.exec("BEGIN IMMEDIATE");
+      try {
+        this.db
+          .prepare(
+            "INSERT INTO shop_inventory VALUES(?,?,?,?) ON CONFLICT(player_id,item_id) DO NOTHING",
+          )
+          .run(p.playerID, p.itemID, p.id, job.signature);
+        for (const item of p.grants ?? [p.itemID])
+          this.db
+            .prepare(
+              "INSERT INTO shop_entitlements VALUES(?,?,?) ON CONFLICT(player_id,item_id) DO NOTHING",
+            )
+            .run(p.playerID, item, p.id);
+        this.db.exec("COMMIT");
+      } catch (error) {
+        this.db.exec("ROLLBACK");
+        throw error;
+      }
     }
   }
   async reconcilePending() {

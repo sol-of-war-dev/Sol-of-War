@@ -74,6 +74,9 @@ it("protects purchases and inventory, derives the owner from auth, and serves on
     expect(shop.submit.mock.calls[0][0]).toEqual(identity);
     expect(shop.equip.mock.calls[0][0]).toBe("alice");
     expect(shop.cancel.mock.calls[0][0]).toBe("alice");
+    const renderer = await fetch(`${base}/renderer-catalog`);
+    expect(renderer.status).toBe(200);
+    expect(Object.keys((await renderer.json()).flags)).toHaveLength(3);
     const art = await fetch(`${base}/art/ember-standard.svg`);
     expect(art.headers.get("content-type")).toContain("image/svg+xml");
     expect(await art.text()).toContain("<svg");
