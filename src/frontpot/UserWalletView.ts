@@ -332,6 +332,7 @@ export class UserWalletView {
         receipt?: ChainJob;
         id: string;
         source: string;
+        feePayer?: string;
         destination: string;
         lamports: number;
         network: string;
@@ -362,7 +363,7 @@ export class UserWalletView {
     }
     assertNativeTransfer(prepared.transaction, {
       source: d.wallet.address,
-      payer: d.wallet.address,
+      payer: prepared.feePayer ?? d.wallet.address,
       transfers: [{ to: p.destination, lamports: prepared.lamports }],
     });
     const transaction = await (
@@ -565,8 +566,8 @@ export class UserWalletView {
                                   }}
                               /></label>
                               <p>
-                                Your wallet pays the network fee. Leave enough
-                                SOL for the fee shown by your wallet.
+                                Sol of War pays the network fee for new
+                                withdrawals. Your approval is still required.
                               </p>
                               <label class="sw-confirm"
                                 ><input

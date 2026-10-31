@@ -5,6 +5,7 @@ import { InputError } from "../Store";
 import { decodeAddress } from "../Wallet";
 import { acceptDepositSignature } from "./DepositSignature";
 import type { DevnetTransactions, Wire, ChainJob } from "./DevnetTransactions";
+import type { FeeSponsor } from "./FeeSponsor";
 import type { PaymentNetwork } from "./Network";
 import type { PlayerWallets, WalletSnapshot } from "./PlayerWallets";
 
@@ -33,6 +34,7 @@ export type UserWithdrawal = {
 };
 type PreparedWithdrawal = Wire & {
   id: string;
+  feePayer?: string;
   source: string;
   destination: string;
   lamports: number;
@@ -136,6 +138,7 @@ export class UserOwnedWallets {
     private verifier: Pick<PrivyUserWalletVerifier, "verify">,
     readonly transactions: DevnetTransactions,
     readonly legacy: PlayerWallets | null,
+    readonly feeSponsor?: FeeSponsor,
   ) {
     if (
       !legacy &&
@@ -383,7 +386,7 @@ export class UserOwnedWallets {
       ) {
         const replacement = await this.transactions.rpc.build(
           wallet.address,
-          wallet.address,
+          saved.feePayer ?? wallet.address,
           [{ to: destination, lamports }],
         );
         if (replacement.lastValidBlockHeight <= height)
@@ -404,6 +407,7 @@ export class UserOwnedWallets {
       }
       return {
         ...saved.wire,
+        feePayer: saved.feePayer,
         receipt: this.transactions.get(id),
         id,
         source: wallet.address,
@@ -434,12 +438,13 @@ export class UserOwnedWallets {
       );
     const wire = await this.transactions.rpc.build(
       wallet.address,
-      wallet.address,
+      this.feeSponsor?.payer.address ?? wallet.address,
       [{ to: destination, lamports }],
     );
     const intent = {
       id,
       playerID: identity.id,
+      feePayer: this.feeSponsor?.payer.address,
       source: wallet.address,
       destination,
       lamports,
@@ -475,6 +480,9 @@ export class UserOwnedWallets {
       playerID: string;
       source: string;
       wire: Wire;
+      feePayer?: string;
+      destination: string;
+      lamports: number;
       cancelled?: boolean;
     };
     if (saved.playerID !== identity.id || saved.source !== wallet.address)
@@ -482,12 +490,27 @@ export class UserOwnedWallets {
     if (saved.cancelled)
       throw new InputError("This withdrawal request was cancelled.");
     if (!this.transactions.get(id)) {
-      const wire = await acceptDepositSignature(
-        saved.wire,
-        transaction,
-        wallet.address,
-        this.transactions.rpc,
-      );
+      if (saved.feePayer && saved.feePayer !== this.feeSponsor?.payer.address)
+        throw new InputError(
+          "The original fee sponsor is unavailable. No payment was submitted.",
+        );
+      const wire = saved.feePayer
+        ? await this.feeSponsor!.sign(
+            id,
+            identity.id,
+            saved.wire,
+            transaction,
+            {
+              source: wallet.address,
+              transfers: [{ to: saved.destination, lamports: saved.lamports }],
+            },
+          )
+        : await acceptDepositSignature(
+            saved.wire,
+            transaction,
+            wallet.address,
+            this.transactions.rpc,
+          );
       await this.transactions.persist(id, wire, () => {
         const current = this.db
           .prepare("SELECT body FROM user_wallet_withdrawals WHERE id=?")

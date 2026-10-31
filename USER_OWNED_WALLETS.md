@@ -106,3 +106,12 @@ A final two-player legacy-funded match (`0cb4ca60`) verified recovery of a late 
 - [Get key quorum](https://docs.privy.io/api-reference/key-quorums/get)
 - [Identity tokens](https://docs.privy.io/user-management/users/identity-tokens)
 - [Wallet policies and controls](https://docs.privy.io/security/wallet-infrastructure/policy-and-controls)
+
+
+## Network fee sponsorship — October 30, 2026 implementation
+
+New user-owned match entries and in-app withdrawals use the platform fee payer. Users must still sign the exact native-SOL transfer; the backend cannot authorize their spending. Only after verifying that signature does the server validate the fee, simulate the transfer, and request the separate platform fee signature. Both signatures are verified, then the signed transaction is persisted before broadcast. Existing issued requests keep their original fee payer; cancel/leave and create a fresh request to use sponsorship. There is no silent fallback to charging the user when sponsorship fails.
+
+The sponsor rejects message changes, extra instructions (including priority-fee changes), missing user signatures, expired requests, failed simulations, and network fees above 20,000 lamports. Durable conservative reservations limit sponsorship to 0.1 SOL per UTC day globally and 0.002 SOL per player, reserving the 20,000-lamport maximum per intent. Repeated submission of a persisted intent uses the same transaction. Sponsorship is availability-limited; independent wallet use and inbound external deposits are not sponsored. Match platform fees are separate from network fees.
+
+A real devnet two-signature transfer finalized at slot 516948142: [transaction](https://explorer.solana.com/tx/zQieEUVPmVbtskWTQAfwEUzsn89JLMuunCgqpLkqM5JjZPPMv3BhxwoHx6zYFWzFCMQftcrqoqAkSnqxr38UBTK?cluster=devnet). The source lost exactly 1,000,000 lamports, the recipient gained exactly 1,000,000, and the platform fee payer lost 10,000 for the network fee. This used existing rehearsal wallets and the real provider fee-payer signer without policy changes; it is not a new browser-based embedded-wallet or mainnet end-to-end test. Earlier receipts above accurately record the previous user-paid fees.

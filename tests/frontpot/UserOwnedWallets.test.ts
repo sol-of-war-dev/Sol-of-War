@@ -13,6 +13,7 @@ import {
   DevnetRPC,
   DevnetTransactions,
 } from "../../src/frontpot/payments/DevnetTransactions";
+import { FeeSponsor } from "../../src/frontpot/payments/FeeSponsor";
 import { GENESIS_HASHES } from "../../src/frontpot/payments/Network";
 import type { PlayerWallets } from "../../src/frontpot/payments/PlayerWallets";
 import {
@@ -125,7 +126,7 @@ it.each([
 });
 const dbs: DatabaseSync[] = [];
 afterEach(() => dbs.splice(0).forEach((db) => db.close()));
-async function walletFixture() {
+async function walletFixture(sponsored = false) {
   const db = new DatabaseSync(":memory:");
   dbs.push(db);
   const key = await generateKeyPair();
@@ -135,34 +136,38 @@ async function walletFixture() {
   const rpc = new DevnetRPC("https://rpc.invalid", async (_url, init) => {
     const { method, params } = JSON.parse(String(init?.body));
     const result =
-      method === "getGenesisHash"
-        ? GENESIS_HASHES.devnet
-        : method === "getBalance"
-          ? { value: 10_000_000 }
-          : method === "getLatestBlockhash"
-            ? {
-                value: {
-                  blockhash: address,
-                  lastValidBlockHeight: height + 100,
-                },
-              }
-            : method === "isBlockhashValid"
-              ? { value: true }
-              : method === "getSignatureStatuses"
-                ? { value: [null] }
-                : method === "getBlockHeight"
-                  ? height
-                  : method === "sendTransaction"
-                    ? (() => {
-                        const signature = getSignatureFromTransaction(
-                          getTransactionDecoder().decode(
-                            Buffer.from(params[0], "base64"),
-                          ),
-                        );
-                        sent.add(signature);
-                        return signature;
-                      })()
-                    : undefined;
+      method === "getFeeForMessage"
+        ? { value: 10_000 }
+        : method === "simulateTransaction"
+          ? { value: { err: null } }
+          : method === "getGenesisHash"
+            ? GENESIS_HASHES.devnet
+            : method === "getBalance"
+              ? { value: 10_000_000 }
+              : method === "getLatestBlockhash"
+                ? {
+                    value: {
+                      blockhash: address,
+                      lastValidBlockHeight: height + 100,
+                    },
+                  }
+                : method === "isBlockhashValid"
+                  ? { value: true }
+                  : method === "getSignatureStatuses"
+                    ? { value: [null] }
+                    : method === "getBlockHeight"
+                      ? height
+                      : method === "sendTransaction"
+                        ? (() => {
+                            const signature = getSignatureFromTransaction(
+                              getTransactionDecoder().decode(
+                                Buffer.from(params[0], "base64"),
+                              ),
+                            );
+                            sent.add(signature);
+                            return signature;
+                          })()
+                        : undefined;
     if (result === undefined) throw new Error(`Unhandled RPC ${method}`);
     return new Response(JSON.stringify({ result }));
   });
@@ -174,8 +179,28 @@ async function walletFixture() {
       verifiedAt: Date.now(),
     })),
   };
+  const sponsorKey = await generateKeyPair();
+  const sponsorAddress = await getAddressFromPublicKey(sponsorKey.publicKey);
+  const sponsorSigner = {
+    sign: vi.fn(async (_id: string, wire: string) =>
+      getBase64EncodedWireTransaction(
+        await partiallySignTransaction(
+          [sponsorKey],
+          getTransactionDecoder().decode(Buffer.from(wire, "base64")),
+        ),
+      ),
+    ),
+  };
+  const sponsor = sponsored
+    ? new FeeSponsor(
+        db,
+        { id: "fee-payer", address: sponsorAddress },
+        sponsorSigner,
+        rpc,
+      )
+    : undefined;
   const tx = new DevnetTransactions(db, rpc),
-    service = new UserOwnedWallets(db, verifier, tx, null);
+    service = new UserOwnedWallets(db, verifier, tx, null, sponsor);
   const identity = {
     id: "alice",
     subject,
@@ -197,6 +222,9 @@ async function walletFixture() {
     tx,
     identity,
     ownedAddress,
+    sponsor,
+    sponsorSigner,
+    sponsorAddress,
     sign,
     sent,
     verifier,
@@ -439,4 +467,33 @@ it("remembers cancellation before preparation finishes and isolates the request 
     f.service.cancelWithdrawal({ ...f.identity, id: "bob" }, requestID),
   ).toThrow("Registered wallet");
   expect(f.sent.size).toBe(0);
+});
+
+it("sponsors a full-balance withdrawal only after user approval and persists one signed job", async () => {
+  const f = await walletFixture(true);
+  await f.service.register(f.identity, id);
+  const requestID = randomUUID();
+  const prepared = await f.service.prepareWithdrawal(
+    f.identity,
+    requestID,
+    destination,
+    "0.01",
+  );
+  expect(prepared.feePayer).toBe(f.sponsorAddress);
+  await expect(
+    f.service.submitWithdrawal(f.identity, requestID, prepared.transaction),
+  ).rejects.toThrow();
+  expect(f.sponsorSigner.sign).not.toHaveBeenCalled();
+  const signed = await f.sign(prepared.transaction);
+  await f.service.submitWithdrawal(f.identity, requestID, signed);
+  const recovered = new UserOwnedWallets(
+    f.db,
+    f.verifier,
+    f.tx,
+    null,
+    f.sponsor,
+  );
+  await recovered.submitWithdrawal(f.identity, requestID, signed);
+  expect(f.sent.size).toBe(1);
+  expect(f.sponsorSigner.sign).toHaveBeenCalledTimes(1);
 });

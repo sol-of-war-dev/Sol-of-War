@@ -82,7 +82,10 @@ async function fixture(
     async (_url: unknown, init: RequestInit | undefined) => {
       const { method, params } = JSON.parse(init!.body as string);
       let result: unknown;
-      if (method === "getGenesisHash") result = chain;
+      if (method === "getFeeForMessage") result = { value: 10_000 };
+      else if (method === "simulateTransaction")
+        result = { value: { err: null } };
+      else if (method === "getGenesisHash") result = chain;
       else if (method === "getLatestBlockhash")
         result = {
           value: {
@@ -1650,7 +1653,8 @@ it("user-owned funding requires its own signature, keeps login identity and free
     await f.sign(2, prep.transaction!),
   );
   expect(f.sent.size).toBe(1);
-  expect(f.signer.sign).not.toHaveBeenCalled();
+  expect(f.signer.sign).toHaveBeenCalledTimes(1);
+  expect(prep.feePayer).toBeDefined();
   expect(
     f.payments.payoutSeats(f.room.id, [
       { ...f.players[0], team: 0, joined: Date.now() },

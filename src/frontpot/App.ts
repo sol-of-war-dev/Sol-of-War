@@ -242,7 +242,7 @@ async function fundEntry() {
     signingAddress = owned.address;
     assertNativeTransfer(prepared.transaction, {
       source: signingAddress,
-      payer: signingAddress,
+      payer: prepared.feePayer ?? signingAddress,
       transfers: [{ to: prepared.poolAddress, lamports: target.lamports }],
     });
   }
@@ -3017,7 +3017,7 @@ function termsView() {
     <a class="fp-primary" href="/">Back to games</a>
     <p class="fp-eyebrow">SOL OF WAR · ${modeBadge()}</p>
     <h1>Terms of Service</h1>
-    <p class="sq-terms-date">Updated October 29, 2026</p>
+    <p class="sq-terms-date">Updated October 30, 2026</p>
     ${
       authConfig?.userOwnedWalletsEnabled
         ? html`<h2>Personal wallets and legacy balances</h2>
@@ -3026,8 +3026,10 @@ function termsView() {
               registers no server spending signer. You approve transfers through
               your wallet and can export your key through Privy’s protected
               interface. Protect your sign-in methods and device; this does not
-              remove provider, account compromise or website risks. Your wallet
-              pays its outgoing network fees.
+              remove provider, account compromise or website risks. Sol of War
+              sponsors network fees for new in-app entries and withdrawals,
+              subject to availability and usage limits. External wallet funding
+              and transfers made outside the app may still charge your wallet.
             </p>
             <p>
               Older account wallets remain under platform custody until you

@@ -45,10 +45,12 @@ export function paymentView(
     <small
       >${
         {
-          unfunded: `${network === "devnet" ? "Test SOL only." : "This entry uses real SOL."} ${fromBalance ? "Confirm to pay from your Sol of War balance. The platform covers the network fee." : "Approve this entry in your wallet. Deposit network fees apply."}`,
+          unfunded: `${network === "devnet" ? "Test SOL only." : "This entry uses real SOL."} ${fromBalance ? "Confirm to pay from your Sol of War balance. The platform covers the network fee." : "Approve this entry in your wallet. Sol of War sponsors new in-app user-owned wallet entries."}`,
           awaiting_signature: fromBalance
             ? "Confirm this entry using your Sol of War balance."
-            : "Approve the entry in your wallet. Deposit network fees apply.",
+            : status?.feePayer
+              ? "Approve the entry in your wallet. Sol of War pays the network fee."
+              : "This existing request uses your wallet for network fees. Leave and prepare a new in-app entry for sponsorship.",
           confirming:
             "Waiting for final confirmation on Solana. Stay connected; late entries are refunded.",
           funded:

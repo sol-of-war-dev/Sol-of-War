@@ -163,6 +163,7 @@ const userOwnedWallets =
         }),
         payments.transactions,
         playerWallets,
+        payments.feeSponsor,
       )
     : null;
 const reconciliation = payments

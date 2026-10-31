@@ -1,0 +1,16 @@
+{
+  "checkedAt": "2026-10-31T00:02:24.023Z",
+  "network": "devnet",
+  "signature": "zQieEUVPmVbtskWTQAfwEUzsn89JLMuunCgqpLkqM5JjZPPMv3BhxwoHx6zYFWzFCMQftcrqoqAkSnqxr38UBTK",
+  "slot": 516948142,
+  "source": "CTesggEX1CmgosFLzDib6PTq8SgFB1GnYa75uidb5JvD",
+  "destination": "Ab2LZLurTpCZJFse9kbzjHvYo9CatVGv2DMojeRQLDPY",
+  "feePayer": "5GwHZg4ZsM9DBHwvw89Z2JKdViRUrupGEqJMVFYZSJDr",
+  "amountLamports": 1000000,
+  "feeLamports": 10000,
+  "sourceDeductionLamports": 1000000,
+  "payerDeductionLamports": 10000,
+  "state": "finalized",
+  "userSignatureRequired": true,
+  "providerPolicyChanged": false
+}

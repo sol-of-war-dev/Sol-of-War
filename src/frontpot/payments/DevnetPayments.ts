@@ -15,6 +15,7 @@ import {
   type PoolSigner,
   type Wire,
 } from "./DevnetTransactions";
+import { FeeSponsor } from "./FeeSponsor";
 import type { PaymentNetwork } from "./Network";
 import type { PaymentLimits } from "./PaymentConfig";
 import type { PlayerWallets } from "./PlayerWallets";
@@ -38,6 +39,7 @@ type Entry = {
   wallet: string;
   paymentWallet?: string;
   userSigned?: boolean;
+  feePayer?: string;
   lamports: number;
   cancelled: boolean;
   wire: Wire;
@@ -57,6 +59,7 @@ export type PaymentStatus = {
   network: PaymentNetwork;
   fundingSource?: "balance" | "external" | "user-wallet";
   fundingAddress?: string;
+  feePayer?: string;
   matchID: string;
   state: Entry["state"] | "unfunded";
   lamports: number;
@@ -74,6 +77,7 @@ export interface WalletProvisioner {
  * Only this service's verified funded roster may enter the result ledger. */
 export class DevnetPayments {
   readonly outbox: SettlementOutbox;
+  readonly feeSponsor: FeeSponsor;
   readonly returns: UnmatchedReturns;
   private running = new Map<string, Promise<unknown>>();
   constructor(
@@ -86,6 +90,7 @@ export class DevnetPayments {
     private assertAdmissions: () => void = () => {},
     private limits?: PaymentLimits,
   ) {
+    this.feeSponsor = new FeeSponsor(db, payer, signer, transactions.rpc);
     db.exec(`CREATE TABLE IF NOT EXISTS devnet_matches(id TEXT PRIMARY KEY,body TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS devnet_entries(id TEXT PRIMARY KEY,match_id TEXT NOT NULL,player_id TEXT NOT NULL,wallet TEXT NOT NULL,body TEXT NOT NULL,UNIQUE(match_id,player_id),UNIQUE(match_id,wallet));`);
     this.outbox = new SettlementOutbox(db, this.network);
@@ -250,7 +255,7 @@ export class DevnetPayments {
         this.assertLimits(room);
         const wire = await this.transactions.rpc.build(
           paymentWallet ?? identity.wallet!,
-          paymentWallet && !userSigned
+          paymentWallet
             ? this.payer.address
             : (paymentWallet ?? identity.wallet!),
           [{ to: m.wallet!.address, lamports: m.stakeLamports }],
@@ -262,7 +267,9 @@ export class DevnetPayments {
           playerID: identity.id,
           wallet: identity.wallet!,
           paymentWallet,
-          ...(userSigned ? { userSigned: true } : {}),
+          ...(userSigned
+            ? { userSigned: true, feePayer: this.payer.address }
+            : {}),
           lamports: m.stakeLamports,
           cancelled: false,
           wire,
@@ -320,12 +327,28 @@ export class DevnetPayments {
       if (!["awaiting_signature", "confirming"].includes(e.state))
         return this.status(matchID, identity.id);
       if (!this.transactions.get(`deposit:${e.id}`)) {
-        const wire = await acceptDepositSignature(
-          e.wire,
-          signed,
-          e.paymentWallet ?? e.wallet,
-          this.transactions.rpc,
-        );
+        const wire = e.feePayer
+          ? await this.feeSponsor.sign(
+              `deposit:${e.id}`,
+              identity.id,
+              e.wire,
+              signed,
+              {
+                source: e.paymentWallet ?? e.wallet,
+                transfers: [
+                  {
+                    to: this.match(matchID)!.wallet!.address,
+                    lamports: e.lamports,
+                  },
+                ],
+              },
+            )
+          : await acceptDepositSignature(
+              e.wire,
+              signed,
+              e.paymentWallet ?? e.wallet,
+              this.transactions.rpc,
+            );
         await this.transactions.persist(`deposit:${e.id}`, wire);
       }
       // Re-read after asynchronous signature verification: a deadline/leave may
@@ -417,6 +440,7 @@ export class DevnetPayments {
             ? "balance"
             : "external"
         : undefined,
+      feePayer: e?.feePayer,
       fundingAddress: e ? (e.paymentWallet ?? e.wallet) : undefined,
       matchID,
       state: e?.state ?? "unfunded",
