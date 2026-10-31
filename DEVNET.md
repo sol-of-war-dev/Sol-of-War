@@ -27,7 +27,7 @@ The policy itself is not a network lock. Do not fund these test wallets on mainn
 
 ## Configuration reference
 
-1. In the existing Sol Siege Privy app, create a dedicated authorization key/owner for test pool wallets, plus policies limited to the intended Solana transfer/signing operations. Do not grant ownership of players' external wallets. Review permitted recipients and limits against the tester allowlist and treasury. Private authorization key storage must be server-only, separate from source.
+1. In the existing Sol of War Privy app, create a dedicated authorization key/owner for test pool wallets, plus policies limited to the intended Solana transfer/signing operations. Do not grant ownership of players' external wallets. Review permitted recipients and limits against the tester allowlist and treasury. Private authorization key storage must be server-only, separate from source.
 2. Create a separate managed Solana fee payer under the intended owner/policies. Record its public address and Privy wallet ID. Keep pool wallets separate from the fee payer and treasury.
 3. Obtain devnet test SOL for the fee payer (at least 0.01 SOL) and make the treasury account rent-exempt on devnet. Startup checks both and verifies the RPC genesis. No real SOL is needed.
 4. Configure these server variables through private environment configuration, never chat or tracked files:

@@ -1,6 +1,6 @@
 > Historical implementation notes. For the supported local setup and current handoff, see [README.md](README.md) and [REPOSITORY.md](REPOSITORY.md). Statements below about public deployment status may be outdated.
 
-# SolSiege demo
+# Sol of War demo
 
 An independently branded fork of OpenFront for testing wallet sign-in and stake-based matchmaking. **No real-money wagering, deposits, escrow, withdrawals, or payouts.** All stakes and prize pools are simulations.
 
@@ -53,7 +53,7 @@ The replay check runs the actual isolated game engine from a compressed archive 
 
 ## Attribution and licenses
 
-© OpenFront and Contributors. Source is AGPL-3.0 with the additional terms in `LICENSE`. Licensed resources remain CC BY-SA 4.0 as described in `LICENSE-ASSETS`. SolSiege is independent and is not endorsed by OpenFront. Upstream proprietary logos and font files are not used or served. The new interface uses the bundled Overpass fonts; the game resources preserve their existing attribution. Game and lobby components use HTML/Lit. A lazy-loaded React island hosts Privy’s supported authentication UI.
+© OpenFront and Contributors. Source is AGPL-3.0 with the additional terms in `LICENSE`. Licensed resources remain CC BY-SA 4.0 as described in `LICENSE-ASSETS`. Sol of War is independent and is not endorsed by OpenFront. Upstream proprietary logos and font files are not used or served. The new interface uses the bundled Overpass fonts; the game resources preserve their existing attribution. Game and lobby components use HTML/Lit. A lazy-loaded React island hosts Privy’s supported authentication UI.
 
 `index.html`, upstream deployment scripts and the original README describe upstream OpenFront. **Use `demo.html`, `vite.demo.config.ts`, and `src/frontpot/Server.ts` for this demo.**
 

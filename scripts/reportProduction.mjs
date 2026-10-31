@@ -6,6 +6,7 @@ export const repository = "sol-of-war-dev/Sol-of-War";
 export const site = "https://solofwar.fun";
 const api = `https://api.github.com/repos/${repository}`;
 const task = "verify:live";
+export const environment = "Sol of War / production";
 
 export function validateRelease(release, health) {
   if (
@@ -31,6 +32,49 @@ const same = (a, b) =>
   a?.sourceDigest === b?.sourceDigest &&
   a?.builtDigest === b?.builtDigest;
 
+/** Rename display metadata only; preserve deployment state, SHA and links. */
+export async function normalizeDeploymentNames({ request, write = false }) {
+  const legacy = new Set(["Frontpot / production", "Production"]);
+  let renamed = 0;
+  for (let page = 1; ; page++) {
+    const deployments = await request(
+      "GET",
+      `${api}/deployments?per_page=100&page=${page}`,
+    );
+    for (const deployment of deployments) {
+      const owned =
+        deployment.task === task &&
+        deployment.payload?.reporter === "sol-of-war-live-release-v1";
+      const railway =
+        deployment.task === "deploy" &&
+        deployment.creator?.login === "railway-app[bot]";
+      if (!legacy.has(deployment.environment) || (!owned && !railway)) continue;
+      const [status] = await request(
+        "GET",
+        `${api}/deployments/${deployment.id}/statuses?per_page=1`,
+      );
+      if (
+        !status ||
+        !["success", "failure", "error", "inactive"].includes(status.state)
+      )
+        continue;
+      if (write)
+        await request("POST", `${api}/deployments/${deployment.id}/statuses`, {
+          state: status.state,
+          environment,
+          auto_inactive: false,
+          environment_url: status.environment_url ?? "",
+          log_url: status.log_url ?? "",
+          description:
+            "Sol of War deployment display name updated; recorded outcome unchanged.",
+        });
+      renamed++;
+    }
+    if (deployments.length < 100) break;
+  }
+  return { renamed, write };
+}
+
 /** Record observed releases. This never calls Railway or deploys application code. */
 export async function reportProduction({ request, logUrl, write = false }) {
   const snapshot = async () => {
@@ -43,7 +87,7 @@ export async function reportProduction({ request, logUrl, write = false }) {
   const release = await snapshot();
   const deployments = await request(
     "GET",
-    `${api}/deployments?environment=Production&per_page=100`,
+    `${api}/deployments?environment=${encodeURIComponent(environment)}&per_page=100`,
   );
   const owned = deployments.filter(
     (d) =>
@@ -89,7 +133,7 @@ export async function reportProduction({ request, logUrl, write = false }) {
         auto_merge: false,
         // The exact live SHA's Actions verification was checked above.
         required_contexts: [],
-        environment: "Production",
+        environment,
         production_environment: true,
         transient_environment: false,
         description: "Verified running release on solofwar.fun",
@@ -110,7 +154,7 @@ export async function reportProduction({ request, logUrl, write = false }) {
       );
     await request("POST", `${api}/deployments/${deployment.id}/statuses`, {
       state: "success",
-      environment: "Production",
+      environment,
       environment_url: site,
       log_url: logUrl,
       auto_inactive: false,
@@ -129,7 +173,7 @@ export async function reportProduction({ request, logUrl, write = false }) {
       if (previous?.state === "inactive") break;
       await request("POST", `${api}/deployments/${old.id}/statuses`, {
         state: "inactive",
-        environment: "Production",
+        environment,
         auto_inactive: false,
         description: "Superseded by a newer verified live release.",
       });
@@ -190,6 +234,8 @@ if (
     return response.json();
   };
   const logUrl = `https://github.com/${repository}/actions/runs/${process.env.GITHUB_RUN_ID}`;
+  const names = await normalizeDeploymentNames({ request, write });
+  console.log(JSON.stringify(names));
   const result = await reportProduction({ request, logUrl, write });
   console.log(JSON.stringify(result, null, 2));
   if (process.env.GITHUB_STEP_SUMMARY)

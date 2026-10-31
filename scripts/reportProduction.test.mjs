@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { reportProduction, repository, site } from "./reportProduction.mjs";
+import {
+  reportProduction,
+  normalizeDeploymentNames,
+  repository,
+  site,
+} from "./reportProduction.mjs";
 
 const release = {
   available: true,
@@ -64,7 +69,7 @@ test("records the live SHA and canonical URL, with auto-merge disabled", async (
   await f.run();
   assert.equal(f.writes[0].body.ref, release.sourceCommit);
   assert.equal(f.writes[0].body.auto_merge, false);
-  assert.equal(f.writes[0].body.environment, "Production");
+  assert.equal(f.writes[0].body.environment, "Sol of War / production");
   assert.equal(f.writes[1].body.environment_url, site);
   assert.equal(f.writes[1].body.state, "success");
 });
@@ -129,3 +134,59 @@ test("a rollback gets a new record and only reporter-owned predecessors become i
   assert.equal(f.writes[2].body.state, "inactive");
   assert.ok(f.writes[2].url.endsWith("/90/statuses"));
 });
+
+for (const write of [false, true])
+  test(`normalizes only owned finished deployment labels (write=${write})`, async () => {
+    const writes = [];
+    const request = async (method, url, body) => {
+      if (method === "POST") {
+        writes.push(body);
+        return {};
+      }
+      if (url.includes("/statuses"))
+        return [
+          {
+            state: "failure",
+            environment_url: site,
+            log_url: "https://railway.com/project/test",
+          },
+        ];
+      return [
+        {
+          id: 1,
+          environment: "Frontpot / production",
+          task: "deploy",
+          creator: { login: "railway-app[bot]" },
+        },
+        {
+          id: 2,
+          environment: "Production",
+          task: "verify:live",
+          payload: { reporter: "sol-of-war-live-release-v1" },
+        },
+        {
+          id: 3,
+          environment: "Other",
+          task: "deploy",
+          creator: { login: "railway-app[bot]" },
+        },
+        {
+          id: 4,
+          environment: "Production",
+          task: "deploy",
+          creator: { login: "someone-else" },
+        },
+      ];
+    };
+    assert.equal(
+      (await normalizeDeploymentNames({ request, write })).renamed,
+      2,
+    );
+    assert.equal(writes.length, write ? 2 : 0);
+    for (const body of writes) {
+      assert.equal(body.environment, "Sol of War / production");
+      assert.equal(body.state, "failure");
+      assert.equal(body.auto_inactive, false);
+      assert.equal(body.environment_url, site);
+    }
+  });

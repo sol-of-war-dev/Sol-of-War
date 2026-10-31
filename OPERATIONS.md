@@ -86,7 +86,7 @@ The S3 adapter uploads only the AES-GCM encrypted `.ssbackup` file. It reads the
 - `SOLSIEGE_BACKUP_S3_ACCESS_KEY_ID` and `SOLSIEGE_BACKUP_S3_SECRET_ACCESS_KEY`: bucket-scoped access.
 - `SOLSIEGE_BACKUP_S3_PATH_STYLE=true` only for a provider requiring path-style URLs.
 
-Retain the latest 12 snapshots and every snapshot from the last hour, then the newest per UTC hour for 24 hours and per UTC day for seven days. Pruning affects only exact SolSiege filenames under the active network prefix and follows a verified upload. Other objects and other networks are untouched. Keep the decryption key independently of both the game volume and bucket credentials. Railway's bucket service does not currently provide object locking or versioning; this is volume-loss protection, not protection from a compromised account that controls both credentials and the key.
+Retain the latest 12 snapshots and every snapshot from the last hour, then the newest per UTC hour for 24 hours and per UTC day for seven days. Pruning affects only recognized backup filenames under the active network prefix and follows a verified upload. Other objects and other networks are untouched. Keep the decryption key independently of both the game volume and bucket credentials. Railway's bucket service does not currently provide object locking or versioning; this is volume-loss protection, not protection from a compromised account that controls both credentials and the key.
 
 With the private storage variables and encryption key supplied through the environment, run:
 

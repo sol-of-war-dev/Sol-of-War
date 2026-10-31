@@ -1,6 +1,6 @@
 > Historical implementation notes. For the supported local setup and current handoff, see [README.md](README.md) and [REPOSITORY.md](REPOSITORY.md). Statements below about public deployment status may be outdated.
 
-# SolSiege launch checklist
+# Sol of War launch checklist
 
 Updated October 27, 2026. The objective is the complete playable game with real wagers. Deferring test funding postpones the funded rehearsal only. The public site remains simulation while launch work continues.
 

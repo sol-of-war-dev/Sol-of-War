@@ -1,4 +1,4 @@
-name: Record Production deployment
+name: Record Sol of War deployment
 on:
   workflow_dispatch:
   push:

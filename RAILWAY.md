@@ -30,7 +30,7 @@ Before calling a deployment ready, check `/healthz`, the homepage, a map asset, 
 
 Primary URL: https://solofwar.fun
 
-Railway project: Frontpot. Environment: production. Service: frontpot. Region: US West. Persistent volume: frontpot-volume at `/data`. The service builds from `sol-of-war-dev/Sol-of-War`; production releases are manually selected by exact commit after deployment preparation. GitHub autodeploy remains disabled.
+Railway project: Sol of War. Environment: production. Service: sol-of-war. Region: US West. Persistent volume: frontpot-volume at `/data`. The service builds from `sol-of-war-dev/Sol-of-War`; production releases are manually selected by exact commit after deployment preparation. GitHub autodeploy remains disabled.
 
 Public branding is Sol of War. Name.com hosts DNS: solofwar.fun apex ANAME points to `cuvaw3wg.up.railway.app`; www CNAME points to `39fe64wz.up.railway.app`. Preserve Railway ownership TXT records `_railway-verify` and `_railway-verify.www`. Both domains route to port 8080 with Railway-managed HTTPS. `APP_ORIGIN=https://solofwar.fun`; apex and www are allowed in the existing Privy app. The old solsiege.fun domains and Railway hostname remain connected and redirect website requests to the new apex, preserving paths and queries. Existing users, wallet addresses and balances remain in the same service/database. Browser sessions may require sign-in again on the new origin.
 
