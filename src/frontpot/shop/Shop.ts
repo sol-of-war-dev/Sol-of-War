@@ -325,7 +325,7 @@ export class CosmeticShop {
       });
       if (!account)
         throw new InputError(
-          "Your in-platform wallet needs enough shop tokens in one token account. No SOL payment is required.",
+          "Your in-platform wallet needs enough $SOLOFWAR in one token account. No SOL payment is required.",
         );
       const terms: BurnTerms = {
         program: mint.value!.owner,

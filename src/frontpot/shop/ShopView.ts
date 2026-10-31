@@ -164,9 +164,9 @@ export class ShopView {
       </header>
       <div class="sow-shop-info">
         <div>
-          <strong>Pay with Sol of War tokens</strong>
+          <strong>Pay with $SOLOFWAR</strong>
           <p>
-            The full token price is burned on Solana. Sol of War pays the
+            The full $SOLOFWAR price is burned on Solana. Sol of War pays the
             network fee.
           </p>
         </div>
@@ -179,7 +179,7 @@ export class ShopView {
           </p>
         </div>
       </div>
-      ${catalog ? html`<p class="sow-shop-mint">${catalog.network === "devnet" ? "Devnet test token" : "Token mint"}: <code>${catalog.mint || "Not configured"}</code></p>` : html`<p role="status">Loading collection…</p>`}
+      ${catalog ? html`<p class="sow-shop-mint">${catalog.network === "devnet" ? "Devnet test $SOLOFWAR mint" : "$SOLOFWAR mint"}: <code>${catalog.mint || "Not configured"}</code></p>` : html`<p role="status">Loading collection…</p>`}
       ${
         !identity || identity.guest
           ? html`<button class="fp-primary" @click=${this.c.signIn}>
@@ -220,13 +220,13 @@ export class ShopView {
                   this.c.paint();
                 }}
               >
-                ${this.receiving ? "Hide token deposit details" : "Receive shop tokens"}</button
+                ${this.receiving ? "Hide $SOLOFWAR deposit details" : "Receive $SOLOFWAR"}</button
               >${
                 this.receiving
                   ? inventory?.walletAddress
                     ? html`<p>
-                          Send only the exact shop token on
-                          ${catalog?.network === "devnet" ? "Solana devnet (test tokens only)" : "Solana mainnet"}
+                          Send only $SOLOFWAR with the exact mint shown above on
+                          ${catalog?.network === "devnet" ? "Solana devnet (test $SOLOFWAR only)" : "Solana mainnet"}
                           to your user-owned wallet below. Verify the mint shown
                           above. Your sending wallet may charge its own network
                           fee.
@@ -247,7 +247,7 @@ export class ShopView {
                     : html`<p>
                         Create your user-owned wallet on the
                         <a href="/wallet">Wallet page</a> before receiving
-                        tokens.
+                        $SOLOFWAR.
                       </p>`
                   : ""
               }
@@ -367,7 +367,7 @@ export class ShopView {
                           ${item.slot ? html`<button class="fp-primary" ?disabled=${this.c.busy() || inventory?.equipped[item.slot] === item.id} @click=${() => this.c.act(() => this.equip(item.id))}>${inventory?.equipped[item.slot] === item.id ? "Equipped" : "Equip"}</button>` : ""}`
                       : html`<p>
                             <strong
-                              >${Number(item.tokens).toLocaleString()} tokens
+                              >${Number(item.tokens).toLocaleString()} $SOLOFWAR
                               will be permanently
                               burned.${!catalog.enabled ? " Draft price." : ""}</strong
                             >
@@ -417,7 +417,7 @@ export class ShopView {
                 this.gamePreview = item.id;
                 this.c.paint();
               }}
-              .actionContent=${html`<div class="sow-shop-card-action"><strong>${Number(item.tokens).toLocaleString()} tokens ${!catalog.enabled ? html`<small>Draft</small>` : ""}</strong><span>${equipped ? "Equipped" : owned ? "Owned permanently" : "100% burned on purchase"}</span><button class="fp-primary" @click=${() => this.preview(item.id)}>${item.category === "bundle" ? "View bundle" : "Preview"}</button>${owned && item.slot ? html`<button ?disabled=${this.c.busy()} @click=${() => this.c.act(() => this.equip(equipped ? null : item.id, item.slot))}>${equipped ? "Unequip" : "Equip"}</button>` : ""}</div>`}
+              .actionContent=${html`<div class="sow-shop-card-action"><strong>${Number(item.tokens).toLocaleString()} $SOLOFWAR ${!catalog.enabled ? html`<small>Draft</small>` : ""}</strong><span>${equipped ? "Equipped" : owned ? "Owned permanently" : "100% burned on purchase"}</span><button class="fp-primary" @click=${() => this.preview(item.id)}>${item.category === "bundle" ? "View bundle" : "Preview"}</button>${owned && item.slot ? html`<button ?disabled=${this.c.busy()} @click=${() => this.c.act(() => this.equip(equipped ? null : item.id, item.slot))}>${equipped ? "Unequip" : "Equip"}</button>` : ""}</div>`}
             ></cosmetic-card>`;
           })}
       </div>
@@ -477,11 +477,11 @@ export class ShopView {
               <h2>Verified shop burns</h2>
               <p>
                 <strong
-                  >${BigInt(this.activity.totalTokens).toLocaleString()} tokens
-                  burned</strong
+                  >${BigInt(this.activity.totalTokens).toLocaleString()}
+                  $SOLOFWAR burned</strong
                 >
                 across ${this.activity.purchases} finalized
-                purchases${catalog?.network === "devnet" ? " on devnet (test tokens)" : ""}.
+                purchases${catalog?.network === "devnet" ? " on devnet (test $SOLOFWAR)" : ""}.
               </p>
               ${this.activity.receipts.slice(0, 5).map((r) => html`<article><span>${catalog?.items.find((i) => i.id === r.itemID)?.name ?? r.itemID}</span><a href=${`https://solscan.io/tx/${r.signature}${catalog?.network === "devnet" ? "?cluster=devnet" : ""}`} target="_blank" rel="noopener noreferrer">View finalized burn</a></article>`)}
             </section>`

@@ -253,14 +253,14 @@ export function initializePrivy(
               showWalletUIs: true,
               description:
                 purpose === "burn"
-                  ? "Burn tokens to unlock your Sol of War cosmetic. Burning is permanent. Sol of War pays the network fee. Approve, then close the confirmation to submit."
+                  ? "Burn $SOLOFWAR to unlock your Sol of War cosmetic. Burning is permanent. Sol of War pays the network fee. Approve, then close the confirmation to submit."
                   : feeSponsored
                     ? "Sol of War pays the network fee. Review your transfer, approve, then close the confirmation promptly to submit."
                     : "Review the transfer. After approving, close the signed confirmation promptly to submit before it expires.",
               successHeader: "Signature ready",
               successDescription:
                 purpose === "burn"
-                  ? "Close this dialog to submit your token burn. Your cosmetic unlocks after Solana finalizes it."
+                  ? "Close this dialog to submit your $SOLOFWAR burn. Your cosmetic unlocks after Solana finalizes it."
                   : "Close this dialog now to submit the signed transaction. The transfer is not complete until Solana finalizes it.",
             },
           },
