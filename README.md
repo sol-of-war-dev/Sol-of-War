@@ -170,3 +170,11 @@ Upstream proprietary artwork is excluded. The application retains its
 [Contact](mailto:team@solofwar.fun) · [Privacy Policy](https://solofwar.fun/privacy) · [Terms of Service](https://solofwar.fun/terms)
 
 © 2026 Sol of War inc. Upstream OpenFront and contributor notices and applicable open-source licenses remain in effect.
+
+## Browser graphics compatibility
+
+Sol of War requires WebGL2. It prefers hardware graphics but permits supported software renderers such as SwiftShader, without identifying or granting exceptions to individual browsers or review services. Software mode reduces the render pixel ratio to 0.75, caps rendering at 30 FPS, limits queued frames, and disables HUD backdrop blur. Game rules, simulation, payment authorization and payout eligibility are unchanged. These are rendering limits, not promised frame rates; software performance depends heavily on the browser and machine.
+
+Startup failures dismiss the loading overlay and show the error with lobby navigation available. After 30 seconds of unresolved loading, the dialog offers a return to lobbies. This does not itself cancel a match or promise a refund; existing settlement rules apply.
+
+Local Chrome/SwiftShader practice checks reached the map, spawned a player and exercised an attack with territory progression. An injected no-WebGL2 failure returned to the lobby UI with the graphics error visible. Tested software configurations remained slow (roughly 1–2 FPS with all visual passes), so broad smooth-play support is not established. Regression coverage includes context fallback, stalled-loading recovery, startup error propagation and software frame pacing.

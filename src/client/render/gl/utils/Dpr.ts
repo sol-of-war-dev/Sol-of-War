@@ -8,6 +8,20 @@
  * must go through this so the canvas size, camera math, and text scaling stay
  * on the same coordinate system.
  */
+let softwareRendering = false;
+export function setSoftwareRendering(enabled: boolean): void {
+  softwareRendering = enabled;
+  if (import.meta.env.VITE_FRONTPOT) {
+    document.documentElement.classList.toggle(
+      "sow-software-rendering",
+      enabled,
+    );
+  }
+}
+export function isSoftwareRendering(): boolean {
+  return softwareRendering;
+}
+
 export function renderDpr(): number {
-  return Math.min(window.devicePixelRatio || 2, 2);
+  return Math.min(window.devicePixelRatio || 2, softwareRendering ? 0.75 : 2);
 }

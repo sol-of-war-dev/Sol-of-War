@@ -1,20 +1,13 @@
-/**
- * WebGL2 context acquisition that demands a GPU-accelerated context.
- *
- * Software-rendered WebGL (SwiftShader/llvmpipe — hardware acceleration off,
- * blocklisted driver, or a locked-down machine) runs the game at ~1fps, which
- * is unplayable. `failIfMajorPerformanceCaveat: true` forces a real GPU
- * context: Chrome returns null instead of silently handing back a software
- * context. We branch on that to gate the user with an actionable message
- * rather than running at 1fps.
- */
+/** WebGL2 initialization with a lower-resolution software fallback for Sol of War. */
 
 import type { WebGLGateStatus } from "../../components/WebGLGate";
 import { getPaletteSize } from "./utils/ColorUtils";
+import { setSoftwareRendering } from "./utils/Dpr";
 import { readRenderer } from "./utils/GlUtils";
 
 export type GLResult =
   | { gl: WebGL2RenderingContext; status: "ok" }
+  | { gl: WebGL2RenderingContext; status: "software-ready"; renderer: string }
   | {
       gl: WebGL2RenderingContext;
       status: "limited";
@@ -36,54 +29,47 @@ const REQUIRED_TEXTURE_SIZE = getPaletteSize();
 // in utilities/Diagnostic.ts.
 const SOFTWARE_RENDERER = /swiftshader|llvmpipe|software/i;
 
-/**
- * Acquire a GPU-accelerated WebGL2 context on `canvas`.
- *
- * @param attrs Context attributes to merge with the mandatory
- *   `failIfMajorPerformanceCaveat: true`. A second `getContext("webgl2")`
- *   call on the same canvas returns the already-created context (ignoring
- *   attrs), so these must be the attributes the renderer wants.
- */
+/** Prefer hardware, but permit software WebGL2 in Sol of War. No browser identity checks. */
 export function initGL(
   canvas: HTMLCanvasElement,
   attrs: WebGLContextAttributes = {},
+  allowSoftware = !!import.meta.env.VITE_FRONTPOT,
 ): GLResult {
-  // 1. demand a GPU-accelerated context
-  const accel = canvas.getContext("webgl2", {
+  const accelerated = canvas.getContext("webgl2", {
     ...attrs,
     failIfMajorPerformanceCaveat: true,
   });
-  if (accel) {
-    // failIfMajorPerformanceCaveat does NOT reliably reject a software context
-    // when hardware acceleration is turned off in browser settings (as opposed
-    // to a blocklisted driver) — Chrome still hands back a SwiftShader context.
-    // So inspect the renderer and gate if it's software; the game is unplayable
-    // (~1fps) on it either way.
-    const renderer = readRenderer(accel);
-    if (SOFTWARE_RENDERER.test(renderer)) {
+  const gl =
+    accelerated ??
+    (allowSoftware
+      ? canvas.getContext("webgl2", {
+          ...attrs,
+          failIfMajorPerformanceCaveat: false,
+        })
+      : null);
+  if (gl) {
+    const renderer = readRenderer(gl);
+    const software = !accelerated || SOFTWARE_RENDERER.test(renderer);
+    if (software && !allowSoftware)
       return { gl: null, status: "software", renderer };
-    }
-    // Fingerprinting protection caps texture sizes on an otherwise
-    // hardware-accelerated context; the map renders with black areas (#4357).
-    const maxTextureSize = Number(accel.getParameter(accel.MAX_TEXTURE_SIZE));
+    const maxTextureSize = Number(gl.getParameter(gl.MAX_TEXTURE_SIZE));
+    setSoftwareRendering(software);
     if (maxTextureSize < REQUIRED_TEXTURE_SIZE) {
-      return { gl: accel, status: "limited", renderer, maxTextureSize };
+      return { gl, status: "limited", renderer, maxTextureSize };
     }
-    return { gl: accel, status: "ok" };
+    return software
+      ? { gl, status: "software-ready", renderer }
+      : { gl, status: "ok" };
   }
-
-  // 2. probe what's actually available. A canvas locks to the first context
-  // that *succeeds*; the failed (null) call above does NOT lock it, but we use
-  // a throwaway canvas here regardless to avoid any chance of context lock-in.
+  if (allowSoftware) return { gl: null, status: "unsupported", renderer: "" };
   const probe = document.createElement("canvas").getContext("webgl2");
-  if (!probe) return { gl: null, status: "unsupported", renderer: "" };
-
-  // WebGL2 exists but couldn't be obtained accelerated → treat as software.
-  return { gl: null, status: "software", renderer: readRenderer(probe) };
+  return probe
+    ? { gl: null, status: "software", renderer: readRenderer(probe) }
+    : { gl: null, status: "unsupported", renderer: "" };
 }
 
 /**
- * Thrown by the renderer when a GPU-accelerated WebGL2 context can't be
+ * Thrown by the renderer when a supported WebGL2 context cannot be
  * obtained. Carries the detected status + renderer so the caller can gate the
  * user and log the outcome.
  */
@@ -104,7 +90,7 @@ export class GLUnavailableError extends Error {
  * otherwise.
  */
 export function trackGLInit(
-  status: "ok" | "software" | "unsupported" | "limited",
+  status: "ok" | "software-ready" | "software" | "unsupported" | "limited",
   renderer: string,
   maxTextureSize?: number,
 ): void {

@@ -637,3 +637,18 @@ describe("version_mismatch takes the versioned page on this host first", () => {
     expect(reloadForUpdate).toHaveBeenCalled();
   });
 });
+
+
+it("dismisses the starting overlay before notifying a custom startup error handler", async () => {
+  const modal = document.createElement("game-starting-modal") as HTMLElement & {hide: () => void};
+  modal.hide = vi.fn();
+  document.body.append(modal);
+  const onGameError = vi.fn(() => expect(modal.hide).toHaveBeenCalled());
+  const lobby = makeLobbyConfig(false);
+  lobby.onGameError = onGameError;
+  vi.mocked(loadCachedTerrainMap).mockRejectedValueOnce(new Error("Map download failed"));
+  joinLobby(new EventBus(), lobby);
+  captured.lobbyOnMessage!({type:"start", myClientID:"c0000001", gameStartInfo:{gameID:"game1234", config:{}, players:[]}});
+  await vi.waitFor(() => expect(onGameError).toHaveBeenCalled());
+  modal.remove();
+});

@@ -7,6 +7,15 @@ export class GameStartingModal extends LitElement {
   @state()
   isVisible = false;
 
+  @state()
+  delayed = false;
+  private delayTimer?: ReturnType<typeof setTimeout>;
+
+  disconnectedCallback() {
+    clearTimeout(this.delayTimer);
+    super.disconnectedCallback();
+  }
+
   createRenderRoot() {
     return this;
   }
@@ -50,18 +59,37 @@ export class GameStartingModal extends LitElement {
         <p
           class="text-xl font-medium tracking-wider text-white bg-white/5 border border-white/10 px-4 py-3 rounded-xl"
         >
-          ${translateText("game_starting_modal.title")}
+          ${this.delayed ? "Loading is taking longer than expected" : translateText("game_starting_modal.title")}
         </p>
+        ${
+          this.delayed
+            ? html`<p role="status">
+                  The game has not finished loading. You can return to the lobby
+                  and retry. Paid entries remain subject to the match and refund
+                  rules.
+                </p>
+                <a href="/lobbies" class="block mt-4 underline"
+                  >Return to lobby</a
+                >`
+            : ""
+        }
       </div>
     `;
   }
 
   show() {
+    clearTimeout(this.delayTimer);
+    this.delayed = false;
+    this.delayTimer = setTimeout(() => {
+      this.delayed = true;
+    }, 30000);
     this.isVisible = true;
     this.requestUpdate();
   }
 
   hide() {
+    clearTimeout(this.delayTimer);
+    this.delayed = false;
     this.isVisible = false;
     this.requestUpdate();
   }

@@ -170,3 +170,26 @@ describe("GLUnavailableError", () => {
     expect(err.renderer).toBe("SwiftShader");
   });
 });
+
+
+describe("software fallback", () => {
+  afterEach(() => { vi.restoreAllMocks(); });
+  it("retains a SwiftShader context instead of rejecting it when allowed", () => {
+    const gl = fakeContext("Google SwiftShader");
+    stubGetContext({ accelerated: gl, probe: null });
+    expect(initGL(document.createElement("canvas"), {}, true)).toMatchObject({gl, status: "software-ready"});
+  });
+  it("retries on the actual render canvas with the caller attributes", () => {
+    const gl = fakeContext("llvmpipe");
+    const canvas = document.createElement("canvas");
+    const spy = stubGetContext({accelerated: null, probe: gl});
+    spy.mockClear();
+    expect(initGL(canvas, {alpha:false}, true)).toMatchObject({gl, status: "software-ready"});
+    expect(spy.mock.contexts).toEqual([canvas, canvas]);
+    expect(spy).toHaveBeenLastCalledWith("webgl2", {alpha:false, failIfMajorPerformanceCaveat:false});
+  });
+  it("does not pretend WebGL exists if both context requests fail", () => {
+    stubGetContext({accelerated:null, probe:null});
+    expect(initGL(document.createElement("canvas"), {}, true)).toMatchObject({gl:null, status:"unsupported"});
+  });
+});

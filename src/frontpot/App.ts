@@ -1295,12 +1295,17 @@ async function enter(nextRoom: PublicRoom, background = false) {
     onGameError: (failure) => {
       if (requestGeneration !== generation || room?.id !== nextRoom.id) return;
       connected = false;
+      inGame = false;
+      document.body.classList.remove("in-game");
+      (document.querySelector("game-starting-modal") as GameStartingModal)?.hide();
       error =
-        failure.message === "full-lobby"
-          ? "This lobby is full. Return to lobbies to choose another match."
-          : failure.message === "game-started"
-            ? "This match has already started. Return to lobbies to choose another match."
-            : `Unable to join this match: ${failure.message}`;
+        failure.message.startsWith("WebGL2 unavailable")
+          ? "Your browser could not start WebGL2 graphics. Enable WebGL2 or try another browser. You can return to lobbies and retry."
+          : failure.message === "full-lobby"
+            ? "This lobby is full. Return to lobbies to choose another match."
+            : failure.message === "game-started"
+              ? "This match has already started. Return to lobbies to choose another match."
+              : `Unable to join this match: ${failure.message}`;
       paint();
     },
     onLobbyConnected: () => {

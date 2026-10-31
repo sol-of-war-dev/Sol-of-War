@@ -1,3 +1,4 @@
+import { isSoftwareRendering } from "./render/gl/utils/Dpr";
 import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   BuildableUnit,
@@ -311,18 +312,15 @@ export function joinLobby(
         .catch((e) => {
           console.error("error creating client game", e);
           if (stopped) return;
+          currentGameRunner = null;
+          const startingModal = document.querySelector("game-starting-modal") as
+            (HTMLElement & { hide?: () => void }) | null;
+          startingModal?.hide?.();
           if (lobbyConfig.onGameError) {
             lobbyConfig.onGameError(e instanceof Error ? e : new Error(String(e)));
             return;
           }
-          currentGameRunner = null;
 
-          const startingModal = document.querySelector(
-            "game-starting-modal",
-          ) as HTMLElement;
-          if (startingModal) {
-            startingModal.classList.add("hidden");
-          }
           // No GPU-accelerated WebGL2: gate with an actionable message rather
           // than the generic crash modal (the game would crawl at ~1fps).
           if (e instanceof GLUnavailableError) {
@@ -525,8 +523,8 @@ function createWebGLView(
   const palette = new Float32Array(4096 * 2 * 4);
   // Log the GPU init result on every session so we can size the real % of
   // users on software/missing WebGL2. MapRenderer constructs the GL context;
-  // a non-accelerated context throws GLUnavailableError (handled by the
-  // game-start catch, which shows the gate).
+  // unavailable WebGL2 throws GLUnavailableError; supported software contexts
+  // use reduced-resolution rendering.
   let view: MapRenderer;
   try {
     view = new MapRenderer(
@@ -568,7 +566,7 @@ function createWebGLView(
     );
     showGLGate("limited");
   } else {
-    trackGLInit("ok", "");
+    trackGLInit(isSoftwareRendering() ? "software-ready" : "ok", "");
   }
 
   (window as unknown as { __webglView?: unknown }).__webglView = view;
@@ -645,9 +643,13 @@ function mountWebGLFrameLoop(
   // renderer's captured frame callback (which draws). One RAF = one
   // synchronized camera-update + WebGL render.
   let rafId: number | null = null;
+  let lastSoftwareFrame = -Infinity;
   const driveFrame = (nowMs: number): void => {
-    onFrame(nowMs);
-    syncCamera();
+    if (!isSoftwareRendering() || nowMs - lastSoftwareFrame >= 1000 / 30) {
+      onFrame(nowMs);
+      syncCamera();
+      lastSoftwareFrame = nowMs;
+    }
     rafId = requestAnimationFrame(driveFrame);
   };
   rafId = requestAnimationFrame(driveFrame);

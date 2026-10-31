@@ -72,7 +72,7 @@ import {
   hexToRgb,
   MAX_TRAIL_COLORS,
 } from "./utils/ColorUtils";
-import { renderDpr } from "./utils/Dpr";
+import { renderDpr, isSoftwareRendering } from "./utils/Dpr";
 import {
   createTexture2D,
   toScreen,
@@ -185,6 +185,7 @@ export class GPURenderer {
 
   private animId: number | null = null;
   private frameTick = 0;
+  private softwareFrame: WebGLSync | null = null;
   private mapW = 0;
   private mapH = 0;
 
@@ -229,12 +230,8 @@ export class GPURenderer {
     this.raf = raf;
     this.caf = caf;
 
-    // Demand a GPU-accelerated context. A software (SwiftShader) or missing
-    // WebGL2 context throws GLUnavailableError, which the game-start path
-    // turns into an actionable gate instead of letting the game crawl at
-    // ~1fps. A fingerprint-capped context ("limited" — MAX_TEXTURE_SIZE below
-    // the palette width, #4357) proceeds anyway; glLimited lets the owner
-    // warn the player that the map may render with black areas.
+    // Sol of War permits software WebGL2; shared DPR logic reduces its pixel cost.
+    // Unsupported contexts still fail, and texture-size limits remain visible.
     const res = initGL(canvas, {
       alpha: false,
       antialias: false,
@@ -1254,9 +1251,20 @@ export class GPURenderer {
   // ---------------------------------------------------------------------------
 
   draw(): void {
+    // Software drivers can accept commands faster than they render. Keep at most
+    // one frame in flight rather than building a queue that delays input/display.
+    if (this.softwareFrame) {
+      if (this.gl.clientWaitSync(this.softwareFrame, 0, 0) === this.gl.TIMEOUT_EXPIRED) return;
+      this.gl.deleteSync(this.softwareFrame);
+      this.softwareFrame = null;
+    }
     this.uploadTextures();
     this.computeTextures();
     this.renderFrame();
+    if (isSoftwareRendering()) {
+      this.softwareFrame = this.gl.fenceSync(this.gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+      this.gl.flush();
+    }
   }
 
   private uploadTextures(): void {
@@ -1480,6 +1488,8 @@ export class GPURenderer {
    *   MapRenderer.handleContextLost.
    */
   dispose({ releaseContext = true }: { releaseContext?: boolean } = {}): void {
+    if (this.softwareFrame) this.gl.deleteSync(this.softwareFrame);
+    this.softwareFrame = null;
     this.stopLoop();
     for (const p of this.mapLayerPasses.values()) p.dispose();
     this.mapLayerPasses.clear();
