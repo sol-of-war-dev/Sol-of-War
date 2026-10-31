@@ -3611,7 +3611,7 @@ async function replayMatch(pool: Pick<Pool, "matchID" | "name">, publicReplay = 
   });
 }
 function historyView() {
-  return html`<main class="fp-setup-page">
+  return html`<main class="fp-setup-page sow-history-page">
     <button
       class="fp-text-button"
       @click=${() => {
@@ -3629,7 +3629,7 @@ function historyView() {
     </p>
     ${
       paymentHistory.length && isFunded()
-        ? html`<section class="fp-help" aria-label="Payment receipts">
+        ? html`<section class="sow-history-section" aria-label="Payment receipts">
             <h2>Entry payments</h2>
             ${paymentHistory.map(
               (p) =>
@@ -3671,13 +3671,15 @@ function historyView() {
                   ${p.stakeLamports === 0 ? "Free match" : payout ? `${(payout.lamports / 1e9).toLocaleString("en-US", { maximumFractionDigits: 9 })} ${currencyLabel(p.network)}` : "No payout recorded"}
                 </p>
                 ${p.stakeLamports > 0 ? html`<small>Pool ${p.poolID.slice(0, 8)}</small>` : ""}
+                <div class="sow-history-actions">
                 ${p.signature ? html`<a href=${transactionLink(p.signature, p.network === "mainnet" ? "mainnet" : "devnet")} target="_blank" rel="noreferrer">View payout</a>` : ""}
                 ${!p.private && !p.practice ? html`<a class="fp-primary" href=${`/matches/${p.matchID}`}>Match receipt</a>` : ""}
                 ${p.replayAvailable ? html`<button class="fp-create" @click=${() => act(() => replayMatch(p))}>Watch replay</button>` : ""}
+                </div>
               </div>
             </article>`;
           })
-        : html`<section class="fp-help">
+        : html`<section class="sow-history-section">
             <p>Your matches appear here after they start.</p>
             <button class="fp-primary" @click=${() => openSetup(true)}>
               Play a practice match

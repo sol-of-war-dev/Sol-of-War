@@ -5511,3 +5511,51 @@ html.sow-software-rendering body * {
 .sow-dispute-form { display: grid; gap: 16px; margin: 24px 0; }
 .sow-dispute-form label { display: grid; gap: 8px; }
 .sow-dispute-form .fp-input { width: 100%; box-sizing: border-box; }
+
+/* Receipts are documents, not the horizontal homepage help strip. */
+.sow-receipt, .sow-history-page { max-width: 1120px; margin-inline: auto; }
+.sow-receipt h1, .sow-history-page h1 { font-size: clamp(28px, 4vw, 42px); line-height: 1.15; }
+.sow-receipt-card, .sow-history-section {
+  display: block; min-width: 0; margin: 24px 0; padding: clamp(20px, 3vw, 32px);
+  background: #1b1128; border: 1px solid #8b55ab4d; border-radius: 20px;
+}
+.sow-receipt-card h2, .sow-history-section > h2 { font-size: 22px; margin: 0 0 16px; }
+.sow-receipt-card > p { margin: 12px 0; line-height: 1.6; }
+.sow-receipt-row {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 24px; padding: 20px; margin: 16px 0; border: 1px solid #ffffff18;
+  border-radius: 14px; background: #140d20; align-items: start;
+}
+.sow-receipt-row > *, .sow-history-page .fp-history-card > * { min-width: 0; }
+.sow-receipt-row h3 { margin: 0 0 8px; font-size: 18px; }
+.sow-receipt-row p { margin: 8px 0; color: #c6b6cf; line-height: 1.5; }
+.sow-receipt-row a, .sow-receipt-card > a { display: inline-flex; margin: 8px 16px 8px 0; }
+.sow-receipt-address { overflow-wrap: anywhere; line-height: 1.5; font-size: 14px; }
+.sow-history-page .fp-history-card { display: grid; grid-template-columns: minmax(0, 1fr) minmax(240px, 340px); align-items: start; }
+.sow-history-page .fp-history-card h2 { margin: 0; }
+.sow-history-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; margin-top: 16px; }
+.sow-history-actions a, .sow-history-actions button { font-size: 14px; margin: 0; }
+.sow-history-actions .fp-create { padding: 0; }
+.sow-history-section .fp-history-card > div:last-child { display: flex; gap: 20px; flex-wrap: wrap; }
+.sow-dispute-dialog {
+  position: fixed; inset: 0; margin: auto; width: min(600px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px); overflow-y: auto; box-sizing: border-box;
+  padding: 28px; border: 1px solid #745389; border-radius: 24px;
+  background: #1b1128; color: #f8f3ff; box-shadow: 0 24px 100px #0009;
+}
+.sow-dispute-dialog::backdrop { background: #090512bf; backdrop-filter: blur(6px); }
+body:has(.sow-dispute-dialog[open]) { overflow: hidden; }
+.sow-dispute-header { display: flex; align-items: start; justify-content: space-between; gap: 20px; }
+.sow-dispute-header h2 { margin: 0; font-size: 26px; }
+.sow-dispute-header p { margin: 8px 0 0; color: #b8a9c9; font-size: 14px; }
+.sow-dispute-header button { min-height: 44px; padding: 8px 12px; }
+.sow-dispute-dialog .sow-dispute-form { margin-bottom: 0; gap: 18px; }
+.sow-dispute-dialog .sow-dispute-form p { margin: 0; font-size: 13px; line-height: 1.6; color: #c6b6cf; }
+.sow-dispute-dialog label { font-size: 14px; font-weight: 600; }
+.sow-dispute-dialog .fp-input { min-height: 46px; border-radius: 12px; font: inherit; color-scheme: dark; }
+.sow-dispute-dialog textarea { resize: vertical; }
+.sow-dispute-dialog :focus-visible { outline: 2px solid #ffad55; outline-offset: 3px; }
+@media (max-width: 640px) {
+  .sow-receipt-row, .sow-history-page .fp-history-card { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .sow-dispute-dialog { padding: 20px; }
+}

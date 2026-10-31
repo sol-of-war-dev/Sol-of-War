@@ -1,4 +1,5 @@
 import { html } from "lit";
+import { ref } from "lit/directives/ref.js";
 import { transactionLink } from "./payments/PaymentView";
 type Receipt = {
   matchID: string;
@@ -45,10 +46,20 @@ export class MatchReceiptView {
     [];
   next: number | null = null;
   form = false;
+  formError = "";
+  private dialog?: HTMLDialogElement;
+  private returnFocus?: HTMLElement;
+  closeForm() {
+    this.dialog?.close();
+    this.form = false;
+    this.paint();
+    this.returnFocus?.focus();
+  }
   private generation = 0;
   clearSession() {
     this.generation++;
     this.dispute = null;
+    this.dialog?.close();
     this.form = false;
   }
   dispute: { id: string; status: string; resolution?: string } | null = null;
@@ -86,6 +97,10 @@ export class MatchReceiptView {
     this.paint();
   }
   async openDispute() {
+    this.returnFocus =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : undefined;
     const generation = this.generation;
     const dispute = await this.api<{
       id: string;
@@ -94,12 +109,13 @@ export class MatchReceiptView {
     } | null>(`/matches/${this.id}/dispute`);
     if (generation !== this.generation) return;
     this.dispute = dispute;
+    this.formError = "";
     this.form = !this.dispute;
     this.paint();
   }
   render(busy: boolean, act: (fn: () => Promise<void>) => unknown) {
     if (!this.id)
-      return html`<main class="fp-setup-page">
+      return html`<main class="fp-setup-page sow-receipt">
         <a href="/">Back to games</a>
         <h1>Public match receipts</h1>
         <p>
@@ -107,11 +123,11 @@ export class MatchReceiptView {
           matches and practice are excluded.
         </p>
         <p role="status">${this.failure}</p>
-        ${this.items.map((p) => html`<article class="fp-history-card"><a href=${`/matches/${p.matchID}`}>${p.name}</a><span>${p.network} · ${p.state}</span></article>`)}${this.next ? html`<button class="fp-primary" ?disabled=${busy} @click=${() => act(() => this.load())}>Load more</button>` : ""}
+        ${this.items.map((p) => html`<article class="sow-receipt-row"><a href=${`/matches/${p.matchID}`}>${p.name}</a><span>${p.network} · ${p.state}</span></article>`)}${this.next ? html`<button class="fp-primary" ?disabled=${busy} @click=${() => act(() => this.load())}>Load more</button>` : ""}
       </main>`;
     const p = this.receipt;
     if (!p)
-      return html`<main class="fp-setup-page">
+      return html`<main class="fp-setup-page sow-receipt">
         <h1>Match receipt</h1>
         <p role="status">${this.failure || "Loading match…"}</p>
         <a href="/">Back to games</a>
@@ -133,7 +149,7 @@ export class MatchReceiptView {
       <p class="fp-eyebrow">Public match receipt · ${p.network}</p>
       <h1>${p.name}</h1>
       <p>${p.mode} · ${p.map} · ${new Date(p.created).toLocaleString()}</p>
-      <section class="fp-help">
+      <section class="sow-receipt-card">
         <h2>Result and payments</h2>
         <p role="status">${p.state}</p>
         <p>${p.reason}</p>
@@ -143,16 +159,18 @@ export class MatchReceiptView {
         </p>
         ${p.participants.map(
           (m) =>
-            html`<article class="fp-history-card">
+            html`<article class="sow-receipt-row">
               <div>
                 <h3>${m.name}</h3>
                 ${p.mode === "2v2" ? html`<p>Team ${m.team === 0 ? "A" : "B"}</p>` : ""}
-                <p>${m.payment?.state ?? "No on-chain entry receipt"}</p>
+                <p>
+                  ${p.stakeLamports === 0 ? "Free entry" : (m.payment?.state ?? "No on-chain entry receipt")}
+                </p>
                 ${tx(m.payment?.depositSignature, "View entry")}${tx(m.payment?.refundSignature, "View refund")}
               </div>
               <div>
                 ${
-                  m.payout.length
+                  m.payout.length && p.stakeLamports > 0
                     ? m.payout.map(
                         (x) =>
                           html`<p><strong>${sol(x.lamports)}</strong></p>
@@ -160,7 +178,9 @@ export class MatchReceiptView {
                               ${x.wallet ?? "Simulation destination"}
                             </p>`,
                       )
-                    : html`<p>No payout recorded</p>`
+                    : html`<p>
+                        ${p.stakeLamports === 0 ? "Free match · No SOL payout" : "No payout recorded"}
+                      </p>`
                 }
               </div>
             </article>`,
@@ -181,7 +201,7 @@ export class MatchReceiptView {
       </section>
       ${
         this.dispute
-          ? html`<section class="fp-help" role="status">
+          ? html`<section class="sow-receipt-card" role="status">
               <h2>Your dispute</h2>
               <p class="sow-receipt-address">Reference: ${this.dispute.id}</p>
               <p>${this.dispute.status}</p>
@@ -198,73 +218,128 @@ export class MatchReceiptView {
       }
       ${
         this.form
-          ? html`<form
-              class="fp-help sow-dispute-form"
-              @submit=${(e: Event) => {
+          ? html`<dialog
+              class="sow-dispute-dialog"
+              aria-labelledby="sow-dispute-title"
+              ${ref((element) => {
+                this.dialog = element as HTMLDialogElement | undefined;
+                if (this.dialog && !this.dialog.open)
+                  queueMicrotask(() => {
+                    if (
+                      this.form &&
+                      this.dialog?.isConnected &&
+                      !this.dialog.open
+                    )
+                      this.dialog.showModal();
+                  });
+              })}
+              @cancel=${(e: Event) => {
                 e.preventDefault();
-                const data = new FormData(e.currentTarget as HTMLFormElement);
-                const generation = this.generation;
-                void act(async () => {
-                  const submitted = await this.api<{
-                    id: string;
-                    status: string;
-                  }>(`/matches/${this.id}/dispute`, Object.fromEntries(data));
-                  if (generation !== this.generation) return;
-                  this.dispute = submitted;
-                  this.form = false;
-                  this.paint();
-                });
+                this.closeForm();
+              }}
+              @click=${(e: MouseEvent) => {
+                if (e.target !== this.dialog) return;
+                const rect = this.dialog.getBoundingClientRect();
+                if (
+                  e.clientX < rect.left ||
+                  e.clientX > rect.right ||
+                  e.clientY < rect.top ||
+                  e.clientY > rect.bottom
+                )
+                  this.closeForm();
               }}
             >
-              <h2>Dispute Result</h2>
-              <p>
-                Match ${p.matchID}. Participants only. The team reviews
-                submissions; this does not stop or reverse a payout. No response
-                deadline or compensation is guaranteed.
-              </p>
-              <label
-                >Reason<select class="fp-input" name="reason" required>
-                  <option>Incorrect winner</option>
-                  <option>Payout issue</option>
-                  <option>Replay issue</option>
-                  <option>Other</option>
-                </select></label
+              <header class="sow-dispute-header">
+                <div>
+                  <h2 id="sow-dispute-title">Dispute Result</h2>
+                  <p>Match ${p.matchID}</p>
+                </div>
+                <button
+                  type="button"
+                  class="fp-text-button"
+                  @click=${() => this.closeForm()}
+                >
+                  Close
+                </button>
+              </header>
+              <form
+                class="sow-dispute-form"
+                @submit=${(e: Event) => {
+                  e.preventDefault();
+                  const data = new FormData(e.currentTarget as HTMLFormElement);
+                  const generation = this.generation;
+                  void act(async () => {
+                    const submitted = await this.api<{
+                      id: string;
+                      status: string;
+                    }>(
+                      `/matches/${this.id}/dispute`,
+                      Object.fromEntries(data),
+                    ).catch((e: unknown) => {
+                      if (generation === this.generation) {
+                        this.formError =
+                          e instanceof Error ? e.message : String(e);
+                        this.paint();
+                      }
+                      return null;
+                    });
+                    if (!submitted) return;
+                    if (generation !== this.generation) return;
+                    this.dispute = submitted;
+                    this.closeForm();
+                  });
+                }}
               >
-              <label
-                >What happened?<textarea
-                  class="fp-input"
-                  name="description"
-                  required
-                  minlength="10"
-                  maxlength="2000"
-                  rows="4"
-                ></textarea>
-              </label>
-              <label
-                >Replay timestamp or evidence link (optional)<input
-                  class="fp-input"
-                  name="evidence"
-                  maxlength="500"
-              /></label>
-              <label
-                >Reply email (optional, private)<input
-                  class="fp-input"
-                  name="email"
-                  type="email"
-                  maxlength="254"
-              /></label>
-              <p>
-                Never include a private key or seed phrase. Your submission is
-                visible to authorized administrators. Review conclusions may be
-                published without your contact details.
-              </p>
-              <button class="fp-primary" ?disabled=${busy}>
-                Submit dispute
-              </button>
-            </form>`
+                <p class="sow-dispute-intro">
+                  Tell us what went wrong. Our team will review the match and
+                  payment records.
+                </p>
+                ${this.formError ? html`<p class="fp-error" role="alert">${this.formError}</p>` : ""}
+                <label
+                  >Reason<select class="fp-input" name="reason" required>
+                    <option>Incorrect winner</option>
+                    <option>Payout issue</option>
+                    <option>Replay issue</option>
+                    <option>Other</option>
+                  </select></label
+                >
+                <label
+                  >What happened?<textarea
+                    class="fp-input"
+                    name="description"
+                    required
+                    minlength="10"
+                    maxlength="2000"
+                    rows="4"
+                  ></textarea>
+                </label>
+                <label
+                  >Replay timestamp or evidence link (optional)<input
+                    class="fp-input"
+                    name="evidence"
+                    maxlength="500"
+                /></label>
+                <label
+                  >Reply email (optional, private)<input
+                    class="fp-input"
+                    name="email"
+                    type="email"
+                    maxlength="254"
+                /></label>
+                <p>
+                  Never share a private key or seed phrase. Only administrators
+                  see your submission. Review conclusions may be public. A
+                  dispute does not reverse a payment or guarantee compensation
+                  or a response deadline.
+                </p>
+                <button class="fp-primary" ?disabled=${busy}>
+                  Submit dispute
+                </button>
+              </form>
+            </dialog>`
           : ""
       }
-      <section class="fp-help">
+      <section class="sow-receipt-card">
         <h2>Match rules</h2>
         ${p.rules ? html`<p>${p.rules.gameMapSize} map · ${p.rules.bots} tribes · Nations: ${p.rules.nations} · ${p.rules.maxTimerValue} minutes</p>` : html`<p>This older receipt does not contain a rules snapshot.</p>`}
         <p class="sow-receipt-address">
@@ -272,7 +347,7 @@ export class MatchReceiptView {
         </p>
         <a href="/how-to-play">Win conditions and payout rules</a>
       </section>
-      <section class="fp-help">
+      <section class="sow-receipt-card">
         <h2>Replay</h2>
         ${p.replayAvailable ? html`<a class="fp-primary" href=${`/matches/${p.matchID}/watch`}>Watch replay</a><a class="fp-text-button" href=${`/frontpot/api/matches/${p.matchID}/replay`}>Replay data</a>` : html`<p>No replay available for this match.</p>`}
         <p>
@@ -282,11 +357,11 @@ export class MatchReceiptView {
         </p>
         ${p.verificationHash ? html`<p class="sow-receipt-address">Verification hash: ${p.verificationHash}</p>` : ""}
       </section>
-      <section class="fp-help">
+      <section class="sow-receipt-card">
         <h2>Payment timeline</h2>
         ${p.events.map((e) => html`<p>${new Date(e.at).toLocaleString()} · ${e.state}</p>`)}
       </section>
-      <section class="fp-help">
+      <section class="sow-receipt-card">
         <h2>Review updates</h2>
         ${
           p.reviews.length

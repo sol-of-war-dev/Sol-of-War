@@ -48,7 +48,9 @@ are not exposed through this endpoint.
 
 ## Dispute Result
 
-**Dispute Result** sits in the payout section. Sign in with the account that
+**Dispute Result** sits in the payout section and opens a centered lightbox.
+Close, Escape or a backdrop click dismisses it; keyboard focus stays in the dialog
+while open. Submission errors appear inside the lightbox. Sign in with the account that
 participated in the match. The form includes:
 
 - A prefilled match ID and reason selection.
