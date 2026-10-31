@@ -2,6 +2,13 @@
 
 This is a setup guide, not a record of current activation or custody assurance. The default local mode is `simulation`; the live mode must be checked separately. For payment behavior and evidence limits, see [PAYOUTS.md](PAYOUTS.md) and [PAYMENTS.md](PAYMENTS.md). The October 27 setup notes below are historical, not current balances or a completed funded rehearsal.
 
+## Completed mainnet match evidence
+
+A controlled 1v1 completed on October 30 Pacific / October 31 UTC, 2026.
+[See both real-SOL entries, the finalized prize/treasury settlement and verification script](MAINNET_MATCH_EVIDENCE.md).
+This updates the evidence available since the historical setup checks below; it
+does not establish all-mode coverage, trustless custody or an independent audit.
+
 ## User-owned wallet rollout
 
 See [USER_OWNED_WALLETS.md](USER_OWNED_WALLETS.md) for provider prerequisites, identity-only authentication, migration approval and required live verification. `SOLSIEGE_USER_OWNED_WALLETS=enabled` is a separate opt-in flag. Do not enable it until a real test user can create a wallet, pass the read-only owner/quorum checks, approve a transfer and open protected export. Keep legacy keyrings and backups for outstanding balances and frozen old match destinations. The feature does not remove match-pool custody or supply audited escrow.

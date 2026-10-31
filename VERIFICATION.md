@@ -1,5 +1,17 @@
 # Verification record
 
+## Latest evidence — October 30 Pacific / October 31 UTC, 2026
+
+- [Completed mainnet paid 1v1](MAINNET_MATCH_EVIDENCE.md): two finalized 0.01 SOL entries; finalized 0.0198 SOL prize and 0.0002 SOL treasury transfer. Operator-run with two controlled accounts.
+- Release `2bed045`: 505 application/payment/engine/replay tests and 25 reconnection tests passed locally; TypeScript, lint, production build and GitHub CI passed.
+- Deployed source/archive comparison: 3,415 files, zero mismatches. Mainnet and user-owned-wallet mode verified.
+- Encrypted production backup restored successfully to temporary storage; integrity passed. Payment monitor showed no pending/review/signing-failure jobs before rollout.
+- Fee sponsorship has separate real devnet transfer evidence. This mainnet match predates sponsored entries and does not validate a sponsored mainnet withdrawal.
+
+Earlier records below are dated historical checks, not statements of current activation. These are developer checks, not an independent audit.
+
+## October 29 source snapshot
+
 Checked October 29, 2026 against the prepared source snapshot using Node 24.15.0.
 
 - Application TypeScript check: passed.

@@ -2,6 +2,16 @@
 
 This page separates the running production configuration from developer-run test results. A public repository, a transaction, and a security audit establish different things. These records are not an independent security audit.
 
+## Completed mainnet paid match
+
+[Match e36bb46d](MAINNET_MATCH_EVIDENCE.md) completed using two operator-controlled
+accounts and real mainnet SOL. Two 0.01 SOL entries funded one pool; the finalized
+settlement paid 0.0198 SOL to the winner and 0.0002 SOL to the treasury. The platform
+paid the settlement network fee. Both entries paid their own fees under the older
+release. The linked report includes all three receipts, full addresses and a
+read-only verifier. This is one controlled 1v1, not an independent audit, organic
+usage measurement or evidence of on-chain escrow.
+
 ## Check the running release
 
 - [Production release metadata](https://solofwar.fun/frontpot/api/release) identifies the source commit and source/build digests.
@@ -9,7 +19,17 @@ This page separates the running production configuration from developer-run test
 - [Production availability](https://solofwar.fun/frontpot/api/availability) reports paused entries and deployment draining.
 - [Public application configuration](https://solofwar.fun/frontpot/api/config) identifies the payment network and enabled wallet mode.
 
-Observed on **October 30, 2026 at 19:31 UTC**: production reported commit `b6defd9d526f9d866e02a89baa2f258ec6448b68`, mainnet payments, user-owned wallets disabled, and entries paused with draining enabled. This dated observation is not a claim that a later deployment has the same settings. Source on another branch is not evidence that a feature is active on the website.
+Latest deployment check, **October 31, 2026 at 00:30 UTC**: source commit
+`2bed045c49fe0271f8ba01bc2865af9d83899052`, mainnet, user-owned wallets enabled,
+entries enabled and draining disabled. All **3,415 source files** in the live
+archive matched the GitHub checkout; served frontend assets matched the live
+build manifest. Source digest:
+`3853ebd2ebface840beefe14a29874178ebc9395d7ff11c016e5a952f309ae05`.
+The earlier mainnet match ran `20bdfbc`; the later release adds sponsored in-app
+entries/withdrawals, elimination victory and reconnection fixes. Its automated
+checks and devnet sponsorship test are separate from the mainnet match evidence.
+
+Historical observation, **October 30, 2026 at 19:31 UTC**: production reported commit `b6defd9d526f9d866e02a89baa2f258ec6448b68`, mainnet payments, user-owned wallets disabled, and entries paused with draining enabled. This dated observation is not a claim that a later deployment has the same settings. Source on another branch is not evidence that a feature is active on the website.
 
 ## Real devnet receipts
 
@@ -36,7 +56,7 @@ Late legacy recovery also completed in match `0cb4ca60`. An approved legacy with
 ## Remaining limits
 
 - Earlier expired signed requests remain held for review. A fresh test does not erase an uncertain earlier receipt.
-- These devnet receipts do not establish that a production paid match has completed. Mainnet activation and separately approved production checks remain outstanding.
+- Devnet receipts alone do not establish mainnet completion. The separate [mainnet 1v1 record](MAINNET_MATCH_EVIDENCE.md) supplies one completed-match payout; other modes, failure paths and sponsored mainnet withdrawals need their own evidence.
 - Fresh personal-wallet ownership does not remove custody of wagered funds. The operator still controls match pools and server game-result verification. On-chain escrow is not implemented.
 - The game requires WebGL2. A browser without it cannot independently exercise gameplay; readable source and receipts are supplementary evidence, not a substitute for a supported-browser play test.
 

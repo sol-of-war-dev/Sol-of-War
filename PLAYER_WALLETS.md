@@ -2,7 +2,7 @@
 
 ## User-owned wallet migration
 
-The opt-in user-owned wallet flow is documented in [USER_OWNED_WALLETS.md](USER_OWNED_WALLETS.md). New wallets are created in the user’s Privy account without added server signers, and sensitive key export stays in Privy’s protected interface. Registration checks linked ownership, a sole user owner, no additional signers and no restrictive wallet policies. Unknown metadata fails closed. Existing balances move only after exact, signed user approval; match pools remain custodial. This source implementation does not establish that the feature is enabled or validated in production.
+The opt-in user-owned wallet flow is documented in [USER_OWNED_WALLETS.md](USER_OWNED_WALLETS.md). New wallets are created in the user’s Privy account without added server signers, and sensitive key export stays in Privy’s protected interface. Registration checks linked ownership, a sole user owner, no additional signers and no restrictive wallet policies. Unknown metadata fails closed. Existing balances move only after exact, signed user approval; match pools remain custodial. For dated production activation checks and the completed mainnet match, see [deployment evidence](SECURITY_EVIDENCE.md) and [mainnet receipts](MAINNET_MATCH_EVIDENCE.md). Source code alone does not establish a deployment's configuration.
 
 The remainder of this document describes the **legacy custodial wallets**, retained for recovery and old match payouts.
 

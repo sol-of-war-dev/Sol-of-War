@@ -40,6 +40,13 @@
   <br><sub>Local Free Play spectator view.</sub>
 </p>
 
+## Completed mainnet paid match
+
+A completed live 1v1 funded a **0.02 SOL mainnet pool** from two 0.01 SOL entries.
+The finalized settlement paid **0.0198 SOL to the winner** and **0.0002 SOL to the treasury**.
+[Inspect the complete route, all three receipts and the read-only verifier](MAINNET_MATCH_EVIDENCE.md).
+These receipts verify mainnet transfers and settlement; match pools remain custodial.
+
 ## Follow the SOL
 
 **Top up · Confirm entry · Play · Verify result · Receive payout · Withdraw**
@@ -48,19 +55,21 @@ The prize pool shown in the app is gross. Settlement uses the funded roster lock
 at match start: 1% goes to the platform, and 99% to the winner or winning team.
 Eligible cancellations return the full entry without the platform fee.
 
-**Custody is explicit:** in the default legacy mode, the platform controls player
-and match-pool signing keys. An opt-in [user-owned wallet flow](USER_OWNED_WALLETS.md)
-is available in this source and requires provider verification before activation.
-Match pools remain custodial in either mode. This is not trustless smart-contract escrow. The documentation explains the
-implemented safeguards and the scope of the available verification evidence.
+**Custody is explicit:** production was verified on October 31, 2026 at 00:30 UTC
+running release `2bed045` with [user-owned wallets](USER_OWNED_WALLETS.md) enabled.
+Fresh personal-wallet transfers require user approval; legacy wallets retain their
+documented custody model until migrated. **Match pools remain operator-controlled**
+in either mode. This is not trustless smart-contract escrow. Check the
+[deployment evidence](SECURITY_EVIDENCE.md) and live metadata for later changes.
 
 | Start here                                               | What you can inspect                                                             |
 | -------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| [Mainnet match evidence](MAINNET_MATCH_EVIDENCE.md) | Completed paid 1v1: both entries, winner payout, treasury fee and reproducible checks |
 | [Funds & payouts](PAYOUTS.md)                            | Deposits, fees, winnings, refunds, withdrawals and receipt checks                |
 | [Payment architecture](PAYMENTS.md)                      | Source paths, signing boundaries, durable transfers and recovery                 |
 | [Payment code & test map](PAYMENTS.md#code-and-test-map) | The implementation and regression tests for each safeguard                       |
 | [Verification record](VERIFICATION.md)                   | Checks performed, test scope and remaining evidence limits                       |
-| [Deployment and payment evidence](SECURITY_EVIDENCE.md)  | Running-release checks, real devnet receipts and outstanding activation evidence |
+| [Deployment and payment evidence](SECURITY_EVIDENCE.md)  | Running-release checks, mainnet payout evidence and real devnet receipts |
 | [Account wallets](PLAYER_WALLETS.md)                     | Key storage, reservations and withdrawal authorization                           |
 
 These are source documentation and developer-run checks, not an independent

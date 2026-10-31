@@ -7,11 +7,11 @@ Paid matches use native SOL. Eligible entries form the prize pool; the platform
 fee is **1% of that pool**, and the winner or winning team receives the remainder.
 Cancelled entries are returned in full without that platform fee.
 
-**Sol of War controls the signing keys for account wallets and match pools.**
+**Sol of War controls signing for legacy custodial account wallets and match pools.**
 These are custodial wallets. The server verifies games and authorizes payments;
 a trustless escrow smart contract does not adjudicate the outcome.
 
-This guide describes the repository's implementation, reviewed October 29, 2026.
+This guide describes the repository's implementation, updated October 30, 2026.
 It does not establish the live service's current network, balances or audit status.
 See [Payment architecture](PAYMENTS.md) for implementation evidence and known limits.
 
@@ -30,15 +30,33 @@ and treasury addresses are not personal deposit instructions.
 
 ## Follow your funds
 
-When account wallets are enabled:
+With a fresh user-owned personal wallet:
+
+1. **Top up.** Send native SOL to the personal address shown in the app. The
+   sending external wallet controls this transfer and pays its network fee.
+2. **Approve entry.** Review and sign the exact match transfer through the wallet
+   provider. For newly prepared sponsored entries, the platform adds only its own
+   fee-payer signature after checking your signature and the saved transfer terms.
+3. **Play and verify.** The funded roster and payout destinations are locked. The
+   server verifies the recorded result before authorizing settlement.
+4. **Receive.** The prize or eligible refund returns to the original funding
+   address. While in the match pool, funds are under operator custody.
+5. **Withdraw.** Approve an exact transfer from your personal wallet to your
+   chosen address. Newly prepared withdrawals use platform fee sponsorship;
+   the platform does not receive authority to spend the personal wallet alone.
+
+The [completed mainnet match](MAINNET_MATCH_EVIDENCE.md) documents entry through
+settlement. Its older entry requests predated fee sponsorship.
+
+With a legacy custodial account wallet:
 
 1. **Top up.** Your external wallet signs a transfer to your dedicated Sol of War
    deposit address. Funding an account does not enter a match. The balance updates
    after Solana finalizes the transfer.
 2. **Confirm an entry.** You approve the wager amount in the app. The server reserves
    it and signs a transfer from your account wallet into that match's separate pool.
-   This does not require another signature in your external wallet. Sign-in alone
-   does not pay an entry.
+   The verified sign-in wallet must authorize the exact new payment request.
+   Sign-in alone does not pay an entry.
 3. **Start.** Only funded, connected players qualify for the starting roster.
    The server freezes participants, teams, entry amounts and payout wallets.
 4. **Verify.** The server replays the recorded game before authorizing a prize.
@@ -54,7 +72,8 @@ wallets does not redirect those existing entries.
 | Wallet | Controller and purpose |
 | --- | --- |
 | External wallet | You hold its keys. Used for sign-in and top-ups; the default withdrawal destination. |
-| Sol of War account wallet | The application holds its encrypted key. Holds available balance and receives account-funded prizes/refunds. |
+| Fresh personal wallet | User-owned through Privy, with user-approved transfers and protected key export; no server spending signer is added. |
+| Legacy Sol of War account wallet | The application holds its encrypted key. Holds available balance and receives account-funded prizes/refunds. |
 | Match pool | Platform-authorized signing through Privy. Holds entries for one match. |
 | Treasury | Receives the platform fee on a successfully settled winning result. |
 | Network fee payer | Separate platform wallet that pays for supported outgoing transactions. |
@@ -144,13 +163,13 @@ a report. Do not send another payment solely because the first one timed out.
 
 The code verifies funding, freezes payout destinations, checks recorded results,
 persists signed transfers before broadcast and reserves unresolved spending.
-Account keys are encrypted at rest. An offsite backup containing a new account
+Legacy account keys are encrypted at rest. An offsite backup containing a new legacy account
 wallet is required before its deposit address is exposed.
 
-The application can decrypt account keys to sign. Control of its runtime and
+The application can decrypt legacy account keys to sign. Control of its runtime and
 keyring can therefore mean control of funds. Pool-signing authority and server
 result verification are also trusted components. The repository contains no
-independent custody/security audit or complete public mainnet rehearsal record.
+independent custody/security audit. A [controlled mainnet 1v1 record](MAINNET_MATCH_EVIDENCE.md) now documents both entries and its finalized payout; it does not cover every mode or recovery scenario.
 Fixture tests do not guarantee protection against compromise or loss. Review
 the [code, tests and known recovery limits](PAYMENTS.md) before treating a
 documented safeguard as a verified production assurance.
