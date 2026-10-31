@@ -9,6 +9,7 @@ import {
 import brandSymbol from "../assets/sol-of-war-symbol.png";
 import type { WalletLogin } from "../PrivyLogin";
 import type { Identity } from "../Store";
+import { tokenPurchaseLink } from "../TokenPurchaseLink";
 import { assertBurn } from "./BurnPolicy";
 import { SHOP_MINT, type Category, type ShopItem } from "./Catalog";
 import "../../client/components/CosmeticPreviewModal";
@@ -244,6 +245,7 @@ export class ShopView {
           commander’s look. Cosmetic only; no gameplay advantages.
         </p>
       </header>
+      ${tokenPurchaseLink(catalog?.network)}
       <div class="sow-shop-info">
         <div>
           <strong>Pay with $SOLOFWAR</strong>
@@ -295,7 +297,7 @@ export class ShopView {
       ${this.notice ? html`<p role="status" class="fp-message">${this.notice}</p>` : ""}
       ${
         identity && !identity.guest
-          ? html`<section class="sow-shop-receive" id="sow-shop-upload">
+          ? html`<section class="sow-shop-receive">
               <button
                 @click=${() => {
                   this.receiving = !this.receiving;

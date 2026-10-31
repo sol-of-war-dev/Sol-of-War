@@ -12,7 +12,9 @@ import type {
   UserWithdrawal,
 } from "./payments/UserOwnedWallets";
 import type { WalletLogin } from "./PrivyLogin";
+import { SHOP_MINT } from "./shop/Catalog";
 import type { Identity } from "./Store";
+import { tokenPurchaseLink } from "./TokenPurchaseLink";
 import "./AccountCards.css";
 
 const sol = (n: number) => (n / 1e9).toFixed(9).replace(/\.?0+$/, "") || "0";
@@ -403,6 +405,7 @@ export class UserWalletView {
       </nav>
       <h1>Sol of War wallet</h1>
       <p class="sc-subtitle">Your balance and transfers, in one place.</p>
+      ${tokenPurchaseLink(d?.network)}
       ${
         !c.identity()?.name
           ? html`<button class="fp-primary" @click=${c.signIn}>Sign in</button>`
@@ -524,16 +527,19 @@ export class UserWalletView {
                             </button>`
                         : html`
                             <div ?hidden=${this.panel !== "deposit"}>
-                              <h2>Add SOL</h2>
+                              <h2>
+                                ${d.network === "mainnet" ? "Add SOL or $SOLOFWAR" : "Add test SOL"}
+                              </h2>
                               <p class="sc-status">
                                 <strong
                                   >${d.network === "mainnet" ? "Solana mainnet only" : "Solana devnet only · Test SOL"}</strong
-                                ><br />Only deposit native SOL on this network.
-                                Do not send other tokens or use another network.
+                                ><br />${d.network === "mainnet" ? "Send native SOL or the official $SOLOFWAR token to this address. Use Solana mainnet only." : "Send test assets on Solana devnet only. Do not send real SOL or mainnet $SOLOFWAR."}
                               </p>
                               <p>
-                                Send only native SOL on this network to this
-                                address.
+                                SOL funds match entries. $SOLOFWAR buys
+                                cosmetics; it does not count toward your SOL
+                                balance. The withdrawal form sends SOL only.
+                                ${d.network === "mainnet" ? html`<br />Official $SOLOFWAR mint: <code class="sw-address">${SHOP_MINT}</code>` : ""}
                               </p>
                               <code class="sw-address">${wallet.address}</code>
                               ${depositQR(wallet.address)}<button

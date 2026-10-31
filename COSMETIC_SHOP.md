@@ -227,3 +227,9 @@ ownership, draft caps, and invalid-image cases have automated tests. The [predef
 [custom-PNG rehearsal](CUSTOM_PNG_DEVNET_EVIDENCE.md) include finalized devnet
 burns with platform-paid fees. The custom PNG was also equipped and verified in
 a running practice match. These are devnet receipts, not mainnet shop purchases.
+
+## Buying and depositing $SOLOFWAR
+
+The wallet page and shop link to the official mainnet mint on pump.fun through **Buy $SOLOFWAR**. This opens an external page; it does not execute a swap inside Sol of War. After buying, send the tokens to the user-owned Sol of War wallet address shown in the wallet or shop receive panel. Native SOL and the official $SOLOFWAR token use that same address. SOL funds matches; $SOLOFWAR funds cosmetics and does not count toward the displayed SOL balance. The withdrawal form sends SOL only. Do not send tokens to a legacy custodial wallet.
+
+External purchases and transfers may require SOL for fees. Sol of War sponsors the cosmetic burn transaction only. Checkout remains restricted to the registered user-owned Sol of War wallet; direct connected-wallet checkout is deferred. The mainnet purchase link is hidden in devnet mode.
