@@ -64,7 +64,9 @@ describe("varied automatic games", () => {
         );
         if (template.mode !== "ffa") {
           expect(rules.maxPlayers).toBe(template.mode === "1v1" ? 2 : 4);
-          expect(rules.bots).toBe(0);
+          expect(rules.bots).toBe(
+            rules.gameMapSize === GameMapSize.Compact ? 100 : 400,
+          );
           expect(rules.nations).toBe("disabled");
           expect(rules.maxTimerValue).toBe(
             rules.gameMapSize === GameMapSize.Compact ? 10 : 15,
@@ -79,7 +81,7 @@ describe("varied automatic games", () => {
       db.exec(
         "CREATE TABLE queue_settings(id INTEGER PRIMARY KEY,settings TEXT,template_cursor INTEGER,map_cursor INTEGER,revision INTEGER)",
       );
-      const { variety: _, ...old } = defaultQueueSettings();
+      const old = { ...defaultQueueSettings(), variety: undefined };
       db.prepare("INSERT INTO queue_settings VALUES(1,?,0,0,0)").run(
         JSON.stringify(old),
       );

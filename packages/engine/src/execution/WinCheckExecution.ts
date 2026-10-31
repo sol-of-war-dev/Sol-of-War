@@ -207,6 +207,12 @@ export class WinCheckExecution implements Execution {
 
     const teamToTiles = new Map<Team, number>();
     for (const player of this.mg.players()) {
+      // Neutral tribes must not block a human team from winning on the timer.
+      if (
+        this.mg.config().gameConfig().humanEliminationVictory &&
+        player.type() !== PlayerType.Human
+      )
+        continue;
       const team = player.team();
       // Sanity check, team should not be null here
       if (team === null) continue;

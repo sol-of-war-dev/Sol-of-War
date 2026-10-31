@@ -31,6 +31,27 @@ describe("complete game settings", () => {
     }
     expect(defaultRules("ffa", true).bots).toBe(400);
   });
+  it.each(["1v1", "2v2"])(
+    "fixes tribe counts and disables nations in %s",
+    (mode) => {
+      for (const [gameMapSize, bots] of [
+        [GameMapSize.Compact, 100],
+        [GameMapSize.Normal, 400],
+      ] as const) {
+        const rules = parseRules(
+          { gameMapSize, bots: 0, nations: "default" },
+          mode,
+          false,
+        );
+        expect(gameConfig(rules, mode, false)).toMatchObject({
+          bots,
+          nations: "disabled",
+          humanEliminationVictory: true,
+          maxPlayers: mode === "1v1" ? 2 : 4,
+        });
+      }
+    },
+  );
   it("passes map and gameplay options to the actual engine", () => {
     const rules = parseRules(
       {
@@ -79,7 +100,7 @@ describe("complete game settings", () => {
       parseRules({ gameMap: "../../secret" }, "ffa", false),
     ).toThrow();
     expect(parseRules({ bots: 80, nations: 30 }, "2v2", false)).toMatchObject({
-      bots: 0,
+      bots: 400,
       nations: "disabled",
     });
     expect(gameConfig(defaultRules(), "2v2", false)).toMatchObject({

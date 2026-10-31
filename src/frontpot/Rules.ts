@@ -59,7 +59,11 @@ export function mapPopulation(
   size: GameMapSize,
   mode = "ffa",
 ) {
-  if (mode !== "ffa") return { bots: 0, nations: "disabled" as const };
+  if (mode !== "ffa")
+    return {
+      bots: size === GameMapSize.Compact ? 100 : 400,
+      nations: "disabled" as const,
+    };
   const count = mapNationCount(map);
   return {
     bots: size === GameMapSize.Compact ? 100 : 400,
@@ -98,9 +102,9 @@ export function parseRules(
     ...provided,
   });
   rules.disabledUnits = [...new Set(rules.disabledUnits)].sort();
-  // Fixed competitive teams: bots/nations can never become a paying teammate.
+  // Tribes are neutral opponents; nations stay disabled and human seats stay fixed.
   if (!practice && mode !== "ffa") {
-    rules.bots = 0;
+    rules.bots = rules.gameMapSize === GameMapSize.Compact ? 100 : 400;
     rules.nations = "disabled";
   }
   return rules;

@@ -84,6 +84,54 @@ describe("Sol of War elimination victory", () => {
       ...team.map((p) => p.clientID()),
     ]);
   });
+  it.each(["1v1", "2v2"] as const)(
+    "awards %s to humans while a larger tribe survives",
+    async (mode) => {
+      const { game, players, win, check } = await fixture(mode);
+      game.addPlayer(new PlayerInfo("Tribe", PlayerType.Bot, null, "tribe"));
+      const tribe = game.player("tribe");
+      let count = 0;
+      game.map().forEachTile((tile) => {
+        if (count >= 100 || !game.map().isLand(tile) || game.hasOwner(tile))
+          return;
+        tribe.conquer(tile);
+        count++;
+      });
+      expect(tribe.numTilesOwned()).toBe(100);
+      if (mode === "1v1") kill(players[1]);
+      else players.filter((p) => p !== players[0]).forEach(kill);
+      check.tick(10);
+      expect(win).toHaveBeenCalledWith(
+        mode === "1v1" ? players[0] : players[0].team(),
+        expect.anything(),
+      );
+    },
+  );
+  it.each(["1v1", "2v2"] as const)(
+    "a larger tribe cannot win or block the %s timer result",
+    async (mode) => {
+      const { game, players, win, check } = await fixture(mode);
+      game.addPlayer(new PlayerInfo("Tribe", PlayerType.Bot, null, "tribe"));
+      const tribe = game.player("tribe");
+      let count = 0;
+      game.map().forEachTile((tile) => {
+        if (count >= 100 || !game.map().isLand(tile) || game.hasOwner(tile))
+          return;
+        tribe.conquer(tile);
+        count++;
+      });
+      game.config().gameConfig().maxTimerValue = 1;
+      vi.spyOn(game, "elapsedGameSeconds").mockReturnValue(60);
+      check.tick(10);
+      expect(win).toHaveBeenCalledTimes(1);
+      const winner = win.mock.calls[0][0];
+      expect(
+        mode === "1v1"
+          ? players.includes(winner as Player)
+          : players.some((p) => p.team() === winner),
+      ).toBe(true);
+    },
+  );
   it("does not treat a network disconnect as a death", async () => {
     const { players, win, check } = await fixture("1v1");
     players[1].markDisconnected(true);
